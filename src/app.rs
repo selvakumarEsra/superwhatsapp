@@ -3915,8 +3915,11 @@ impl App {
                         .as_ref()
                         .map(PreviewState::chat)
                         .is_some_and(|id| {
-                            self.chat(id)
-                                .is_none_or(|chat| chat.locked && !self.locked_folder_open())
+                            // A picture of no chat has no chat to lose.
+                            !id.is_empty()
+                                && self
+                                    .chat(id)
+                                    .is_none_or(|chat| chat.locked && !self.locked_folder_open())
                         })
                 {
                     self.image_preview = None;
@@ -10839,11 +10842,11 @@ impl App {
         if self.video.message().is_some() && self.video_chat != self.open_chat {
             self.video.stop();
         }
-        // The viewer shows the open chat's media, and leaves with it.
-        if self
-            .image_preview
-            .as_ref()
-            .is_some_and(|preview| self.open_chat.as_deref() != Some(preview.chat()))
+        // The viewer shows the open chat's media, and leaves with it. A
+        // picture of no chat, like a profile picture, stays until closed.
+        if self.image_preview.as_ref().is_some_and(|preview| {
+            !preview.chat().is_empty() && self.open_chat.as_deref() != Some(preview.chat())
+        })
         {
             self.image_preview = None;
             self.viewer_media.clear();
@@ -10896,11 +10899,14 @@ impl App {
         }
         self.viewer_media.clear();
         self.viewer_media_state.clear();
-        self.viewer_media_chat = Some(preview.chat().to_owned());
-        self.backend.send(Command::LoadChatMedia {
-            chat: preview.chat().to_owned(),
-            around: Some(preview.message().to_owned()),
-        });
+        // A picture of no chat, like a profile picture, has no album to load.
+        if !preview.chat().is_empty() {
+            self.viewer_media_chat = Some(preview.chat().to_owned());
+            self.backend.send(Command::LoadChatMedia {
+                chat: preview.chat().to_owned(),
+                around: Some(preview.message().to_owned()),
+            });
+        }
         self.image_preview = Some(preview);
         self.dialog = None;
         self.picker = None;
@@ -17131,6 +17137,43 @@ mod tests {
             ),
             "the album is asked for around the opened message"
         );
+    }
+
+    /// A profile picture from the info panel belongs to no chat: the viewer
+    /// keeps it open over the open chat, asks for no album, and a refresh of
+    /// the chat list does not close it (REQ-PHOTO-001).
+    #[test]
+    fn a_profile_picture_stays_open_in_the_viewer() {
+        let ctx = egui::Context::default();
+        let mut app = app_with_album(0);
+        app.open_chat = Some("1@s.whatsapp.net".into());
+        let (backend, mut commands) = Backend::recording();
+        app.backend = backend;
+        let file = tempfile::NamedTempFile::with_suffix(".jpg").unwrap();
+        std::fs::write(file.path(), b"not a real image").unwrap();
+
+        app.apply(
+            Action::PreviewImage {
+                card: None,
+                path: file.path().to_owned(),
+                chat: String::new(),
+                message: String::new(),
+            },
+            &ctx,
+        );
+        assert!(app.image_preview.is_some(), "the viewer opens");
+        assert!(
+            !matches!(commands.try_recv(), Ok(Command::LoadChatMedia { .. })),
+            "no album is asked for"
+        );
+
+        app.tick_video(&ctx);
+        let chats = app.chats.clone();
+        app.apply_backend_event(Event::Chats(chats), true);
+        assert!(app.image_preview.is_some(), "the viewer stays open");
+
+        app.apply(Action::CloseImagePreview, &ctx);
+        assert!(app.image_preview.is_none(), "Close still closes it");
     }
 
     /// The viewer tracks its own download: progress while it runs, and the
