@@ -40,7 +40,9 @@ Three more fork features live in `src/extras/` (contract:
   never included.
 - **Keep**: a message deleted for everyone, and each version an edit
   replaces, is kept in the local archive (`extras_kept` table, encrypted
-  with the archive) and listed under Insights → Deleted & edited. Every
+  with the archive) and listed under Insights → Deleted & edited, where each
+  entry can be copied or selected, and an earlier version shows what its
+  edit changed (removed words struck through, added words in green). Every
   attachment downloads as it arrives (Insights → Saving, on by default), and
   **Save everything now** fetches archived attachments not yet on disk.
   Messages you delete yourself are not kept, and nothing about keeping
