@@ -349,3 +349,99 @@ verifies:
 <!-- id: REQ-EXTRAS-011.A3 -->
 - Coverage comes from message times and chat state only; no message text is
   read for it.
+
+<!-- id: REQ-EXTRAS-012 -->
+## Insights → Deleted & edited MUST let the person copy a kept message
+
+Each entry in the Deleted & edited list gets a **Copy** button next to
+"Open chat" and "Forget", and its message text can be selected with the
+mouse (drag, double-click a word) and copied with ⌘C / Ctrl+C or the
+right-click menu. The rest of the app keeps text unselectable as it is
+today; only the kept message's text becomes selectable.
+
+implementations:
+  - src/extras/insights/ui.rs:kept
+  - src/extras/keep.rs:copy_text
+
+verifies:
+  - src/extras/keep.rs:copy_takes_the_text_or_the_caption
+
+## Acceptance
+<!-- id: REQ-EXTRAS-012.A1 -->
+- Clicking Copy puts the entry's full message text on the clipboard,
+  exactly as shown (no badge, chat name, sender or time).
+  [needs review: some may want "sender, time: text"]
+<!-- id: REQ-EXTRAS-012.A2 -->
+- Clicking Copy shows a short "Copied" confirmation.
+<!-- id: REQ-EXTRAS-012.A3 -->
+- Dragging across part of the message text selects it, and ⌘C / Ctrl+C
+  copies only the selected part.
+<!-- id: REQ-EXTRAS-012.A4 -->
+- For an attachment, Copy copies its caption, or its summary (e.g.
+  "Photo") when there is no caption. The "Saved at" path line is
+  selectable too.
+<!-- id: REQ-EXTRAS-012.A5 -->
+- Copying sends nothing to WhatsApp and does not change or forget the
+  kept copy.
+<!-- id: REQ-EXTRAS-012.A6 -->
+- Text elsewhere in Insights (badges, titles, buttons) stays
+  unselectable, matching the app's theme.
+
+<!-- id: REQ-EXTRAS-013 -->
+## Insights → Deleted & edited MUST show what each edit changed
+
+A "Before edit N" entry keeps the text as it was before edit N (see
+REQ-EXTRAS-007). The entry now shows, in one inline text, what that edit
+changed: words the edit removed in red with strikethrough, words it added
+in green, everything else as plain text. Changes are marked word by word,
+so "Moderatiob" → "Moderation" marks the whole word.
+
+The text that replaced version N is the next kept version of the same
+message (N+1). For the newest kept version it is the message's current
+text in the chat, or, if the message was later deleted for everyone, the
+content kept when it was deleted.
+
+implementations:
+  - src/extras/insights/ui.rs:kept
+  - src/extras/insights/ui.rs:diff_job
+  - src/extras/keep.rs:word_diff
+  - src/extras/keep.rs:edit_diff
+  - src/extras/keep.rs:replaced_by
+
+verifies:
+  - src/extras/keep.rs:a_word_diff_marks_the_replaced_word
+  - src/extras/keep.rs:a_word_diff_marks_whole_words_and_keeps_the_text_exact
+  - src/extras/keep.rs:each_edit_is_compared_with_the_text_that_replaced_it
+  - src/extras/keep.rs:the_newest_edit_of_a_deleted_message_compares_with_the_deleted_copy
+  - src/extras/keep.rs:a_forgotten_next_version_shows_no_highlights
+
+## Acceptance
+<!-- id: REQ-EXTRAS-013.A1 -->
+- For versions "a b c" → "a x c", the entry shows `a`, `b` (red, struck
+  through), `x` (green), `c`, in that order.
+<!-- id: REQ-EXTRAS-013.A2 -->
+- Each "Before edit N" entry is compared with the text that replaced it
+  (version N+1, or the current or deleted text for the newest version),
+  not with the original message.
+<!-- id: REQ-EXTRAS-013.A3 -->
+- A change inside a word marks the whole old word as removed and the
+  whole new word as added.
+<!-- id: REQ-EXTRAS-013.A4 -->
+- Spaces, line breaks, emoji and non-Latin text (e.g. `黃道😅`) are
+  preserved exactly; a word made of such characters is compared like any
+  other.
+<!-- id: REQ-EXTRAS-013.A5 -->
+- When the version after it was forgotten while later versions remain,
+  the entry shows the plain kept text without highlights. (Forgetting the
+  newest version cannot be detected; the entry then compares with the
+  message's current or deleted text.)
+<!-- id: REQ-EXTRAS-013.A6 -->
+- Copy (REQ-EXTRAS-012) still copies the plain kept text, without the
+  added words or any markup; selecting text with the mouse still works.
+<!-- id: REQ-EXTRAS-013.A7 -->
+- Removed and added words are also told apart without colour (the
+  strikethrough on removed words) so they read in both themes and for
+  colour-blind users; each change also gets a faint background tint.
+<!-- id: REQ-EXTRAS-013.A8 -->
+- "Deleted for everyone" entries and attachment-only edits are shown as
+  today, without highlights.

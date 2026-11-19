@@ -223,6 +223,7 @@ fn kept(source: &Source) -> Vec<Kept> {
             timestamp: now - 3600,
             content: text("Don't tell anyone yet, but we're getting a puppy! 🐶"),
             kept_at: now - 3500,
+            replaced_by: None,
         },
         Kept {
             chat: chat(1).id,
@@ -235,6 +236,7 @@ fn kept(source: &Source) -> Vec<Kept> {
             timestamp: now - 7200,
             content: text("Meet at 6 at the station"),
             kept_at: now - 7000,
+            replaced_by: Some(text("Meet at 7 at the old station")),
         },
         Kept {
             chat: chat(2).id,
@@ -247,6 +249,7 @@ fn kept(source: &Source) -> Vec<Kept> {
             timestamp: now - 86_400,
             content: text("Oops, wrong chat 🙈"),
             kept_at: now - 86_000,
+            replaced_by: None,
         },
     ]
 }

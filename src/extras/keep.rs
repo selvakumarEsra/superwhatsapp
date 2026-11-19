@@ -68,6 +68,10 @@ pub struct Kept {
     pub timestamp: i64,
     pub content: Content,
     pub kept_at: i64,
+    /// For an edited copy, the content the edit replaced it with: the next
+    /// kept version, else the deleted copy, else the message as it is now.
+    /// `None` when that is unknown (REQ-EXTRAS-013.A5).
+    pub replaced_by: Option<Content>,
 }
 
 fn now() -> i64 {
@@ -192,9 +196,169 @@ pub fn kept(connection: &Connection) -> rusqlite::Result<Vec<Kept>> {
                 what: "message".into(),
             }),
             kept_at: row.get(9)?,
+            replaced_by: None,
         })
     })?;
-    rows.collect()
+    let mut all: Vec<Kept> = rows.collect::<rusqlite::Result<_>>()?;
+    let replaced: Vec<Option<Content>> = all
+        .iter()
+        .map(|item| replaced_by(connection, &all, item))
+        .collect();
+    for (item, replaced) in all.iter_mut().zip(replaced) {
+        item.replaced_by = replaced;
+    }
+    Ok(all)
+}
+
+/// What edit `item.version` replaced the kept text with (REQ-EXTRAS-013.A2).
+fn replaced_by(connection: &Connection, all: &[Kept], item: &Kept) -> Option<Content> {
+    if item.why != Why::Edited {
+        return None;
+    }
+    let same = |other: &&Kept| other.chat == item.chat && other.id == item.id;
+    let later: Vec<&Kept> = all
+        .iter()
+        .filter(same)
+        .filter(|other| other.why == Why::Edited && other.version > item.version)
+        .collect();
+    if let Some(next) = later.iter().find(|other| other.version == item.version + 1) {
+        return Some(next.content.clone());
+    }
+    // The next version was forgotten: there is nothing honest to compare with.
+    if !later.is_empty() {
+        return None;
+    }
+    if let Some(deleted) = all
+        .iter()
+        .filter(same)
+        .find(|other| other.why == Why::Deleted)
+    {
+        return Some(deleted.content.clone());
+    }
+    let current: String = connection
+        .query_row(
+            "SELECT content FROM messages WHERE chat = ?1 AND id = ?2",
+            params![item.chat, item.id],
+            |row| row.get(0),
+        )
+        .optional()
+        .ok()
+        .flatten()?;
+    serde_json::from_str::<Content>(&current)
+        .ok()
+        .filter(|content| !matches!(content, Content::Revoked))
+}
+
+/// The text Copy puts on the clipboard (REQ-EXTRAS-012.A1/A4): a message's
+/// full text, an attachment's caption, or its summary without one.
+pub fn copy_text(content: &Content) -> String {
+    match content {
+        Content::Text { text, .. } | Content::Interactive { text, .. } => text.clone(),
+        _ => match caption_of(content).map(str::trim) {
+            Some(caption) if !caption.is_empty() => caption.to_owned(),
+            _ => content.summary(),
+        },
+    }
+}
+
+fn caption_of(content: &Content) -> Option<&str> {
+    match content {
+        Content::Image { caption, .. }
+        | Content::Video { caption, .. }
+        | Content::Document { caption, .. }
+        | Content::StickerPack { caption, .. } => caption.as_deref(),
+        _ => None,
+    }
+}
+
+/// One run of a word diff.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Change {
+    Same,
+    Removed,
+    Added,
+}
+
+/// Splits text into words and the whitespace between them, so joining the
+/// pieces gives the text back exactly (REQ-EXTRAS-013.A4).
+fn words(text: &str) -> Vec<&str> {
+    let mut pieces = Vec::new();
+    let mut start = 0;
+    let mut space = None;
+    for (at, c) in text.char_indices() {
+        let is_space = c.is_whitespace();
+        if space.is_some_and(|was| was != is_space) {
+            pieces.push(&text[start..at]);
+            start = at;
+        }
+        space = Some(is_space);
+    }
+    if start < text.len() {
+        pieces.push(&text[start..]);
+    }
+    pieces
+}
+
+/// Most words compared before falling back to "all of it changed".
+const DIFF_LIMIT: usize = 4_000;
+
+/// What changed from `old` to `new`, word by word, in reading order with
+/// removed words before the words that replaced them (REQ-EXTRAS-013).
+pub fn word_diff(old: &str, new: &str) -> Vec<(Change, String)> {
+    let a = words(old);
+    let b = words(new);
+    let mut runs: Vec<(Change, String)> = Vec::new();
+    let mut push = |change: Change, piece: &str| match runs.last_mut() {
+        Some((last, text)) if *last == change => text.push_str(piece),
+        _ => runs.push((change, piece.to_owned())),
+    };
+    if a.len() > DIFF_LIMIT || b.len() > DIFF_LIMIT {
+        push(Change::Removed, old);
+        push(Change::Added, new);
+        return runs;
+    }
+    // Longest common subsequence, filled from the end.
+    let width = b.len() + 1;
+    let mut table = vec![0u32; (a.len() + 1) * width];
+    for i in (0..a.len()).rev() {
+        for j in (0..b.len()).rev() {
+            table[i * width + j] = if a[i] == b[j] {
+                table[(i + 1) * width + j + 1] + 1
+            } else {
+                table[(i + 1) * width + j].max(table[i * width + j + 1])
+            };
+        }
+    }
+    let (mut i, mut j) = (0, 0);
+    while i < a.len() || j < b.len() {
+        if i < a.len() && j < b.len() && a[i] == b[j] {
+            push(Change::Same, a[i]);
+            i += 1;
+            j += 1;
+        } else if i < a.len()
+            && (j == b.len() || table[(i + 1) * width + j] >= table[i * width + j + 1])
+        {
+            push(Change::Removed, a[i]);
+            i += 1;
+        } else {
+            push(Change::Added, b[j]);
+            j += 1;
+        }
+    }
+    runs
+}
+
+/// The highlighted runs for an edited copy, when both versions are the
+/// same kind of content and their text differs (REQ-EXTRAS-013.A8).
+pub fn edit_diff(item: &Kept) -> Option<Vec<(Change, String)>> {
+    let next = item.replaced_by.as_ref()?;
+    if item.why != Why::Edited
+        || std::mem::discriminant(&item.content) != std::mem::discriminant(next)
+    {
+        return None;
+    }
+    let (old, new) = (copy_text(&item.content), copy_text(next));
+    (old != new).then(|| word_diff(&old, &new))
 }
 
 /// Copies the person asked to forget, per archive file, until that
@@ -411,6 +575,92 @@ mod tests {
         let versions: Vec<_> = kept.iter().map(|kept| kept.content.clone()).collect();
         assert_eq!(versions, [text("v1"), text("v2")]);
         assert!(kept.iter().all(|kept| kept.why == Why::Edited));
+    }
+
+    fn joined(runs: &[(Change, String)], keep: impl Fn(Change) -> bool) -> String {
+        runs.iter()
+            .filter(|(change, _)| keep(*change))
+            .map(|(_, text)| text.as_str())
+            .collect()
+    }
+
+    #[test]
+    fn a_word_diff_marks_the_replaced_word() {
+        let runs = word_diff("a b c", "a x c");
+        assert_eq!(
+            runs,
+            vec![
+                (Change::Same, "a ".to_owned()),
+                (Change::Removed, "b".to_owned()),
+                (Change::Added, "x".to_owned()),
+                (Change::Same, " c".to_owned()),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_word_diff_marks_whole_words_and_keeps_the_text_exact() {
+        let old = "Path of Moderatiob (黃道😅 ) dang\nwill  not";
+        let new = "Path of Moderation (黃道😅 ) dang\nwill  not";
+        let runs = word_diff(old, new);
+        assert!(runs.contains(&(Change::Removed, "Moderatiob".to_owned())));
+        assert!(runs.contains(&(Change::Added, "Moderation".to_owned())));
+        assert_eq!(joined(&runs, |c| c != Change::Added), old);
+        assert_eq!(joined(&runs, |c| c != Change::Removed), new);
+    }
+
+    #[test]
+    fn copy_takes_the_text_or_the_caption() {
+        assert_eq!(copy_text(&text("line 1\nline 2")), "line 1\nline 2");
+    }
+
+    #[test]
+    fn each_edit_is_compared_with_the_text_that_replaced_it() {
+        let db = archive();
+        put(&db, "m", &text("v1 a"));
+        preserve(&db, "c", "m", &text("v2 a"), true);
+        put(&db, "m", &text("v2 a"));
+        preserve(&db, "c", "m", &text("v3 a"), true);
+        put(&db, "m", &text("v3 a"));
+        let mut kept = kept(&db).unwrap();
+        kept.sort_by_key(|kept| kept.version);
+        assert_eq!(kept[0].replaced_by, Some(text("v2 a")));
+        assert_eq!(kept[1].replaced_by, Some(text("v3 a")));
+        let runs = edit_diff(&kept[0]).unwrap();
+        assert!(runs.contains(&(Change::Removed, "v1".to_owned())));
+        assert!(runs.contains(&(Change::Added, "v2".to_owned())));
+    }
+
+    #[test]
+    fn the_newest_edit_of_a_deleted_message_compares_with_the_deleted_copy() {
+        let db = archive();
+        put(&db, "m", &text("v1"));
+        preserve(&db, "c", "m", &text("v2"), true);
+        put(&db, "m", &text("v2"));
+        preserve(&db, "c", "m", &Content::Revoked, false);
+        put(&db, "m", &Content::Revoked);
+        let all = kept(&db).unwrap();
+        let edited = all.iter().find(|k| k.why == Why::Edited).unwrap();
+        assert_eq!(edited.replaced_by, Some(text("v2")));
+    }
+
+    #[test]
+    fn a_forgotten_next_version_shows_no_highlights() {
+        let db = archive();
+        for (now, next) in [("v1", "v2"), ("v2", "v3"), ("v3", "v4")] {
+            put(&db, "m", &text(now));
+            preserve(&db, "c", "m", &text(next), true);
+        }
+        put(&db, "m", &text("v4"));
+        let all: Vec<Kept> = kept(&db)
+            .unwrap()
+            .into_iter()
+            .filter(|k| k.version != 2)
+            .collect();
+        let first = all.iter().find(|k| k.version == 1).unwrap();
+        assert_eq!(replaced_by(&db, &all, first), None);
+        let last = all.iter().find(|k| k.version == 3).unwrap();
+        assert_eq!(replaced_by(&db, &all, last), Some(text("v4")));
     }
 
     /// Through the real archive: its hooks keep the copies.

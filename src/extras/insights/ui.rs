@@ -1187,6 +1187,7 @@ fn kept(app: &mut App, ui: &mut Ui, palette: &Palette) {
     let archive = super::archive_path(app);
     let mut forget = None;
     let mut open = None;
+    let mut copy = None;
     for (index, item) in app.extras.insights.kept.iter().enumerate().take(500) {
         let title = app.chat_title_of(&item.chat);
         let sender = if item.from_me {
@@ -1234,6 +1235,14 @@ fn kept(app: &mut App, ui: &mut Ui, palette: &Palette) {
                         if ui.small_button("Open chat").clicked() {
                             open = Some(item.chat.clone());
                         }
+                        // REQ-EXTRAS-012: copy the kept text.
+                        if ui
+                            .small_button("Copy")
+                            .on_hover_text("Copy this message")
+                            .clicked()
+                        {
+                            copy = Some(crate::extras::keep::copy_text(&item.content));
+                        }
                         let when = jiff::Timestamp::from_second(item.timestamp)
                             .map(|t| {
                                 t.to_zoned(jiff::tz::TimeZone::system())
@@ -1244,16 +1253,38 @@ fn kept(app: &mut App, ui: &mut Ui, palette: &Palette) {
                         ui.label(RichText::new(when).small().color(palette.secondary));
                     });
                 });
-                let summary = item.content.summary();
-                ui.label(RichText::new(summary).color(palette.text));
+                // REQ-EXTRAS-012.A3 / REQ-EXTRAS-013: the text is selectable,
+                // and an edited copy shows what its edit changed.
+                match crate::extras::keep::edit_diff(item) {
+                    Some(runs) => {
+                        let job = diff_job(ui, palette, &runs);
+                        ui.add(egui::Label::new(job).selectable(true).wrap());
+                    }
+                    None => {
+                        let text = item.content.full_summary();
+                        ui.add(
+                            egui::Label::new(RichText::new(text).color(palette.text))
+                                .selectable(true)
+                                .wrap(),
+                        );
+                    }
+                }
                 if let Some(path) = item.content.media().and_then(|media| media.path.as_ref()) {
-                    ui.label(
-                        RichText::new(format!("Saved at {}", path.display()))
-                            .small()
-                            .color(palette.secondary),
+                    ui.add(
+                        egui::Label::new(
+                            RichText::new(format!("Saved at {}", path.display()))
+                                .small()
+                                .color(palette.secondary),
+                        )
+                        .selectable(true)
+                        .wrap(),
                     );
                 }
             });
+    }
+    if let Some(text) = copy {
+        ui.ctx().copy_text(text);
+        app.toast("Copied");
     }
     if let Some(index) = forget {
         let item = app.extras.insights.kept.remove(index);
@@ -1262,6 +1293,50 @@ fn kept(app: &mut App, ui: &mut Ui, palette: &Palette) {
     if let Some(chat) = open {
         app.actions.push(Action::OpenChat(chat));
     }
+}
+
+/// The colour of words an edit added; the palette has no green of its own.
+fn added_color(palette: &Palette) -> Color32 {
+    if palette.dark {
+        Color32::from_rgb(0x4A, 0xD6, 0x6D)
+    } else {
+        Color32::from_rgb(0x1A, 0x7F, 0x37)
+    }
+}
+
+/// An edit's word diff as one inline text: removed words red and struck
+/// through, added words green (REQ-EXTRAS-013.A1/A7).
+fn diff_job(
+    ui: &Ui,
+    palette: &Palette,
+    runs: &[(crate::extras::keep::Change, String)],
+) -> egui::text::LayoutJob {
+    use crate::extras::keep::Change;
+    let font = egui::TextStyle::Body.resolve(ui.style());
+    let mut job = egui::text::LayoutJob::default();
+    for (change, text) in runs {
+        let format = match change {
+            Change::Same => egui::TextFormat::simple(font.clone(), palette.text),
+            Change::Removed => egui::TextFormat {
+                font_id: font.clone(),
+                color: palette.danger,
+                background: palette.danger.gamma_multiply(0.12),
+                strikethrough: Stroke::new(1.2, palette.danger),
+                ..Default::default()
+            },
+            Change::Added => {
+                let green = added_color(palette);
+                egui::TextFormat {
+                    font_id: font.clone(),
+                    color: green,
+                    background: green.gamma_multiply(0.14),
+                    ..Default::default()
+                }
+            }
+        };
+        job.append(text, 0.0, format);
+    }
+    job
 }
 
 fn saving(app: &mut App, ui: &mut Ui, palette: &Palette) {
