@@ -355,3 +355,119 @@ verifies:
 - The trusted publisher key is the fork's, and upstream's key is not trusted.
 <!-- id: REQ-ZNGA-011.A3 -->
 - A release whose signature was made with any other key is refused.
+
+<!-- id: REQ-ZNGA-012 -->
+## Znga MUST answer what the person writes to their own "Message yourself" chat
+
+Off by default (a new switch, "Chat with Znga in Message yourself").
+When on, every text message the person sends to their own number's
+chat, from the phone or from ZapFast, is a request to Znga. Znga
+answers it with the configured engine (local, bring-your-own-key, or
+Claude Code) and sends the answer back to that same chat, on the same
+account, so the person can chat with Znga from their phone.
+
+This is the one exception to the "no auto-replies" non-goal, and it is
+the same line REQ-ZNGA-006 already allows: the only chat Znga ever
+writes to by itself is the person's own. Answers use the same context
+and privacy rules as Ask Znga (REQ-ZNGA-009, REQ-ZNGA-003): recent
+activity from visible chats only, never locked or excluded ones.
+
+Every answer starts with a fixed Znga marker (e.g. `✨ Znga`) so it
+reads as Znga's on the phone and can be told apart from the person's
+own messages (REQ-ZNGA-014).
+
+implementations:
+  - src/znga/hooks.rs:observe_own_chat
+  - src/znga/hooks.rs:request_self_chat
+  - src/znga/prompt.rs:self_chat
+  - src/znga/config.rs:Config
+  - src/znga/mod.rs:Znga.handle
+
+## Acceptance
+<!-- id: REQ-ZNGA-012.A1 -->
+- With the switch off (or Znga off), a message to the own chat gets no
+  answer and no engine request is made.
+<!-- id: REQ-ZNGA-012.A2 -->
+- With the switch on, a text sent to the own chat from the phone gets
+  exactly one answer in that same chat, on the account it was sent on.
+<!-- id: REQ-ZNGA-012.A3 -->
+- A text the person sends to their own chat from ZapFast itself is
+  answered the same way.
+<!-- id: REQ-ZNGA-012.A4 -->
+- Each answer starts with the Znga marker.
+<!-- id: REQ-ZNGA-012.A5 -->
+- When the engine fails or is not set up, Znga sends one short `⚠`
+  answer that says why, instead of staying silent.
+<!-- id: REQ-ZNGA-012.A6 -->
+- Answers are never sent to any chat other than the own chat.
+<!-- id: REQ-ZNGA-012.A7 -->
+- Non-text messages (voice notes, images, stickers, documents) are not
+  answered. [needs review: caption handling]
+<!-- id: REQ-ZNGA-012.A8 -->
+- If the own chat is locked or excluded from Znga, nothing in it is
+  answered.
+
+<!-- id: REQ-ZNGA-013 -->
+## Znga MUST keep the self-chat conversation's context across turns and restarts
+
+The self-chat is a multi-turn conversation. Znga rebuilds the thread
+from the own chat's recent history in ZapFast's archive: the person's
+messages are user turns and messages that start with the Znga marker
+are Znga's turns. Nothing new is stored, so context survives restarts
+without keeping message text outside the encrypted archive (the
+document's non-goal). It is a separate thread from the in-app Ask Znga
+panel.
+
+implementations:
+  - src/znga/prompt.rs:self_chat
+  - src/znga/hooks.rs:self_chat_turns
+
+## Acceptance
+<!-- id: REQ-ZNGA-013.A1 -->
+- A follow-up question ("and what about her sister?") is answered with
+  the earlier turns of the self-chat in the prompt.
+<!-- id: REQ-ZNGA-013.A2 -->
+- After ZapFast restarts, the next answer still has the earlier turns
+  in its prompt.
+<!-- id: REQ-ZNGA-013.A3 -->
+- Znga briefings copied to the own chat (REQ-ZNGA-006) show up as Znga
+  turns, so "what did that briefing mean?" can be answered.
+<!-- id: REQ-ZNGA-013.A4 -->
+- The prompt holds at most the last 20 turns of the self-chat.
+  [needs review: limit]
+<!-- id: REQ-ZNGA-013.A5 -->
+- Self-chat turns never show up in the Ask Znga panel, and Ask panel
+  turns never show up in the self-chat prompt.
+<!-- id: REQ-ZNGA-013.A6 -->
+- No self-chat message text is written to Znga's own state files.
+
+<!-- id: REQ-ZNGA-014 -->
+## Znga MUST never answer itself, replayed history, or more than 100 times a day
+
+Znga's own messages land in the own chat as the person's sent messages
+too, and reconnecting replays history. Neither can count as a request,
+or Znga would loop or answer old notes. A daily cap backs this up.
+
+implementations:
+  - src/znga/proactive.rs:SelfChat
+  - src/znga/hooks.rs:observe_own_chat
+
+## Acceptance
+<!-- id: REQ-ZNGA-014.A1 -->
+- A message that starts with the Znga marker (answers and briefings)
+  never triggers an answer.
+<!-- id: REQ-ZNGA-014.A2 -->
+- Messages from history replay or a sync of older messages are not
+  answered.
+<!-- id: REQ-ZNGA-014.A3 -->
+- A message sent before the switch was turned on, or more than 5 minutes
+  before ZapFast received it, is not answered. [needs review: 5 minutes]
+<!-- id: REQ-ZNGA-014.A4 -->
+- The same message is answered at most once, even when it arrives again
+  (status updates, re-sync).
+<!-- id: REQ-ZNGA-014.A5 -->
+- While an answer is being written, a new message waits for it and is
+  answered next, with the earlier answer in its context.
+<!-- id: REQ-ZNGA-014.A6 -->
+- The 101st answer in a day is not sent. At the cap Znga sends one notice
+  saying it resumes tomorrow, and nothing more that day.
