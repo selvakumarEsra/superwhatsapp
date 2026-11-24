@@ -1,4 +1,5 @@
-//! The Znga panel (Today, Drafts, Ask, Setup) and its button on the rail.
+//! The Znga panel (Today, Drafts, Ask, Memory, Setup) and its button on the
+//! rail.
 //! Views only edit Znga's own fields and queue work through [`super::hooks`].
 
 use egui::{Color32, Pos2, Rect, RichText, Sense, Ui, Vec2, vec2};
@@ -9,8 +10,9 @@ use crate::model::Action;
 use super::config::{Engine, chat_key};
 use super::drafts::Kind;
 use super::privacy::{ChatFacts, visible};
+use super::promises::{Owes, State};
 use super::prompt::{self, Rewrite};
-use super::{Purpose, Tab, hooks, keys};
+use super::{Purpose, Tab, VoiceState, hooks, keys};
 
 /// Paints Znga's mark: a four-point sparkle with a small one beside it.
 pub fn paint_sparkle(painter: &egui::Painter, center: Pos2, size: f32, color: Color32) {
@@ -195,6 +197,7 @@ fn panel(app: &mut App, ui: &mut Ui) {
                 },
             ),
             (Tab::Ask, "Ask".to_owned()),
+            (Tab::Memory, "Memory".to_owned()),
             (Tab::Setup, "Setup".to_owned()),
         ] {
             if ui.selectable_label(app.znga.tab == tab, label).clicked() {
@@ -226,6 +229,7 @@ fn panel(app: &mut App, ui: &mut Ui) {
             Tab::Today => today(app, ui),
             Tab::Drafts => drafts(app, ui),
             Tab::Ask => ask(app, ui),
+            Tab::Memory => memory(app, ui),
             Tab::Setup => setup(app, ui),
         });
 }
@@ -366,6 +370,247 @@ fn today(app: &mut App, ui: &mut Ui) {
             });
         }
     }
+    advanced_today(app, ui);
+}
+
+/// Catch-ups, plans, voice notes, promises and drifting chats
+/// (`specs/znga-advanced.md`).
+fn advanced_today(app: &mut App, ui: &mut Ui) {
+    let palette = app.palette;
+    // Catch-ups (REQ-ZNGA-021).
+    if !app.znga.catch_ups.is_empty() {
+        ui.add_space(4.0);
+        ui.label(RichText::new("Catch-ups").strong());
+        let mut dismiss = None;
+        for (index, catch_up) in app.znga.catch_ups.iter().enumerate().rev().take(4) {
+            card(ui, &palette, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new(&catch_up.chat_title).strong());
+                    ui.label(
+                        RichText::new(time_label(catch_up.at))
+                            .small()
+                            .color(palette.dim),
+                    );
+                    if ui.small_button("Done").clicked() {
+                        dismiss = Some(index);
+                    }
+                });
+                ui.add(egui::Label::new(&catch_up.summary).selectable(true));
+            });
+        }
+        if let Some(index) = dismiss {
+            app.znga.catch_ups.remove(index);
+        }
+    }
+    // Plans found in a chat (REQ-ZNGA-022).
+    if !app.znga.events.is_empty() {
+        ui.add_space(4.0);
+        ui.label(RichText::new("Plans").strong());
+        let mut add = None;
+        let mut dismiss = None;
+        let zone = jiff::tz::TimeZone::system();
+        for (index, found) in app.znga.events.iter().enumerate() {
+            card(ui, &palette, |ui| {
+                ui.label(RichText::new(&found.event.title).strong());
+                let when = jiff::Timestamp::from_second(found.event.start)
+                    .map(|t| {
+                        t.to_zoned(zone.clone())
+                            .strftime("%a %-d %b, %H:%M")
+                            .to_string()
+                    })
+                    .unwrap_or_default();
+                let place = if found.event.place.is_empty() {
+                    String::new()
+                } else {
+                    format!(" · {}", found.event.place)
+                };
+                ui.label(
+                    RichText::new(format!("{when}{place} · from {}", found.chat_title))
+                        .small()
+                        .color(palette.secondary),
+                );
+                ui.horizontal(|ui| {
+                    if ui.small_button("📅 Add to calendar").clicked() {
+                        add = Some(index);
+                    }
+                    if ui.small_button("Dismiss").clicked() {
+                        dismiss = Some(index);
+                    }
+                });
+            });
+        }
+        if let Some(index) = add {
+            hooks::add_to_calendar(app, index);
+        }
+        if let Some(index) = dismiss {
+            app.znga.events.remove(index);
+        }
+    }
+    // Voice notes (REQ-ZNGA-023).
+    if !app.znga.voice_notes.is_empty() {
+        ui.add_space(4.0);
+        ui.label(RichText::new("Voice notes").strong());
+        let mut summarise = None;
+        let mut dismiss = None;
+        for (index, note) in app.znga.voice_notes.iter().enumerate().rev().take(6) {
+            card(ui, &palette, |ui| {
+                ui.horizontal(|ui| {
+                    let length = note
+                        .seconds
+                        .map(|s| format!(" · {}:{:02}", s / 60, s % 60))
+                        .unwrap_or_default();
+                    ui.label(
+                        RichText::new(format!("{} in {}", note.sender_name, note.chat_title))
+                            .strong(),
+                    );
+                    ui.label(
+                        RichText::new(format!("{}{length}", time_label(note.at)))
+                            .small()
+                            .color(palette.dim),
+                    );
+                });
+                match &note.state {
+                    VoiceState::New | VoiceState::Failed(_) => {
+                        if let VoiceState::Failed(error) = &note.state {
+                            ui.label(RichText::new(error).small().color(palette.warning));
+                        }
+                        ui.horizontal(|ui| {
+                            if ui.small_button("🎧 Summarise").clicked() {
+                                summarise = Some(note.id);
+                            }
+                            if ui.small_button("Dismiss").clicked() {
+                                dismiss = Some(index);
+                            }
+                        });
+                    }
+                    VoiceState::Working => {
+                        ui.horizontal(|ui| {
+                            ui.add(egui::Spinner::new().size(12.0));
+                            ui.label(RichText::new("Listening…").small().color(palette.secondary));
+                        });
+                    }
+                    VoiceState::Done {
+                        transcript,
+                        summary,
+                    } => {
+                        if summary.is_empty() {
+                            ui.add(egui::Spinner::new().size(12.0));
+                        } else {
+                            ui.add(egui::Label::new(summary).selectable(true));
+                        }
+                        ui.collapsing("Transcript", |ui| {
+                            ui.add(egui::Label::new(transcript).selectable(true));
+                        });
+                    }
+                }
+            });
+        }
+        if let Some(id) = summarise {
+            hooks::request_voice(app, id);
+        }
+        if let Some(index) = dismiss {
+            app.znga.voice_notes.remove(index);
+        }
+    }
+    // Promises (REQ-ZNGA-018).
+    let open: Vec<(usize, super::promises::Promise)> = app
+        .znga
+        .promises
+        .open()
+        .into_iter()
+        .filter(|(_, p)| p.account == app.account().id.as_str())
+        .map(|(index, p)| (index, p.clone()))
+        .collect();
+    if !open.is_empty() {
+        ui.add_space(4.0);
+        ui.label(RichText::new("Promises").strong());
+        let mut change = None;
+        let zone = jiff::tz::TimeZone::system();
+        for (index, promise) in open.iter().take(12) {
+            card(ui, &palette, |ui| {
+                let who = match promise.owes {
+                    Owes::Me => format!("You → {}", promise.chat_title),
+                    Owes::Them => format!("{} asked you", promise.chat_title),
+                };
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new(who).small().strong());
+                    if let Some(due) = promise.due {
+                        let when = jiff::Timestamp::from_second(due)
+                            .map(|t| {
+                                t.to_zoned(zone.clone())
+                                    .strftime("%a %-d %b, %H:%M")
+                                    .to_string()
+                            })
+                            .unwrap_or_default();
+                        let color = if due < crate::util::now() {
+                            palette.danger
+                        } else {
+                            palette.dim
+                        };
+                        ui.label(RichText::new(format!("due {when}")).small().color(color));
+                    }
+                });
+                ui.label(&promise.text);
+                ui.horizontal(|ui| {
+                    if ui.small_button("Done").clicked() {
+                        change = Some((*index, State::Done));
+                    }
+                    if ui.small_button("Not a promise").clicked() {
+                        change = Some((*index, State::Dismissed));
+                    }
+                });
+            });
+        }
+        if let Some((index, state)) = change {
+            app.znga.promises.set_state(index, state);
+        }
+    }
+    // Stay close (REQ-ZNGA-024).
+    let account = app.account().id.as_str().to_owned();
+    let drifting: Vec<super::coach::Rhythm> = app
+        .znga
+        .rhythms
+        .iter()
+        .filter(|r| r.drifting && r.account == account)
+        .cloned()
+        .collect();
+    if !app.znga.config.twin_chats.is_empty() {
+        ui.add_space(4.0);
+        ui.horizontal(|ui| {
+            ui.label(RichText::new("Stay close").strong());
+            if ui
+                .small_button("⟳")
+                .on_hover_text("Re-read how your chats are going")
+                .clicked()
+            {
+                hooks::scan_rhythms(app);
+            }
+        });
+        if drifting.is_empty() {
+            ui.label(
+                RichText::new("Your twin chats are keeping their usual rhythm.")
+                    .small()
+                    .color(palette.secondary),
+            );
+        }
+        let mut opener = None;
+        for rhythm in &drifting {
+            card(ui, &palette, |ui| {
+                ui.label(RichText::new(&rhythm.chat_title).strong());
+                ui.label(
+                    RichText::new(rhythm.reason())
+                        .small()
+                        .color(palette.secondary),
+                );
+                if ui.small_button("Draft an opener").clicked() {
+                    opener = Some(rhythm.chat.clone());
+                }
+            });
+        }
+        if let Some(chat) = opener {
+            hooks::request_opener(app, &account, &chat);
+        }
+    }
 }
 
 fn drafts(app: &mut App, ui: &mut Ui) {
@@ -397,6 +642,22 @@ fn drafts(app: &mut App, ui: &mut Ui) {
                 let account = app.account().id.as_str().to_owned();
                 hooks::request_draft(app, &account, &chat, Kind::Suggestion);
                 app.znga.set_status("Znga is drafting a reply…", false);
+            }
+            if ui
+                .add_enabled(has_chat, egui::Button::new("⏩ Catch me up"))
+                .on_hover_text("What changed since you last read it, and what needs you")
+                .on_disabled_hover_text("Open a chat first")
+                .clicked()
+            {
+                hooks::request_catch_up(app);
+            }
+            if ui
+                .add_enabled(has_chat, egui::Button::new("📅 Find plans"))
+                .on_hover_text("Turn plans in this chat into calendar events")
+                .on_disabled_hover_text("Open a chat first")
+                .clicked()
+            {
+                hooks::request_events(app);
             }
             for how in Rewrite::ALL {
                 if ui
@@ -543,8 +804,9 @@ fn ask(app: &mut App, ui: &mut Ui) {
     if app.znga.ask.is_empty() {
         ui.label(
             RichText::new(
-                "Ask about your recent chats: \"What did Ada want?\", \"Do I owe anyone \
-                 a reply?\", \"Plan my evening around what people asked\".",
+                "Ask about any of your chats, however old: \"When does Ravi's flight \
+                 land?\", \"Do I owe anyone a reply?\", \"What did we decide about the \
+                 trip?\". Znga searches your archive on this computer.",
             )
             .color(palette.secondary),
         );
@@ -559,14 +821,51 @@ fn ask(app: &mut App, ui: &mut Ui) {
         ui.add(egui::Label::new(&turn.text).selectable(true));
         ui.add_space(6.0);
     }
-    if app.znga.waiting_for(|p| matches!(p, Purpose::Ask)) {
+    // The answer being written, as it streams (REQ-ZNGA-015).
+    let panel_ask = |app: &App, ask: u64| {
+        app.znga
+            .asking
+            .get(&ask)
+            .is_some_and(|a| a.origin == super::archive_ask::AskOrigin::Panel)
+    };
+    let answering = app
+        .znga
+        .runner
+        .partial(|p| {
+            matches!(p, Purpose::Answer { ask } if panel_ask(app, *ask))
+                || matches!(p, Purpose::Ask)
+        })
+        .map(|(_, text)| text.to_owned());
+    // Asked from this tab and not yet answering: planning or searching.
+    let planning = app.znga.asking.iter().any(|(id, asking)| {
+        asking.origin == super::archive_ask::AskOrigin::Panel
+            && !app
+                .znga
+                .waiting_for(|p| matches!(p, Purpose::Answer { ask } if ask == id))
+    });
+    if let Some(text) = &answering {
+        ui.label(RichText::new("Znga").small().strong().color(palette.accent));
+        if !text.is_empty() {
+            ui.add(egui::Label::new(text.as_str()).selectable(true));
+        }
+    }
+    if answering.is_some() || planning {
         ui.horizontal(|ui| {
             ui.add(egui::Spinner::new().size(12.0));
             ui.label(
-                RichText::new("Znga is thinking…")
-                    .small()
-                    .color(palette.secondary),
+                RichText::new(if answering.as_deref().is_some_and(|t| !t.is_empty()) {
+                    "Znga is writing…"
+                } else if planning {
+                    "Searching your chats…"
+                } else {
+                    "Znga is thinking…"
+                })
+                .small()
+                .color(palette.secondary),
             );
+            if ui.small_button("■ Stop").clicked() {
+                hooks::stop_ask(app);
+            }
         });
     }
     ui.separator();
@@ -582,12 +881,176 @@ fn ask(app: &mut App, ui: &mut Ui) {
         let send = ui.button("Ask").clicked();
         if ui.small_button("Clear thread").clicked() {
             app.znga.ask.clear();
+            app.znga.ask_dirty = true;
         }
         if send || enter {
             let question = std::mem::take(&mut app.znga.ask_input);
             hooks::request_ask(app, question);
         }
     });
+}
+
+/// The "Explain" button and its answer under an edited kept copy in
+/// Insights (REQ-ZNGA-026). Returns (key, before, after) when clicked.
+#[cfg(feature = "extras")]
+pub fn explain_edit(
+    app: &App,
+    ui: &mut Ui,
+    item: &crate::extras::keep::Kept,
+) -> Option<(String, String, String)> {
+    if !app.znga.config.enabled {
+        return None;
+    }
+    let after = item.replaced_by.as_ref()?;
+    let key = format!("{}/{}/{}", item.chat, item.id, item.version);
+    let palette = app.palette;
+    match app.znga.explanations.get(&key) {
+        Some(Ok(text)) => {
+            ui.label(RichText::new(format!("✨ {text}")).color(palette.secondary));
+            None
+        }
+        Some(Err(error)) => {
+            ui.label(
+                RichText::new(format!("✨ {error}"))
+                    .small()
+                    .color(palette.warning),
+            );
+            None
+        }
+        None if app
+            .znga
+            .waiting_for(|p| matches!(p, Purpose::ExplainEdit { key: k } if *k == key)) =>
+        {
+            ui.horizontal(|ui| {
+                ui.add(egui::Spinner::new().size(12.0));
+                ui.label(
+                    RichText::new("Explaining…")
+                        .small()
+                        .color(palette.secondary),
+                );
+            });
+            None
+        }
+        None => ui
+            .small_button("✨ Explain")
+            .on_hover_text("What this edit changed, in a sentence")
+            .clicked()
+            .then(|| {
+                (
+                    key,
+                    crate::extras::keep::copy_text(&item.content),
+                    crate::extras::keep::copy_text(after),
+                )
+            }),
+    }
+}
+
+/// What Znga remembers about people, and the Sentinel's log
+/// (REQ-ZNGA-019, REQ-ZNGA-017).
+fn memory(app: &mut App, ui: &mut Ui) {
+    let palette = app.palette;
+    if !app.znga.config.enabled {
+        welcome(app, ui);
+        return;
+    }
+    let account = app.account().id.as_str().to_owned();
+    card(ui, &palette, |ui| {
+        ui.label(RichText::new("What Znga remembers about people").strong());
+        ui.label(
+            RichText::new(
+                "Learned from your twin chats, kept encrypted on this computer only. \
+                 Delete anything; it will not come back.",
+            )
+            .small()
+            .color(palette.secondary),
+        );
+    });
+    let facts: Vec<super::memory::Fact> = app
+        .znga
+        .people
+        .for_account(&account)
+        .into_iter()
+        .cloned()
+        .collect();
+    if facts.is_empty() {
+        ui.label(
+            RichText::new("Nothing yet. Mark close ones as Twin chats in Setup.")
+                .color(palette.secondary),
+        );
+    }
+    let mut forget = None;
+    let mut last_title = String::new();
+    for fact in &facts {
+        if fact.chat_title != last_title {
+            ui.add_space(4.0);
+            ui.label(RichText::new(&fact.chat_title).strong());
+            last_title = fact.chat_title.clone();
+        }
+        ui.horizontal(|ui| {
+            ui.label(format!("• {}", fact.text));
+            if ui.small_button("×").on_hover_text("Forget this").clicked() {
+                forget = Some(fact.clone());
+            }
+        });
+    }
+    if let Some(fact) = forget {
+        app.znga
+            .people
+            .forget(&fact.account, &fact.chat, &fact.text);
+    }
+    if let Some(chat) = app.open_chat.clone() {
+        let title = app.chat_title_of(&chat);
+        ui.add_space(6.0);
+        ui.horizontal(|ui| {
+            ui.add(
+                egui::TextEdit::singleline(&mut app.znga.chat_filter)
+                    .hint_text(format!("Add a fact about {title}"))
+                    .desired_width(220.0),
+            );
+            if ui.button("Add").clicked() {
+                let text = std::mem::take(&mut app.znga.chat_filter);
+                if !text.trim().is_empty() {
+                    let now = crate::util::now();
+                    app.znga
+                        .people
+                        .add(&account, &chat, &title, &[text.trim().to_owned()], now);
+                }
+            }
+        });
+    }
+    ui.add_space(8.0);
+    ui.collapsing(
+        "Sentinel log: everything Znga did or was stopped from doing",
+        |ui| {
+            let mut shown = 0;
+            for entry in app.znga.audit.entries().rev().take(100) {
+                shown += 1;
+                let (mark, color) = if entry.allowed {
+                    ("✓", palette.secondary)
+                } else {
+                    ("✗", palette.danger)
+                };
+                ui.label(
+                    RichText::new(format!(
+                        "{mark} {} · {} · for {} · {}",
+                        time_label(entry.at),
+                        entry.action,
+                        entry.origin.label(),
+                        entry.reason
+                    ))
+                    .small()
+                    .color(color),
+                );
+            }
+            if shown == 0 {
+                ui.label(
+                    RichText::new("Nothing yet.")
+                        .small()
+                        .color(palette.secondary),
+                );
+            }
+        },
+    );
 }
 
 fn setup(app: &mut App, ui: &mut Ui) {
@@ -815,6 +1278,77 @@ fn setup(app: &mut App, ui: &mut Ui) {
         changed |= ui
             .checkbox(&mut config.include_groups, "Include group chats")
             .changed();
+        let was = config.self_chat;
+        changed |= ui
+            .checkbox(
+                &mut config.self_chat,
+                "Chat with Znga in my own \"Message yourself\" chat",
+            )
+            .changed();
+        if config.self_chat && !was {
+            config.self_chat_since = crate::util::now();
+        }
+        if config.self_chat {
+            ui.label(
+                RichText::new(
+                    "Every text you send yourself, from your phone or here, is a question \
+                     for Znga; it answers in the same chat (at most 100 a day). It never \
+                     writes to anyone else.",
+                )
+                .small()
+                .color(palette.secondary),
+            );
+        }
+        changed |= ui
+            .checkbox(&mut config.promises, "Track promises in twin chats")
+            .changed();
+        changed |= ui
+            .checkbox(
+                &mut config.memory,
+                "Remember facts about people in twin chats",
+            )
+            .changed();
+    });
+
+    card(ui, &palette, |ui| {
+        ui.label(RichText::new("Voice notes").strong());
+        let config = &mut app.znga.config;
+        egui::Grid::new("znga-voice-grid")
+            .num_columns(2)
+            .show(ui, |ui| {
+                ui.label("Transcription");
+                changed |= ui
+                    .add(
+                        egui::TextEdit::singleline(&mut config.voice_endpoint)
+                            .hint_text(super::voice::DEFAULT_ENDPOINT),
+                    )
+                    .changed();
+                ui.end_row();
+                ui.label("Model");
+                changed |= ui
+                    .add(
+                        egui::TextEdit::singleline(&mut config.voice_model)
+                            .hint_text(super::voice::DEFAULT_MODEL),
+                    )
+                    .changed();
+                ui.end_row();
+            });
+        let local = super::voice::is_local(&config.voice_endpoint());
+        ui.label(
+            RichText::new(if local {
+                "Runs on this computer: start a whisper.cpp server with \
+                 `--inference-path /v1/audio/transcriptions --port 8080`."
+            } else {
+                "This service receives the voice notes you summarise. It uses your OpenAI \
+                 key and needs the privacy consent above."
+            })
+            .small()
+            .color(if local {
+                palette.secondary
+            } else {
+                palette.warning
+            }),
+        );
     });
 
     card(ui, &palette, |ui| {
@@ -861,6 +1395,7 @@ fn setup(app: &mut App, ui: &mut Ui) {
         );
     });
 
+    changed |= personas(app, ui);
     changed |= chat_choices(app, ui);
 
     if changed || engine_changed {
@@ -869,6 +1404,73 @@ fn setup(app: &mut App, ui: &mut Ui) {
     if engine_changed {
         app.znga.refresh_key();
     }
+}
+
+/// A persona per linked account (REQ-ZNGA-025).
+fn personas(app: &mut App, ui: &mut Ui) -> bool {
+    let palette = app.palette;
+    if app.accounts.len() < 2 {
+        return false;
+    }
+    let mut changed = false;
+    let accounts: Vec<(String, String)> = app
+        .accounts
+        .iter()
+        .map(|account| {
+            let label = account
+                .me_name
+                .clone()
+                .or_else(|| account.me.clone())
+                .unwrap_or_else(|| account.id.as_str().to_owned());
+            (account.id.as_str().to_owned(), label)
+        })
+        .collect();
+    card(ui, &palette, |ui| {
+        ui.label(RichText::new("Personas").strong());
+        ui.label(
+            RichText::new(
+                "How Znga sounds and behaves on each linked account, so work and \
+                 personal stay apart. Empty fields use the settings above.",
+            )
+            .small()
+            .color(palette.secondary),
+        );
+        for (id, label) in accounts {
+            ui.collapsing(label, |ui| {
+                let persona = app.znga.config.personas.entry(id.clone()).or_default();
+                egui::Grid::new(format!("znga-persona-{id}"))
+                    .num_columns(2)
+                    .show(ui, |ui| {
+                        ui.label("Name");
+                        changed |= ui.text_edit_singleline(&mut persona.your_name).changed();
+                        ui.end_row();
+                        ui.label("Tone");
+                        changed |= ui
+                            .add(
+                                egui::TextEdit::singleline(&mut persona.tone)
+                                    .hint_text("brief and professional"),
+                            )
+                            .changed();
+                        ui.end_row();
+                    });
+                ui.label("How you write here");
+                changed |= ui
+                    .add(
+                        egui::TextEdit::multiline(&mut persona.voice_notes)
+                            .desired_rows(2)
+                            .desired_width(f32::INFINITY),
+                    )
+                    .changed();
+                changed |= ui
+                    .checkbox(
+                        &mut persona.briefings,
+                        "Proactive briefings for this account",
+                    )
+                    .changed();
+            });
+        }
+    });
+    changed
 }
 
 /// Twin and Exclude switches for the active account's recent chats.

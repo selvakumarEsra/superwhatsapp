@@ -14,26 +14,40 @@
 //! - [`triage`], [`proactive`]: alerts, briefings, notes to self, check-ins
 //! - [`style`], [`drafts`], [`prompt`]: the twin
 //! - [`privacy`]: which chats Znga may see at all
+//! - [`sentinel`]: the one gate every Znga action passes, with its log
+//! - [`store`]: `znga.db`, Znga's encrypted memory, and archive reads
+//! - [`memory`], [`promises`], [`coach`], [`calendar`], [`voice`],
+//!   [`archive_ask`], [`selfchat`]: the companion's advanced features
+//!   (`specs/znga-advanced.md`)
 //! - [`hooks`]: the bridge to [`crate::app::App`]
 //! - [`ui`]: the Znga panel and its rail button
 
+pub mod archive_ask;
+pub mod calendar;
+pub mod coach;
 pub mod config;
 #[cfg(any(test, feature = "demo"))]
 pub mod demo;
 pub mod drafts;
 pub mod hooks;
 pub mod keys;
+pub mod memory;
 pub mod privacy;
 pub mod proactive;
+pub mod promises;
 pub mod prompt;
 pub mod provider;
 pub mod runner;
+pub mod selfchat;
+pub mod sentinel;
+pub mod store;
 pub mod style;
 pub mod triage;
 pub mod ui;
 pub mod update;
+pub mod voice;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -62,7 +76,63 @@ pub enum Purpose {
         chats: Vec<(String, String)>,
     },
     Ask,
+    /// Step 1 of asking (REQ-ZNGA-020): what to search the archive for.
+    Plan {
+        ask: u64,
+    },
+    /// Step 2: the answer, from recent activity and archive hits.
+    Answer {
+        ask: u64,
+    },
+    Promises {
+        account: String,
+        chat: String,
+        chat_title: String,
+    },
+    Facts {
+        account: String,
+        chat: String,
+        chat_title: String,
+    },
+    CatchUp {
+        account: String,
+        chat: String,
+        chat_title: String,
+    },
+    Events {
+        account: String,
+        chat: String,
+        chat_title: String,
+    },
+    Voice {
+        note: u64,
+    },
+    ExplainEdit {
+        key: String,
+    },
+    /// A mini-app's request (REQ-MINIAPP-007): `key` is its install.
+    App {
+        key: String,
+        tag: String,
+    },
     Test,
+}
+
+impl Purpose {
+    /// Requests that run on the background lane (REQ-ZNGA-015.A2).
+    pub fn background(&self) -> bool {
+        matches!(
+            self,
+            Purpose::Briefing { proactive: true }
+                | Purpose::Draft {
+                    kind: Kind::AutoReply | Kind::CheckIn,
+                    ..
+                }
+                | Purpose::Promises { .. }
+                | Purpose::Facts { .. }
+                | Purpose::App { .. }
+        )
+    }
 }
 
 /// Something [`hooks`] must do in the app after an answer.
@@ -79,6 +149,62 @@ pub enum Effect {
     },
     /// Send `text` to our own chat (proactive briefings, when enabled).
     SelfNote(String),
+    /// Answer in the person's own chat (REQ-ZNGA-012).
+    SendOwn {
+        account: String,
+        chat: String,
+        text: String,
+    },
+    /// Search the archive for an ask in progress (REQ-ZNGA-020).
+    Search { ask: u64, terms: Vec<String> },
+    /// A mini-app's answer, success or failure (REQ-MINIAPP-007.A2).
+    App {
+        key: String,
+        tag: String,
+        answer: Result<String, String>,
+    },
+}
+
+/// A catch-up on one chat (REQ-ZNGA-021).
+#[derive(Clone, Debug, PartialEq)]
+pub struct CatchUp {
+    pub account: String,
+    pub chat: String,
+    pub chat_title: String,
+    pub summary: String,
+    pub at: i64,
+}
+
+/// An event found in a chat, waiting for "Add to calendar" (REQ-ZNGA-022).
+#[derive(Clone, Debug, PartialEq)]
+pub struct FoundEvent {
+    pub chat_title: String,
+    pub event: calendar::Event,
+}
+
+/// A transcription finished on its thread: (voice note id, transcript).
+pub type Transcribed = (u64, Result<String, String>);
+
+/// A voice note Znga may summarise (REQ-ZNGA-023).
+#[derive(Clone, Debug, PartialEq)]
+pub struct VoiceNote {
+    pub id: u64,
+    pub account: String,
+    pub chat: String,
+    pub chat_title: String,
+    pub sender_name: String,
+    pub message: String,
+    pub seconds: Option<u32>,
+    pub at: i64,
+    pub state: VoiceState,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum VoiceState {
+    New,
+    Working,
+    Done { transcript: String, summary: String },
+    Failed(String),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -94,6 +220,8 @@ pub enum Tab {
     Today,
     Drafts,
     Ask,
+    /// Facts, promises and the Sentinel's log.
+    Memory,
     Setup,
 }
 
@@ -143,6 +271,40 @@ pub struct Znga {
     pub(crate) last_checkin_scan: Option<Instant>,
     /// (engine, key) read once per engine instead of on every request.
     key_cache: Option<(config::Engine, Option<String>)>,
+    pub store: store::Store,
+    pub audit: sentinel::Audit,
+    pub people: memory::People,
+    pub promises: promises::Promises,
+    /// Asks in progress (plan → search → answer).
+    pub asking: HashMap<u64, archive_ask::Asking>,
+    next_ask: u64,
+    pub selfchat: selfchat::SelfChat,
+    /// Newest last.
+    pub catch_ups: Vec<CatchUp>,
+    pub events: Vec<FoundEvent>,
+    /// Newest last.
+    pub voice_notes: Vec<VoiceNote>,
+    next_voice: u64,
+    pub(crate) voice_results: (
+        std::sync::mpsc::Sender<Transcribed>,
+        std::sync::mpsc::Receiver<Transcribed>,
+    ),
+    pub rhythms: Vec<coach::Rhythm>,
+    /// Edit explanations by kept-copy key; not saved (REQ-ZNGA-026.A3).
+    pub explanations: HashMap<String, Result<String, String>>,
+    /// The account whose Ask thread is in [`Self::ask`].
+    pub ask_account: Option<String>,
+    pub(crate) ask_dirty: bool,
+    /// Accounts whose `znga.db` was asked for.
+    pub(crate) loaded: HashSet<String>,
+    /// Accounts whose `znga.db` came back; only these are ever saved, so
+    /// memory found before loading never overwrites what was saved.
+    pub(crate) restored: HashSet<String>,
+    /// Newest message time each chat was mined for promises and facts.
+    pub(crate) extracted: HashMap<String, i64>,
+    pub(crate) last_extract: Option<Instant>,
+    pub(crate) last_rhythms: Option<Instant>,
+    pub(crate) last_promise_check: Option<Instant>,
 }
 
 impl Znga {
@@ -181,12 +343,57 @@ impl Znga {
             chat_filter: String::new(),
             status: None,
             unseen: 0,
-            runner: runner::Runner::new(waker),
+            runner: runner::Runner::new(waker.clone()),
             self_notes: SelfNotes::default(),
             checkins_suggested: HashMap::new(),
             last_scan: None,
             last_checkin_scan: None,
             key_cache: None,
+            store: store::Store::new(waker.clone()),
+            audit: sentinel::Audit::default(),
+            people: memory::People::default(),
+            promises: promises::Promises::default(),
+            asking: HashMap::new(),
+            next_ask: 0,
+            selfchat: selfchat::SelfChat::default(),
+            catch_ups: Vec::new(),
+            events: Vec::new(),
+            voice_notes: Vec::new(),
+            next_voice: 0,
+            voice_results: std::sync::mpsc::channel(),
+            rhythms: Vec::new(),
+            explanations: HashMap::new(),
+            ask_account: None,
+            ask_dirty: false,
+            loaded: HashSet::new(),
+            restored: HashSet::new(),
+            extracted: HashMap::new(),
+            last_extract: None,
+            last_rhythms: None,
+            last_promise_check: None,
+        }
+    }
+
+    /// Starts an ask; returns its id.
+    pub fn begin_ask(&mut self, asking: archive_ask::Asking) -> u64 {
+        self.next_ask += 1;
+        self.asking.insert(self.next_ask, asking);
+        self.next_ask
+    }
+
+    pub fn add_voice_note(&mut self, mut note: VoiceNote) {
+        if self
+            .voice_notes
+            .iter()
+            .any(|n| n.message == note.message && n.chat == note.chat)
+        {
+            return;
+        }
+        self.next_voice += 1;
+        note.id = self.next_voice;
+        self.voice_notes.push(note);
+        if self.voice_notes.len() > 20 {
+            self.voice_notes.remove(0);
         }
     }
 
@@ -251,19 +458,12 @@ impl Znga {
         if let Some(reason) = self.blocked() {
             return Err(reason.into());
         }
-        let optional = matches!(
-            purpose,
-            Purpose::Briefing { proactive: true }
-                | Purpose::Draft {
-                    kind: Kind::AutoReply | Kind::CheckIn,
-                    ..
-                }
-        );
-        if optional && self.runner.busy() >= runner::BUSY {
+        let lane = runner::lane_for(purpose.background());
+        if lane == runner::Lane::Background && self.runner.busy_on(lane) >= runner::BUSY {
             return Err("Znga is busy; skipped an automatic request.".into());
         }
         let target = self.target();
-        self.runner.submit(target, prompt, purpose);
+        self.runner.submit(target, prompt, purpose, lane);
         Ok(())
     }
 
@@ -415,11 +615,166 @@ impl Znga {
             },
             (Purpose::Ask, Ok(text)) => {
                 self.ask.push(Turn::assistant(text));
+                self.ask_dirty = true;
                 self.status = None;
             }
             (Purpose::Ask, Err(error)) => {
                 self.ask.push(Turn::assistant(format!("⚠ {error}")));
+                self.ask_dirty = true;
             }
+            (Purpose::Plan { ask }, Err(error)) if error == runner::STOPPED => {
+                return self.handle(Purpose::Answer { ask }, Err(error), now);
+            }
+            (Purpose::Plan { ask }, answer) => {
+                let terms = answer
+                    .map(|text| archive_ask::parse_plan(&text))
+                    .unwrap_or_default();
+                effects.push(Effect::Search { ask, terms });
+            }
+            (Purpose::Answer { ask }, answer) => {
+                let Some(asking) = self.asking.remove(&ask) else {
+                    return effects;
+                };
+                match asking.origin {
+                    archive_ask::AskOrigin::Panel => {
+                        let text = match answer {
+                            Ok(text) => text,
+                            Err(error) => format!("⚠ {error}"),
+                        };
+                        self.ask.push(Turn::assistant(text));
+                        self.ask_dirty = true;
+                        self.status = None;
+                    }
+                    archive_ask::AskOrigin::OwnChat { account, chat } => {
+                        let text = match answer {
+                            Ok(text) => text,
+                            Err(error) => format!("⚠ {error}"),
+                        };
+                        effects.push(Effect::SendOwn {
+                            account,
+                            chat,
+                            text: selfchat::marked(&text),
+                        });
+                    }
+                }
+            }
+            (
+                Purpose::Promises {
+                    account,
+                    chat,
+                    chat_title,
+                },
+                Ok(text),
+            ) => {
+                let zone = jiff::tz::TimeZone::system();
+                let found = promises::parse(&text, &zone);
+                self.promises.add(&account, &chat, &chat_title, found, now);
+            }
+            (
+                Purpose::Facts {
+                    account,
+                    chat,
+                    chat_title,
+                },
+                Ok(text),
+            ) => {
+                let facts = memory::parse_facts(&text);
+                self.people.add(&account, &chat, &chat_title, &facts, now);
+            }
+            (Purpose::Promises { .. } | Purpose::Facts { .. }, Err(_)) => {
+                log::debug!("znga: an extraction failed");
+            }
+            (
+                Purpose::CatchUp {
+                    account,
+                    chat,
+                    chat_title,
+                },
+                Ok(text),
+            ) => {
+                let (summary, reply) = prompt::split_catch_up(&text);
+                self.catch_ups
+                    .retain(|c| !(c.account == account && c.chat == chat));
+                self.catch_ups.push(CatchUp {
+                    account: account.clone(),
+                    chat: chat.clone(),
+                    chat_title: chat_title.clone(),
+                    summary,
+                    at: now,
+                });
+                if self.catch_ups.len() > 10 {
+                    self.catch_ups.remove(0);
+                }
+                if let Some(reply) = reply {
+                    self.drafts.add(Draft {
+                        id: 0,
+                        kind: Kind::Suggestion,
+                        account,
+                        chat,
+                        chat_title,
+                        text: clean_draft(&reply),
+                        created: now,
+                    });
+                }
+                self.tab = Tab::Today;
+                self.status = None;
+            }
+            (Purpose::Events { chat_title, .. }, Ok(text)) => {
+                let zone = jiff::tz::TimeZone::system();
+                let found = calendar::parse_events(&text, &zone);
+                if found.is_empty() {
+                    self.set_status(
+                        format!("No plans with a date found in {chat_title}."),
+                        false,
+                    );
+                } else {
+                    self.set_status(
+                        format!("{} plan(s) found in {chat_title}.", found.len()),
+                        false,
+                    );
+                }
+                self.events.retain(|e| e.chat_title != chat_title);
+                self.events
+                    .extend(found.into_iter().map(|event| FoundEvent {
+                        chat_title: chat_title.clone(),
+                        event,
+                    }));
+                self.tab = Tab::Today;
+            }
+            (Purpose::Voice { note }, answer) => {
+                if let Some(entry) = self.voice_notes.iter_mut().find(|n| n.id == note) {
+                    let transcript = match &entry.state {
+                        VoiceState::Done { transcript, .. } => transcript.clone(),
+                        _ => String::new(),
+                    };
+                    match answer {
+                        Ok(text) => {
+                            let (summary, reply) = prompt::split_catch_up(&text);
+                            entry.state = VoiceState::Done {
+                                transcript,
+                                summary,
+                            };
+                            if let Some(reply) = reply {
+                                let draft = Draft {
+                                    id: 0,
+                                    kind: Kind::Suggestion,
+                                    account: entry.account.clone(),
+                                    chat: entry.chat.clone(),
+                                    chat_title: entry.chat_title.clone(),
+                                    text: clean_draft(&reply),
+                                    created: now,
+                                };
+                                self.drafts.add(draft);
+                            }
+                        }
+                        Err(error) => entry.state = VoiceState::Failed(error),
+                    }
+                }
+            }
+            (Purpose::ExplainEdit { key }, answer) => {
+                self.explanations.insert(key, answer);
+            }
+            (Purpose::App { key, tag }, answer) => effects.push(Effect::App { key, tag, answer }),
             (Purpose::Test, Ok(_)) => self.set_status("Connected. Znga is ready.", false),
             (Purpose::Briefing { proactive: true }, Err(error))
             | (

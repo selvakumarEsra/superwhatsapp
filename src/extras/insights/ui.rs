@@ -1188,6 +1188,8 @@ fn kept(app: &mut App, ui: &mut Ui, palette: &Palette) {
     let mut forget = None;
     let mut open = None;
     let mut copy = None;
+    #[cfg(feature = "znga")]
+    let mut explain: Option<(String, String, String)> = None; // znga hook
     for (index, item) in app.extras.insights.kept.iter().enumerate().take(500) {
         let title = app.chat_title_of(&item.chat);
         let sender = if item.from_me {
@@ -1259,6 +1261,10 @@ fn kept(app: &mut App, ui: &mut Ui, palette: &Palette) {
                     Some(runs) => {
                         let job = diff_job(ui, palette, &runs);
                         ui.add(egui::Label::new(job).selectable(true).wrap());
+                        #[cfg(feature = "znga")]
+                        if let Some(ask) = crate::znga::ui::explain_edit(app, ui, item) {
+                            explain = Some(ask); // znga hook
+                        }
                     }
                     None => {
                         let text = item.content.full_summary();
@@ -1285,6 +1291,10 @@ fn kept(app: &mut App, ui: &mut Ui, palette: &Palette) {
     if let Some(text) = copy {
         ui.ctx().copy_text(text);
         app.toast("Copied");
+    }
+    #[cfg(feature = "znga")]
+    if let Some((key, before, after)) = explain {
+        crate::znga::hooks::request_explain_edit(app, key, &before, &after); // znga hook
     }
     if let Some(index) = forget {
         let item = app.extras.insights.kept.remove(index);

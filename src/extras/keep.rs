@@ -200,53 +200,84 @@ pub fn kept(connection: &Connection) -> rusqlite::Result<Vec<Kept>> {
         })
     })?;
     let mut all: Vec<Kept> = rows.collect::<rusqlite::Result<_>>()?;
-    let replaced: Vec<Option<Content>> = all
-        .iter()
-        .map(|item| replaced_by(connection, &all, item))
-        .collect();
-    for (item, replaced) in all.iter_mut().zip(replaced) {
-        item.replaced_by = replaced;
-    }
+    let current = current_of_edited(connection).unwrap_or_default();
+    replaced_by(&mut all, &current);
     Ok(all)
 }
 
-/// What edit `item.version` replaced the kept text with (REQ-EXTRAS-013.A2).
-fn replaced_by(connection: &Connection, all: &[Kept], item: &Kept) -> Option<Content> {
-    if item.why != Why::Edited {
-        return None;
+/// The archive's current content of every message with a kept edit, in one
+/// query (REQ-EXTRAS-014).
+fn current_of_edited(
+    connection: &Connection,
+) -> rusqlite::Result<HashMap<(String, String), Content>> {
+    let mut statement = connection.prepare(
+        "SELECT m.chat, m.id, m.content FROM messages m
+         WHERE EXISTS (SELECT 1 FROM extras_kept k
+                       WHERE k.chat = m.chat AND k.id = m.id AND k.kind = 'edited')",
+    )?;
+    let rows = statement.query_map([], |row| {
+        Ok((
+            (row.get::<_, String>(0)?, row.get::<_, String>(1)?),
+            row.get::<_, String>(2)?,
+        ))
+    })?;
+    let mut out = HashMap::new();
+    for row in rows {
+        let (key, content) = row?;
+        if let Ok(content) = serde_json::from_str::<Content>(&content)
+            && !matches!(content, Content::Revoked)
+        {
+            out.insert(key, content);
+        }
     }
-    let same = |other: &&Kept| other.chat == item.chat && other.id == item.id;
-    let later: Vec<&Kept> = all
-        .iter()
-        .filter(same)
-        .filter(|other| other.why == Why::Edited && other.version > item.version)
-        .collect();
-    if let Some(next) = later.iter().find(|other| other.version == item.version + 1) {
-        return Some(next.content.clone());
+    Ok(out)
+}
+
+/// Sets what each edit replaced its kept text with (REQ-EXTRAS-013.A2): the
+/// next kept version, else the deleted copy, else the message as it is now.
+/// When a middle version was forgotten there is nothing honest to compare
+/// with. Copies are grouped by message once (REQ-EXTRAS-014).
+fn replaced_by(all: &mut [Kept], current: &HashMap<(String, String), Content>) {
+    let mut groups: HashMap<(&str, &str), Vec<usize>> = HashMap::new();
+    for (index, item) in all.iter().enumerate() {
+        groups
+            .entry((item.chat.as_str(), item.id.as_str()))
+            .or_default()
+            .push(index);
     }
-    // The next version was forgotten: there is nothing honest to compare with.
-    if !later.is_empty() {
-        return None;
+    let mut found: Vec<(usize, Option<Content>)> = Vec::new();
+    for ((chat, id), indexes) in &groups {
+        let mut edits: Vec<(i64, usize)> = indexes
+            .iter()
+            .filter(|&&index| all[index].why == Why::Edited)
+            .map(|&index| (all[index].version, index))
+            .collect();
+        if edits.is_empty() {
+            continue;
+        }
+        edits.sort_unstable();
+        let deleted = indexes
+            .iter()
+            .find(|&&index| all[index].why == Why::Deleted)
+            .map(|&index| all[index].content.clone());
+        for (at, &(version, index)) in edits.iter().enumerate() {
+            let replacement = match edits.get(at + 1) {
+                Some(&(next, next_index)) if next == version + 1 => {
+                    Some(all[next_index].content.clone())
+                }
+                Some(_) => None,
+                None => deleted.clone().or_else(|| {
+                    current
+                        .get(&((*chat).to_owned(), (*id).to_owned()))
+                        .cloned()
+                }),
+            };
+            found.push((index, replacement));
+        }
     }
-    if let Some(deleted) = all
-        .iter()
-        .filter(same)
-        .find(|other| other.why == Why::Deleted)
-    {
-        return Some(deleted.content.clone());
+    for (index, replacement) in found {
+        all[index].replaced_by = replacement;
     }
-    let current: String = connection
-        .query_row(
-            "SELECT content FROM messages WHERE chat = ?1 AND id = ?2",
-            params![item.chat, item.id],
-            |row| row.get(0),
-        )
-        .optional()
-        .ok()
-        .flatten()?;
-    serde_json::from_str::<Content>(&current)
-        .ok()
-        .filter(|content| !matches!(content, Content::Revoked))
 }
 
 /// The text Copy puts on the clipboard (REQ-EXTRAS-012.A1/A4): a message's
@@ -657,10 +688,38 @@ mod tests {
             .into_iter()
             .filter(|k| k.version != 2)
             .collect();
+        let mut all = all;
+        replaced_by(&mut all, &current_of_edited(&db).unwrap());
         let first = all.iter().find(|k| k.version == 1).unwrap();
-        assert_eq!(replaced_by(&db, &all, first), None);
+        assert_eq!(first.replaced_by, None);
         let last = all.iter().find(|k| k.version == 3).unwrap();
-        assert_eq!(replaced_by(&db, &all, last), Some(text("v4")));
+        assert_eq!(last.replaced_by, Some(text("v4")));
+    }
+
+    #[test]
+    fn many_kept_copies_load_in_linear_time() {
+        let db = archive();
+        for message in 0..2_000 {
+            let id = format!("m{message}");
+            for version in 0..10 {
+                put(&db, &id, &text(&format!("v{version} of {message}")));
+                preserve(
+                    &db,
+                    "c",
+                    &id,
+                    &text(&format!("v{} of {message}", version + 1)),
+                    true,
+                );
+            }
+            put(&db, &id, &text(&format!("v10 of {message}")));
+        }
+        let started = std::time::Instant::now();
+        let all = kept(&db).unwrap();
+        let took = started.elapsed();
+        assert_eq!(all.len(), 20_000);
+        assert!(all.iter().all(|k| k.replaced_by.is_some()));
+        // Generous for debug builds; quadratic matching took far longer.
+        assert!(took < std::time::Duration::from_secs(5), "took {took:?}");
     }
 
     /// Through the real archive: its hooks keep the copies.

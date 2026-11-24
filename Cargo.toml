@@ -331,9 +331,11 @@ harness = false
 [features]
 # znga hook: the fork's AI companion (src/znga/), on by default here.
 # extras hook: Favourites, Insights and Keep (src/extras/).
-default = ["znga", "extras"]
+# miniapps hook: apps that live in a chat (src/miniapps/), built on Znga.
+default = ["znga", "extras", "miniapps"]
 znga = []
 extras = []
+miniapps = ["znga"]
 # Sample data, layout tests, and screenshots. Not used in release builds.
 demo = []
 

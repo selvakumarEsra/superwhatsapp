@@ -362,47 +362,15 @@ pub fn find_claude(configured: &str) -> Option<std::path::PathBuf> {
     candidates.into_iter().find(|path| path.is_file())
 }
 
-/// Runs `prompt` against `target`. Blocking: worker thread only.
+/// Runs `prompt` against `target` and returns the whole answer. Blocking:
+/// worker threads only.
 pub fn complete(target: &Target, prompt: &Prompt) -> Result<String, String> {
-    if target.engine == Engine::ClaudeCode {
-        return run_claude_code(target, prompt);
-    }
-    if target.engine.needs_key() && target.key.as_deref().is_none_or(str::is_empty) {
-        return Err("Add an API key in Znga's setup first.".into());
-    }
-    let request = build_request(target, prompt);
-    let local = !target.engine.is_cloud(&target.endpoint);
-    let agent: ureq::Agent = ureq::Agent::config_builder()
-        .timeout_global(Some(Duration::from_secs(if local { 300 } else { 120 })))
-        .http_status_as_error(false)
-        .proxy(if local {
-            None
-        } else {
-            crate::proxy::ureq_proxy()
-        })
-        .build()
-        .into();
-    let mut call = agent.post(&request.url);
-    for (name, value) in &request.headers {
-        call = call.header(name, value);
-    }
-    let body = request.body.to_string();
-    let mut response = call.send(body.as_bytes()).map_err(|error| {
-        if local {
-            format!(
-                "Could not reach the local model at {} ({error}). Is Ollama running?",
-                target.endpoint
-            )
-        } else {
-            format!("Could not reach the model service ({error}).")
-        }
-    })?;
-    let status = response.status().as_u16();
-    let text = response
-        .body_mut()
-        .read_to_string()
-        .map_err(|_| "The model service's answer could not be read.".to_owned())?;
-    parse_response(target.engine, status, &text)
+    complete_streaming(
+        target,
+        prompt,
+        &mut |_| {},
+        &std::sync::atomic::AtomicBool::new(false),
+    )
 }
 
 fn run_claude_code(target: &Target, prompt: &Prompt) -> Result<String, String> {
@@ -441,6 +409,215 @@ fn run_claude_code(target: &Target, prompt: &Prompt) -> Result<String, String> {
             })
         }
         Err(error) => Err(error),
+    }
+}
+
+/// The streaming variant of [`build_request`] (REQ-ZNGA-015).
+pub fn build_streaming_request(target: &Target, prompt: &Prompt) -> HttpRequest {
+    let mut request = build_request(target, prompt);
+    match target.engine {
+        Engine::Gemini => {
+            request.url = request
+                .url
+                .replace(":generateContent", ":streamGenerateContent?alt=sse");
+        }
+        Engine::Claude | Engine::OpenAi | Engine::Local => {
+            request.body["stream"] = json!(true);
+        }
+        Engine::ClaudeCode => {}
+    }
+    request
+}
+
+/// One line of a streamed answer.
+#[derive(Clone, Debug, PartialEq)]
+pub enum StreamItem {
+    Delta(String),
+    Done,
+    Error(String),
+    Skip,
+}
+
+/// Reads one line of a streamed answer: server-sent events for Claude,
+/// OpenAI-compatible servers and Gemini, JSON lines for Ollama.
+pub fn parse_stream_line(engine: Engine, line: &str) -> StreamItem {
+    let line = line.trim();
+    if line.is_empty() || line.starts_with(':') || line.starts_with("event:") {
+        return StreamItem::Skip;
+    }
+    let data = match engine {
+        Engine::Local | Engine::ClaudeCode => line,
+        _ => match line.strip_prefix("data:") {
+            Some(data) => data.trim(),
+            None => return StreamItem::Skip,
+        },
+    };
+    if data == "[DONE]" {
+        return StreamItem::Done;
+    }
+    let Ok(value) = serde_json::from_str::<Value>(data) else {
+        return StreamItem::Skip;
+    };
+    if let Some(message) = api_error(&value).filter(|_| !value["error"].is_null()) {
+        return StreamItem::Error(format!("The model service refused: {message}"));
+    }
+    match engine {
+        Engine::Claude => match value["type"].as_str() {
+            Some("content_block_delta") if value["delta"]["type"] == "text_delta" => {
+                StreamItem::Delta(value["delta"]["text"].as_str().unwrap_or_default().into())
+            }
+            Some("message_delta") if value["delta"]["stop_reason"] == "refusal" => {
+                StreamItem::Error("Claude declined this request.".into())
+            }
+            Some("message_stop") => StreamItem::Done,
+            _ => StreamItem::Skip,
+        },
+        Engine::Gemini => {
+            if let Some(reason) = value["promptFeedback"]["blockReason"].as_str() {
+                return StreamItem::Error(format!("Gemini blocked this request ({reason})."));
+            }
+            let text: String = value["candidates"][0]["content"]["parts"]
+                .as_array()
+                .map(|parts| parts.iter().filter_map(|p| p["text"].as_str()).collect())
+                .unwrap_or_default();
+            if text.is_empty() {
+                StreamItem::Skip
+            } else {
+                StreamItem::Delta(text)
+            }
+        }
+        Engine::OpenAi => match value["choices"][0]["delta"]["content"].as_str() {
+            Some(text) if !text.is_empty() => StreamItem::Delta(text.into()),
+            _ => StreamItem::Skip,
+        },
+        Engine::Local | Engine::ClaudeCode => {
+            let text = value["message"]["content"].as_str().unwrap_or_default();
+            if value["done"].as_bool() == Some(true) {
+                if text.is_empty() {
+                    StreamItem::Done
+                } else {
+                    StreamItem::Delta(text.into())
+                }
+            } else if text.is_empty() {
+                StreamItem::Skip
+            } else {
+                StreamItem::Delta(text.into())
+            }
+        }
+    }
+}
+
+/// Runs `prompt`, reporting text as it is written (REQ-ZNGA-015). Returns
+/// the whole answer, or [`super::runner::STOPPED`] when `cancel` was set.
+/// The Claude Code CLI answers whole. Blocking: worker threads only.
+pub fn complete_streaming(
+    target: &Target,
+    prompt: &Prompt,
+    on_delta: &mut dyn FnMut(&str),
+    cancel: &std::sync::atomic::AtomicBool,
+) -> Result<String, String> {
+    use std::io::BufRead;
+    use std::sync::atomic::Ordering;
+    if target.engine == Engine::ClaudeCode {
+        let answer = run_claude_code(target, prompt)?;
+        if cancel.load(Ordering::Relaxed) {
+            return Err(super::runner::STOPPED.into());
+        }
+        on_delta(&answer);
+        return Ok(answer);
+    }
+    if target.engine.needs_key() && target.key.as_deref().is_none_or(str::is_empty) {
+        return Err("Add an API key in Znga's setup first.".into());
+    }
+    let request = build_streaming_request(target, prompt);
+    let local = !target.engine.is_cloud(&target.endpoint);
+    let agent = agent_for(local);
+    let mut call = agent.post(&request.url);
+    for (name, value) in &request.headers {
+        call = call.header(name, value);
+    }
+    let body = request.body.to_string();
+    let mut response = call
+        .send(body.as_bytes())
+        .map_err(|error| unreachable_message(target, local, &error.to_string()))?;
+    let status = response.status().as_u16();
+    if !(200..300).contains(&status) {
+        let text = response.body_mut().read_to_string().unwrap_or_default();
+        return parse_response(target.engine, status, &text);
+    }
+    let reader = std::io::BufReader::new(response.body_mut().as_reader());
+    let mut answer = String::new();
+    for line in reader.lines() {
+        if cancel.load(Ordering::Relaxed) {
+            return Err(super::runner::STOPPED.into());
+        }
+        let Ok(line) = line else {
+            return Err("The model service's answer was cut off.".into());
+        };
+        match parse_stream_line(target.engine, &line) {
+            StreamItem::Delta(text) => {
+                answer.push_str(&text);
+                on_delta(&text);
+            }
+            StreamItem::Done => break,
+            StreamItem::Error(error) => return Err(error),
+            StreamItem::Skip => {}
+        }
+    }
+    let answer = answer.trim().to_owned();
+    if answer.is_empty() {
+        Err("The model returned an empty answer.".into())
+    } else {
+        Ok(answer)
+    }
+}
+
+fn agent_for(local: bool) -> ureq::Agent {
+    ureq::Agent::config_builder()
+        .timeout_global(Some(Duration::from_secs(if local { 300 } else { 120 })))
+        .http_status_as_error(false)
+        .proxy(if local {
+            None
+        } else {
+            crate::proxy::ureq_proxy()
+        })
+        .build()
+        .into()
+}
+
+fn unreachable_message(target: &Target, local: bool, error: &str) -> String {
+    if local {
+        format!(
+            "Could not reach the local model at {} ({error}). Is Ollama running?",
+            target.endpoint
+        )
+    } else {
+        format!("Could not reach the model service ({error}).")
+    }
+}
+
+/// Fixtures other modules' tests share.
+#[cfg(test)]
+pub mod tests_support {
+    use super::*;
+
+    pub fn prompt() -> Prompt {
+        Prompt {
+            system: "be brief".into(),
+            turns: vec![Turn::user("hi")],
+            max_tokens: 100,
+            effort: Effort::Low,
+        }
+    }
+
+    pub fn target() -> Target {
+        Target {
+            engine: Engine::Local,
+            endpoint: Engine::Local.default_endpoint().into(),
+            model: Engine::Local.default_model().into(),
+            key: None,
+            workdir: std::env::temp_dir(),
+        }
     }
 }
 
@@ -617,7 +794,7 @@ mod tests {
     #[test]
     #[ignore = "calls the installed Claude Code and its account"]
     fn live_twin() {
-        use crate::znga::prompt::{Line, twin_reply};
+        use crate::znga::prompt::{Line, Twin, twin_reply};
         use crate::znga::style::StyleProfile;
         let dir = tempfile::tempdir().unwrap();
         let target = Target {
@@ -648,9 +825,109 @@ mod tests {
                 from_me: false,
             },
         ];
-        let prompt = twin_reply("Sam", &style, "", &examples, "Ma", &lines);
+        let twin = Twin {
+            name: "Sam".into(),
+            style,
+            examples,
+            ..Twin::default()
+        };
+        let prompt = twin_reply(&twin, "Ma", &lines);
         let answer = complete(&target, &prompt).expect("Claude Code answered");
-        println!("STYLE: {style}\nDRAFT: {answer}");
+        println!("STYLE: {}\nDRAFT: {answer}", twin.style);
         assert!(!answer.to_lowercase().contains("10 guests"), "{answer}");
+    }
+
+    #[test]
+    fn streaming_requests_ask_each_engine_to_stream() {
+        let p = prompt();
+        assert_eq!(
+            build_streaming_request(&target(Engine::Claude), &p).body["stream"],
+            true
+        );
+        assert_eq!(
+            build_streaming_request(&target(Engine::OpenAi), &p).body["stream"],
+            true
+        );
+        assert_eq!(
+            build_streaming_request(&target(Engine::Local), &p).body["stream"],
+            true
+        );
+        assert!(
+            build_streaming_request(&target(Engine::Gemini), &p)
+                .url
+                .ends_with(":streamGenerateContent?alt=sse")
+        );
+    }
+
+    #[test]
+    fn stream_lines_add_up_to_the_answer() {
+        let cases: [(Engine, &[&str]); 4] = [
+            (
+                Engine::Claude,
+                &[
+                    "event: content_block_delta",
+                    r#"data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Hel"}}"#,
+                    r#"data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"lo"}}"#,
+                    r#"data: {"type":"message_stop"}"#,
+                ],
+            ),
+            (
+                Engine::OpenAi,
+                &[
+                    r#"data: {"choices":[{"delta":{"role":"assistant"}}]}"#,
+                    r#"data: {"choices":[{"delta":{"content":"Hel"}}]}"#,
+                    r#"data: {"choices":[{"delta":{"content":"lo"}}]}"#,
+                    "data: [DONE]",
+                ],
+            ),
+            (
+                Engine::Gemini,
+                &[
+                    r#"data: {"candidates":[{"content":{"parts":[{"text":"Hel"}]}}]}"#,
+                    r#"data: {"candidates":[{"content":{"parts":[{"text":"lo"}]}}]}"#,
+                ],
+            ),
+            (
+                Engine::Local,
+                &[
+                    r#"{"message":{"content":"Hel"},"done":false}"#,
+                    r#"{"message":{"content":"lo"},"done":false}"#,
+                    r#"{"message":{"content":""},"done":true}"#,
+                ],
+            ),
+        ];
+        for (engine, lines) in cases {
+            let mut text = String::new();
+            for line in lines {
+                match parse_stream_line(engine, line) {
+                    StreamItem::Delta(delta) => text.push_str(&delta),
+                    StreamItem::Done | StreamItem::Skip => {}
+                    StreamItem::Error(error) => panic!("{engine:?}: {error}"),
+                }
+            }
+            assert_eq!(text, "Hello", "{engine:?}");
+        }
+    }
+
+    #[test]
+    fn stream_errors_and_refusals_are_reported() {
+        assert!(matches!(
+            parse_stream_line(Engine::Claude, r#"data: {"type":"error","error":{"type":"overloaded_error","message":"busy"}}"#),
+            StreamItem::Error(e) if e.contains("busy")
+        ));
+        assert!(matches!(
+            parse_stream_line(
+                Engine::Claude,
+                r#"data: {"type":"message_delta","delta":{"stop_reason":"refusal"}}"#
+            ),
+            StreamItem::Error(_)
+        ));
+        assert!(matches!(
+            parse_stream_line(
+                Engine::Gemini,
+                r#"data: {"promptFeedback":{"blockReason":"SAFETY"}}"#
+            ),
+            StreamItem::Error(_)
+        ));
     }
 }

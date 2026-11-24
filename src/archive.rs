@@ -488,6 +488,20 @@ impl Archive {
         &self.connection
     }
 
+    /// znga hook: Znga's own `znga.db`, beside the archive and encrypted
+    /// with the archive's key (src/znga/store.rs).
+    #[cfg(feature = "znga")]
+    pub(crate) fn znga_connection(path: &Path) -> anyhow::Result<Connection> {
+        let key = encryption::key_for(path)?;
+        encryption::open(path, &key)
+    }
+
+    /// miniapps hook: an encrypted file opened with a given key, for tests.
+    #[cfg(all(test, feature = "miniapps"))]
+    pub(crate) fn encrypted_for_tests(path: &Path, key: &[u8; 32]) -> anyhow::Result<Connection> {
+        encryption::open(path, key)
+    }
+
     pub fn in_memory() -> Result<Self> {
         Self::prepare(Connection::open_in_memory()?)
     }

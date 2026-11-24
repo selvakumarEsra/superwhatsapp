@@ -146,6 +146,24 @@ impl Activity {
     }
 
     /// The last `n` messages seen anywhere, oldest first.
+    /// Starts from messages read back from the archive (REQ-ZNGA-016.A2).
+    /// They count as already briefed and never alert; live messages already
+    /// seen stay after them.
+    pub fn seed(&mut self, mut items: Vec<Seen>) {
+        items.retain(|item| {
+            !self.seen.iter().any(|known| {
+                known.key() == item.key() && known.at == item.at && known.text == item.text
+            })
+        });
+        items.sort_by_key(|item| item.at);
+        let live = std::mem::take(&mut self.seen);
+        self.seen = items.into();
+        self.seen.extend(live);
+        while self.seen.len() > KEEP {
+            self.seen.pop_front();
+        }
+    }
+
     pub fn recent(&self, n: usize) -> Vec<Seen> {
         let skip = self.seen.len().saturating_sub(n);
         self.seen.iter().skip(skip).cloned().collect()
@@ -360,5 +378,34 @@ mod tests {
         suggested.insert(chat_key("1", "mom"), 8 * day);
         assert!(checkins_due(&config, &chats, &suggested, 10 * day).is_empty());
         assert_eq!(checkins_due(&config, &chats, &suggested, 15 * day).len(), 1);
+    }
+
+    #[test]
+    fn seeded_history_comes_before_live_messages_and_is_not_briefed() {
+        let mut activity = Activity::default();
+        let live = Seen {
+            account: "1".into(),
+            chat: "a".into(),
+            chat_title: "A".into(),
+            group: false,
+            sender: "a".into(),
+            sender_name: "A".into(),
+            text: "live".into(),
+            at: 100,
+            score: Default::default(),
+        };
+        activity.observe(live.clone(), Context::default());
+        let mut old = live.clone();
+        old.text = "from the archive".into();
+        old.at = 10;
+        activity.seed(vec![old, live]);
+        let recent = activity.recent(10);
+        assert_eq!(recent.len(), 2);
+        assert_eq!(recent[0].text, "from the archive");
+        assert_eq!(
+            activity.pending(),
+            1,
+            "only the live message awaits a briefing"
+        );
     }
 }

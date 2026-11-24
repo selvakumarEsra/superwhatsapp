@@ -28,9 +28,12 @@ chat. The photo shown is the full-size profile picture when it has been
 fetched, otherwise the preview picture already on screen.
 
 implementations:
-  - src/app.rs:tick_video
-  - src/app.rs:open_viewer
+  - src/app.rs:App.tick_video
+  - src/app.rs:App.open_viewer
   - src/ui/info.rs:view_photo
+
+verifies:
+  - src/app.rs:a_profile_picture_stays_open_in_the_viewer
 
 ## Acceptance
 <!-- id: REQ-PHOTO-001.A1 -->

@@ -445,3 +445,25 @@ verifies:
 <!-- id: REQ-EXTRAS-013.A8 -->
 - "Deleted for everyone" entries and attachment-only edits are shown as
   today, without highlights.
+
+<!-- id: REQ-EXTRAS-014 -->
+## Loading kept copies MUST take linear time
+
+Finding what replaced each edited copy groups the copies by message once,
+instead of comparing every copy with every other one, and reads the
+current text of all edited messages in one archive query.
+
+implementations:
+  - src/extras/keep.rs:kept
+  - src/extras/keep.rs:replaced_by
+
+verifies:
+  - src/extras/keep.rs:many_kept_copies_load_in_linear_time
+
+## Acceptance
+<!-- id: REQ-EXTRAS-014.A1 -->
+- Loading 20,000 kept copies of 2,000 messages finishes in under a second
+  in a release build.
+<!-- id: REQ-EXTRAS-014.A2 -->
+- The replacement found for each copy is the same as before
+  (REQ-EXTRAS-013.A2).

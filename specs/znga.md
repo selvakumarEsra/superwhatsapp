@@ -377,11 +377,16 @@ reads as Znga's on the phone and can be told apart from the person's
 own messages (REQ-ZNGA-014).
 
 implementations:
-  - src/znga/hooks.rs:observe_own_chat
-  - src/znga/hooks.rs:request_self_chat
-  - src/znga/prompt.rs:self_chat
+  - src/znga/hooks.rs:observe_messages
+  - src/znga/hooks.rs:pump_self_chat
+  - src/znga/hooks.rs:apply
+  - src/znga/selfchat.rs:marked
   - src/znga/config.rs:Config
   - src/znga/mod.rs:Znga.handle
+
+verifies:
+  - src/znga/selfchat.rs:only_new_live_texts_from_the_person_are_questions
+  - src/znga/sentinel.rs:znga_never_sends_to_another_chat
 
 ## Acceptance
 <!-- id: REQ-ZNGA-012.A1 -->
@@ -402,7 +407,7 @@ implementations:
 - Answers are never sent to any chat other than the own chat.
 <!-- id: REQ-ZNGA-012.A7 -->
 - Non-text messages (voice notes, images, stickers, documents) are not
-  answered. [needs review: caption handling]
+  answered, including their captions.
 <!-- id: REQ-ZNGA-012.A8 -->
 - If the own chat is locked or excluded from Znga, nothing in it is
   answered.
@@ -419,8 +424,12 @@ document's non-goal). It is a separate thread from the in-app Ask Znga
 panel.
 
 implementations:
-  - src/znga/prompt.rs:self_chat
-  - src/znga/hooks.rs:self_chat_turns
+  - src/znga/selfchat.rs:turns
+  - src/znga/hooks.rs:self_chat_history
+  - src/znga/store.rs:Job
+
+verifies:
+  - src/znga/selfchat.rs:the_thread_is_rebuilt_from_the_chat
 
 ## Acceptance
 <!-- id: REQ-ZNGA-013.A1 -->
@@ -434,7 +443,6 @@ implementations:
   turns, so "what did that briefing mean?" can be answered.
 <!-- id: REQ-ZNGA-013.A4 -->
 - The prompt holds at most the last 20 turns of the self-chat.
-  [needs review: limit]
 <!-- id: REQ-ZNGA-013.A5 -->
 - Self-chat turns never show up in the Ask Znga panel, and Ask panel
   turns never show up in the self-chat prompt.
@@ -449,8 +457,12 @@ too, and reconnecting replays history. Neither can count as a request,
 or Znga would loop or answer old notes. A daily cap backs this up.
 
 implementations:
-  - src/znga/proactive.rs:SelfChat
-  - src/znga/hooks.rs:observe_own_chat
+  - src/znga/selfchat.rs:SelfChat
+  - src/znga/hooks.rs:observe_messages
+
+verifies:
+  - src/znga/selfchat.rs:only_new_live_texts_from_the_person_are_questions
+  - src/znga/selfchat.rs:the_hundred_and_first_answer_is_a_single_notice
 
 ## Acceptance
 <!-- id: REQ-ZNGA-014.A1 -->
@@ -461,7 +473,7 @@ implementations:
   answered.
 <!-- id: REQ-ZNGA-014.A3 -->
 - A message sent before the switch was turned on, or more than 5 minutes
-  before ZapFast received it, is not answered. [needs review: 5 minutes]
+  before ZapFast received it, is not answered.
 <!-- id: REQ-ZNGA-014.A4 -->
 - The same message is answered at most once, even when it arrives again
   (status updates, re-sync).

@@ -467,6 +467,8 @@ pub struct App {
     pub znga: crate::znga::Znga, // znga hook
     #[cfg(feature = "extras")]
     pub extras: crate::extras::Extras, // extras hook
+    #[cfg(feature = "miniapps")]
+    pub miniapps: crate::miniapps::hooks::MiniApps, // miniapps hook
     pub adding_account: bool,
     /// The account on screen when "Add account" was chosen, for Cancel.
     account_before_adding: Option<AccountId>,
@@ -1568,6 +1570,8 @@ impl App {
             znga: crate::znga::Znga::load(&dirs.config, &dirs.cache, waker.clone()), // znga hook
             #[cfg(feature = "extras")]
             extras: crate::extras::Extras::load(&dirs.config), // extras hook
+            #[cfg(feature = "miniapps")]
+            miniapps: crate::miniapps::hooks::MiniApps::load(&dirs.config, waker.clone()), // miniapps hook
             dirs,
             settings,
             locale,
@@ -3966,6 +3970,10 @@ impl App {
                 {
                     self.backend.send(Command::LoadCallLog);
                 }
+                #[cfg(feature = "znga")]
+                crate::znga::hooks::observe_messages(self, &chat, &messages, older); // znga hook
+                #[cfg(feature = "miniapps")]
+                crate::miniapps::hooks::observe_messages(self, &chat, &messages, older); // miniapps hook
                 let conversation = self.conversations.entry(chat.clone()).or_default();
                 let was_empty = conversation.messages.is_empty();
                 let messages_empty = messages.is_empty();
@@ -10480,6 +10488,8 @@ impl App {
         crate::znga::hooks::tick(self); // znga hook
         #[cfg(feature = "extras")]
         crate::extras::tick(self); // extras hook
+        #[cfg(feature = "miniapps")]
+        crate::miniapps::hooks::tick(self); // miniapps hook
         for uri in std::mem::take(&mut self.stale_images) {
             crate::image_cache::forget(ctx, &uri);
         }
@@ -10846,8 +10856,7 @@ impl App {
         // picture of no chat, like a profile picture, stays until closed.
         if self.image_preview.as_ref().is_some_and(|preview| {
             !preview.chat().is_empty() && self.open_chat.as_deref() != Some(preview.chat())
-        })
-        {
+        }) {
             self.image_preview = None;
             self.viewer_media.clear();
             self.viewer_media_chat = None;
@@ -11481,6 +11490,8 @@ impl App {
         crate::znga::ui::show(self, ctx); // znga hook
         #[cfg(feature = "extras")]
         crate::extras::ui::show(self, ctx); // extras hook
+        #[cfg(feature = "miniapps")]
+        crate::miniapps::ui::show(self, ctx); // miniapps hook
         self.apply_actions(ctx);
         // After the view and its actions, so a change this frame starts the
         // pause from now. Nobody types behind the lock screen.

@@ -4,7 +4,7 @@
 //! ZapFast owns that struct, and a fork-only field there would conflict on
 //! every merge. API keys are never stored here (see [`super::keys`]).
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -147,6 +147,56 @@ pub struct Config {
     pub your_name: String,
     /// Extra words about how the person writes ("I use 'haha' a lot").
     pub voice_notes: String,
+    /// Answer what the person writes to their own chat (REQ-ZNGA-012).
+    pub self_chat: bool,
+    /// When the self-chat switch was last turned on (Unix seconds);
+    /// earlier messages are never answered (REQ-ZNGA-014.A3).
+    pub self_chat_since: i64,
+    /// Track promises made in twin chats (REQ-ZNGA-018).
+    pub promises: bool,
+    /// Remember facts about people in twin chats (REQ-ZNGA-019).
+    pub memory: bool,
+    /// OpenAI-compatible transcription endpoint (REQ-ZNGA-023). Empty uses
+    /// a local server on this computer.
+    pub voice_endpoint: String,
+    /// Transcription model; empty uses `whisper-1`.
+    pub voice_model: String,
+    /// Per linked account (by account id): how Znga sounds and behaves
+    /// there (REQ-ZNGA-025).
+    pub personas: BTreeMap<String, Persona>,
+}
+
+/// One linked account's persona. Empty fields fall back to the global
+/// settings.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Persona {
+    pub your_name: String,
+    pub voice_notes: String,
+    /// "warm and casual", "brief and professional"…
+    pub tone: String,
+    /// Proactive briefings for this account.
+    pub briefings: bool,
+}
+
+impl Default for Persona {
+    fn default() -> Self {
+        Self {
+            your_name: String::new(),
+            voice_notes: String::new(),
+            tone: String::new(),
+            briefings: true,
+        }
+    }
+}
+
+/// A persona with the global settings filled in.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Effective {
+    pub your_name: String,
+    pub voice_notes: String,
+    pub tone: String,
+    pub briefings: bool,
 }
 
 impl Default for Config {
@@ -168,6 +218,13 @@ impl Default for Config {
             checkin_days: 7,
             your_name: String::new(),
             voice_notes: String::new(),
+            self_chat: false,
+            self_chat_since: 0,
+            promises: true,
+            memory: true,
+            voice_endpoint: String::new(),
+            voice_model: String::new(),
+            personas: BTreeMap::new(),
         }
     }
 }
@@ -233,6 +290,49 @@ impl Config {
 
     pub fn is_excluded(&self, account: &str, chat: &str) -> bool {
         self.excluded_chats.contains(&chat_key(account, chat))
+    }
+
+    /// How Znga sounds and behaves on `account` (REQ-ZNGA-025).
+    pub fn persona(&self, account: &str) -> Effective {
+        let pick = |own: &str, global: &str| {
+            if own.trim().is_empty() {
+                global.trim().to_owned()
+            } else {
+                own.trim().to_owned()
+            }
+        };
+        match self.personas.get(account) {
+            Some(persona) => Effective {
+                your_name: pick(&persona.your_name, &self.your_name),
+                voice_notes: pick(&persona.voice_notes, &self.voice_notes),
+                tone: persona.tone.trim().to_owned(),
+                briefings: self.briefings && persona.briefings,
+            },
+            None => Effective {
+                your_name: self.your_name.trim().to_owned(),
+                voice_notes: self.voice_notes.trim().to_owned(),
+                tone: String::new(),
+                briefings: self.briefings,
+            },
+        }
+    }
+
+    pub fn voice_endpoint(&self) -> String {
+        let endpoint = self.voice_endpoint.trim();
+        if endpoint.is_empty() {
+            super::voice::DEFAULT_ENDPOINT.to_owned()
+        } else {
+            endpoint.to_owned()
+        }
+    }
+
+    pub fn voice_model(&self) -> String {
+        let model = self.voice_model.trim();
+        if model.is_empty() {
+            super::voice::DEFAULT_MODEL.to_owned()
+        } else {
+            model.to_owned()
+        }
     }
 }
 
@@ -312,5 +412,32 @@ mod tests {
             ..Config::default()
         };
         assert_eq!(custom.endpoint(), "http://box:11434");
+    }
+
+    #[test]
+    fn a_persona_overrides_the_global_voice_per_account() {
+        let mut config = Config {
+            your_name: "Selva".into(),
+            voice_notes: "uses haha".into(),
+            ..Config::default()
+        };
+        config.personas.insert(
+            "work".into(),
+            Persona {
+                your_name: "S. Esra".into(),
+                tone: "brief and professional".into(),
+                briefings: false,
+                ..Persona::default()
+            },
+        );
+        let work = config.persona("work");
+        assert_eq!(work.your_name, "S. Esra");
+        assert_eq!(work.voice_notes, "uses haha");
+        assert_eq!(work.tone, "brief and professional");
+        assert!(!work.briefings);
+        let home = config.persona("home");
+        assert_eq!(home.your_name, "Selva");
+        assert!(home.tone.is_empty());
+        assert!(home.briefings);
     }
 }
