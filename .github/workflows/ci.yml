@@ -118,6 +118,51 @@ jobs:
           name: macos-preview
           path: ${{ runner.temp }}/zapfast-*.png
 
+  # The Tauri app (src-tauri/, web/; specs/tauri-ui.md). The jobs above
+  # build only the core package, so this one installs WebKitGTK and the
+  # front end's packages and checks the desktop crate and the page.
+  desktop:
+    name: desktop (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-latest"]' || '["ubuntu-latest", "macos-latest", "windows-latest"]') }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - name: GUI build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-dev libwayland-dev libgl1-mesa-dev libasound2-dev libpipewire-0.3-dev clang libclang-dev cmake perl \
+            libwebkit2gtk-4.1-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Desktop version follows the core
+        shell: bash
+        run: |
+          core=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n 1)
+          desktop=$(sed -n 's/^version = "\(.*\)"$/\1/p' src-tauri/Cargo.toml | head -n 1)
+          test "$core" = "$desktop"
+      - name: Front end
+        working-directory: web
+        run: |
+          npm ci
+          npx tsc --noEmit -p .
+          npm run build
+      - uses: jdx/mr-boxington-action@v1
+        with:
+          cache-generation: desktop-v1
+      - name: Clippy (desktop)
+        run: mbx clippy --locked -p zapfast-desktop --all-targets -- -D warnings
+      - name: Tests (desktop)
+        run: mbx test --locked -p zapfast-desktop
+
   # Linux releases build in Debian 12 for its older glibc (release.yml).
   # Building here too catches a dependency that needs newer system
   # libraries before a release tag does.

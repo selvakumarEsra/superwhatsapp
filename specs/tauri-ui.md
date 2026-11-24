@@ -541,8 +541,14 @@ MSI and zip), macOS (universal DMG), built by the Release workflow from a
 `v*` tag on `main`, with `checksums.txt` signed by the fork's key as
 today. Linux packages declare the WebKitGTK dependency.
 
+Until the new interface is complete, the Desktop packages workflow builds
+these installers as workflow artifacts on every change to the app, and the
+Release workflow keeps shipping the egui app; the release switches to the
+new packages only once the other requirements here are met.
+
 implementations:
   - .github/workflows/release.yml:jobs
+  - .github/workflows/desktop-packages.yml:jobs
   - src-tauri/tauri.conf.json:bundle
 
 ## Acceptance
@@ -554,6 +560,11 @@ implementations:
   platform.
 <!-- id: REQ-WEBUI-017.A3 -->
 - A tag not on `main` builds nothing, as today.
+<!-- id: REQ-WEBUI-017.A4 -->
+- CI builds and lints the desktop crate and the front end on Linux for
+  pull requests and on Linux, macOS and Windows on `main`; a change that
+  breaks either fails CI, and the desktop crate's version must equal the
+  core's.
 
 <!-- id: REQ-WEBUI-018 -->
 ## A demo mode and tests MUST cover the new interface

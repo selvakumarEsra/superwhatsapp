@@ -1,8 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "ZapFast",
-  "version": "0.21.1-beta.5",
-  "identifier": "me.paolino.zapfast",
+  "identifier": "me.paolino.fastsapp",
   "build": {
     "beforeDevCommand": {
       "script": "npm run dev",
@@ -49,6 +48,23 @@
       "icons/icon.ico"
     ],
     "category": "SocialNetworking",
-    "shortDescription": "A fast WhatsApp client"
+    "shortDescription": "A fast WhatsApp client",
+    "publisher": "ZapFast",
+    "linux": {
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0"
+        ]
+      },
+      "rpm": {
+        "depends": [
+          "webkit2gtk4.1"
+        ]
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    }
   }
 }

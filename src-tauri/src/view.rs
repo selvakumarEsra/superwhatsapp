@@ -190,7 +190,10 @@ fn message(app: &App, group: bool, message: &Message) -> Msg {
     };
     let mut reactions: Vec<(String, u32)> = Vec::new();
     for reaction in &message.reactions {
-        match reactions.iter_mut().find(|(emoji, _)| *emoji == reaction.emoji) {
+        match reactions
+            .iter_mut()
+            .find(|(emoji, _)| *emoji == reaction.emoji)
+        {
             Some((_, count)) => *count += 1,
             None => reactions.push((reaction.emoji.clone(), 1)),
         }

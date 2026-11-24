@@ -19789,11 +19789,15 @@ mod tests {
         assert!(app.chat("3@s.whatsapp.net").unwrap().pinned_at > 0);
         assert!(matches!(sent().as_slice(), [Command::PinHere(id)] if id == "3@s.whatsapp.net"));
         app.apply(Action::SetPinned("0@s.whatsapp.net".into(), false), &ctx);
-        assert!(matches!(sent().as_slice(), [Command::SetPinned(id, false)] if id == "0@s.whatsapp.net"));
+        assert!(
+            matches!(sent().as_slice(), [Command::SetPinned(id, false)] if id == "0@s.whatsapp.net")
+        );
         app.apply(Action::SetPinned("1@s.whatsapp.net".into(), false), &ctx);
         sent();
         app.apply(Action::SetPinned("0@s.whatsapp.net".into(), true), &ctx);
-        assert!(matches!(sent().as_slice(), [Command::SetPinned(id, true)] if id == "0@s.whatsapp.net"));
+        assert!(
+            matches!(sent().as_slice(), [Command::SetPinned(id, true)] if id == "0@s.whatsapp.net")
+        );
     }
 
     #[test]
