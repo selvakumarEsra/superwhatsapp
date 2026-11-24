@@ -12,6 +12,13 @@ rail (under Calls) to open it. The contract is [`specs/znga.md`](specs/znga.md).
 | **Ask** | Questions about your recent chats: "Do I owe anyone a reply?" |
 | **Setup** | Engine, privacy, proactive settings, and which chats are **Twin** (your close ones) or **Excluded**. |
 
+Znga also keeps an encrypted memory (`znga.db`: the Ask thread, facts about
+people, promises, the audit log), tracks promises and reminds you, answers
+Ask from the whole archive, catches you up on a chat, turns plans into
+calendar files, summarises voice notes, coaches drifting relationships, and
+can use a persona per account (contract: [`specs/znga-advanced.md`](specs/znga-advanced.md)).
+Every action passes the **Sentinel** (`src/znga/sentinel.rs`), which logs it.
+
 Proactive notifications are titled "Znga". You can also have briefings copied
 to your own "Message yourself" chat so they reach your phone. That option is
 off by default and capped at 6 a day.
@@ -24,6 +31,7 @@ Three more fork features live in `src/extras/` (contract:
 - **Favourites** (heart on the rail): opens the chats marked as favourites,
   here or on the phone, the way Archived opens archived chats. Chats leads
   back to every chat.
+  The Forward dialog has **All** and **Favourites** tabs too.
 - **Insights** (bar-chart button on the rail): a dashboard computed on this
   computer: totals and their change, a daily trend, an hour × weekday
   heatmap, streaks, top chats with reply times, who starts conversations,
@@ -47,6 +55,23 @@ Three more fork features live in `src/extras/` (contract:
   **Save everything now** fetches archived attachments not yet on disk.
   Messages you delete yourself are not kept, and nothing about keeping
   reaches WhatsApp.
+
+## Mini-apps: Goal of the day
+
+Mini-apps live in `src/miniapps/` behind the `miniapps` feature (needs
+`znga`; contract: [`specs/miniapps.md`](specs/miniapps.md)). The target
+button on the rail opens the Mini-apps window. An app is installed in one
+chat after the person sees its permissions; it is handed only the events
+addressed to it (`/command`, quote-replies to its messages, its cards, its
+wake-ups) and answers with actions the host checks with the Sentinel and
+caps (20 sends a day, 10 s apart). Its data is kept per install in an
+encrypted `miniapps.db` beside the archive. A failing app is turned off in
+that install only.
+
+**Goal of the day** (own chat only) proposes a goal at 08:00 from
+yesterday's goal, promises and today's plans, checks in at 13:00 and
+recaps at 20:00 (at most three scheduled messages a day), and keeps 90
+days of history. `/goal help` lists its commands.
 
 ## Engines
 
@@ -76,11 +101,11 @@ The feature is on by default (`znga` in `Cargo.toml`). To build without it:
 
 ## Merging from upstream
 
-All the code is in `src/znga/` and `src/extras/`. Upstream files carry only
-small hooks, each marked `znga hook` or `extras hook`:
+All the code is in `src/znga/`, `src/extras/` and `src/miniapps/`. Upstream files carry only
+small hooks, each marked `znga hook`, `extras hook` or `miniapps hook`:
 
 ```
-git grep -n -e "znga hook" -e "extras hook"
+git grep -n -e "znga hook" -e "extras hook" -e "miniapps hook"
 ```
 
 | File | Hook |
@@ -89,6 +114,8 @@ git grep -n -e "znga hook" -e "extras hook"
 | `src/lib.rs` | `pub mod znga;` |
 | `src/app.rs` | the `znga` field and its init; `pub(crate)` on `waker`, `notifications`, `notification_opens`, `deferred_account_actions`; calls in `Event::Incoming`, `background_frame`, `frame_ui` |
 | `src/demo.rs` | `--demo-page znga`, `znga-drafts`, `znga-ask`, `znga-setup` |
+| `src/demo.rs` (miniapps) | `--demo-page miniapps`, `miniapps-add` |
+| `src/ui/dialogs.rs` | extras: the Forward dialog's All / Favourites tabs, list filter and empty text |
 | `src/ui/rail.rs` | extras: Chats is dark while Favourites is lit, and leads back to every chat |
 | `src/archive.rs` | extras: `keep::preserve` before a revoke or edit overwrites a message; `extras_connection` |
 | `src/backend/worker.rs` | extras: the tick removes kept copies the person forgot |

@@ -4,7 +4,7 @@ description: Alerts, briefings and replies drafted in your voice, from an AI tha
 nav_order: 0
 ---
 
-{% assign v = site.fork_version | default: "0.21.1-beta.4" %}
+{% assign v = site.fork_version | default: "0.21.1-beta.5" %}
 {% assign repo = site.fork_repository | default: "selvakumarEsra/zapfast" %}
 {% assign base = "https://github.com/" | append: repo | append: "/releases/download/v" | append: v %}
 
@@ -39,7 +39,13 @@ ZapFast and choose **Open** the first time. Znga builds update only from
   one personal draft each.
 - **Composer tools and Ask.** Suggest a reply; rewrite a message friendlier,
   shorter or more formal, or fix its spelling; translate; and ask questions
-  about your recent chats.
+  answered from every message on your computer.
+- **Memory.** Znga remembers promises (and reminds you before they're due),
+  facts about the people you talk to, and your Ask thread across restarts,
+  encrypted on your computer.
+- **More help.** Catch up on a chat, turn plans into calendar files,
+  summarise long voice notes, get an opener for a friendship that's
+  drifting, and give each linked account its own persona.
 
 **Znga never sends a message to anyone but you without your click.**
 WhatsApp bans accounts for automated messaging, and your friends should know
@@ -63,8 +69,13 @@ stays in memory.
 
 ## More in this build
 
+- **Goal of the day** — a mini-app for your own "Message yourself" chat
+  (target button on the left rail). Each morning Znga proposes one goal,
+  checks in at midday and recaps in the evening; reply `/goal help` for its
+  commands.
 - **Favourites** — the heart on the left rail opens your favourite chats and
-  groups, the way Archived opens archived ones.
+  groups, the way Archived opens archived ones, and the Forward dialog has a
+  Favourites tab.
 - **Insights** — the bar-chart button opens a dashboard of your WhatsApp
   activity, worked out on your computer: your trends, busiest hours, streaks,
   top chats and reply times, and people you've drifted from. It looks at when
