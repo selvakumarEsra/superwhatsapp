@@ -467,3 +467,47 @@ verifies:
 <!-- id: REQ-EXTRAS-014.A2 -->
 - The replacement found for each copy is the same as before
   (REQ-EXTRAS-013.A2).
+
+<!-- id: REQ-EXTRAS-015 -->
+## The Forward dialog SHOULD offer a Favourites tab
+
+Under the Forward dialog's search field, two chips, **All** and
+**Favourites**, choose which chats the list shows. Favourites shows only
+the chats marked as favourites (here or on the phone) that a message can be
+forwarded to, contacts and groups alike, in the phone's favourites order.
+The search narrows whichever tab is chosen. The chosen tab is remembered
+until ZapFast quits, so someone who forwards to favourites finds them there
+next time.
+
+implementations:
+  - src/extras/forward.rs:tabs
+  - src/extras/forward.rs:narrow
+  - src/extras/forward.rs:empty
+
+verifies:
+  - src/extras/forward.rs:favourites_tab_lists_only_favourites_in_their_order
+  - src/extras/forward.rs:search_and_picks_carry_across_tabs
+  - src/extras/forward.rs:an_empty_favourites_tab_says_how_to_add_one
+
+## Acceptance
+<!-- id: REQ-EXTRAS-015.A1 -->
+- With Favourites chosen, the list holds only favourite chats that can
+  receive a forward (not locked, not blocked, writable), ordered as the
+  phone orders favourites.
+<!-- id: REQ-EXTRAS-015.A2 -->
+- Searching in Favourites matches only favourites; switching tabs keeps
+  the search text.
+<!-- id: REQ-EXTRAS-015.A3 -->
+- Chats picked in either tab stay picked after switching tabs; the
+  recipient count, review step and forwarding limit work as before.
+<!-- id: REQ-EXTRAS-015.A4 -->
+- When Favourites has nothing to show, the list says "No favourite chats.
+  Mark a chat as a favourite from its menu." (or, with a search, "No
+  favourite chats match.") instead of "No writable chats found".
+<!-- id: REQ-EXTRAS-015.A5 -->
+- The dialog opens on All when ZapFast starts and on the last chosen tab
+  after that.
+<!-- id: REQ-EXTRAS-015.A6 -->
+- The chips are not shown while reviewing recipients, nor in a window too
+  short for them and two chat rows (every chat then shows); without the
+  extras feature the dialog is unchanged.

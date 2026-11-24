@@ -1,6 +1,7 @@
 //! Synthetic extras states for demo screenshots: `--demo-page favourites`,
 //! `insights`, `insights-people`, `insights-rhythm`, `insights-words`,
-//! `insights-kept`, `insights-saving`, `insights-history`. Sample content
+//! `insights-kept`, `insights-saving`, `insights-history`,
+//! `forward-favourites` (with `forward`). Sample content
 //! only.
 
 use crate::app::App;
@@ -15,6 +16,11 @@ pub fn apply(app: &mut App, part: &str) -> bool {
     let tab = match part {
         "favourites" => {
             app.chat_filter = ChatFilter::Favorites;
+            return true;
+        }
+        // With `forward`: the Forward dialog on its Favourites tab.
+        "forward-favourites" => {
+            app.extras.forward_favourites = true;
             return true;
         }
         "insights" => Tab::Overview,

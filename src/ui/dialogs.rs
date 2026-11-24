@@ -687,6 +687,8 @@ fn forward(app: &mut App, ui: &mut egui::Ui, messages: &[String]) {
         search.request_focus();
     }
     ui.add_space(4.0);
+    #[cfg(feature = "extras")]
+    let favourites = crate::extras::forward::tabs(app, ui, footer_rect.top()); // extras hook
 
     let needle = app.forward_search.trim().to_lowercase();
     let mut chats: Vec<_> = app
@@ -701,6 +703,8 @@ fn forward(app: &mut App, ui: &mut egui::Ui, messages: &[String]) {
         .cloned()
         .collect();
     chats.sort_by_key(|chat| std::cmp::Reverse(chat.last_activity));
+    #[cfg(feature = "extras")]
+    crate::extras::forward::narrow(favourites, &mut chats); // extras hook
 
     let row_height = 52.0;
     let max_height = (footer_rect.top() - ui.cursor().top() - 8.0).max(1.0);
@@ -791,12 +795,11 @@ fn forward(app: &mut App, ui: &mut egui::Ui, messages: &[String]) {
                 }
             }
             if chats.is_empty() {
-                theme::text(
-                    ui,
-                    "No writable chats found",
-                    theme::regular(13.5),
-                    palette.secondary,
-                );
+                #[cfg(feature = "extras")]
+                let empty = crate::extras::forward::empty(app, favourites); // extras hook
+                #[cfg(not(feature = "extras"))]
+                let empty = "No writable chats found";
+                theme::text(ui, empty, theme::regular(13.5), palette.secondary);
             }
         });
     #[cfg(any(test, feature = "demo"))]

@@ -9,6 +9,7 @@ pub mod config;
 #[cfg(any(test, feature = "demo"))]
 pub mod demo;
 pub mod favourites;
+pub mod forward;
 pub mod insights;
 pub mod keep;
 pub mod ui;
@@ -28,6 +29,8 @@ pub struct Extras {
     pub dirty: bool,
     pub insights: insights::Insights,
     pub backfill: keep::Backfill,
+    /// The Forward dialog shows only favourites (REQ-EXTRAS-015).
+    pub forward_favourites: bool,
 }
 
 impl Extras {
@@ -39,6 +42,7 @@ impl Extras {
             dirty: false,
             insights: insights::Insights::default(),
             backfill: keep::Backfill::default(),
+            forward_favourites: false,
         }
     }
 }
