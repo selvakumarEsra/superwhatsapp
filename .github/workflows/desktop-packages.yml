@@ -94,6 +94,10 @@ jobs:
           # An MSI version is numbers only, and Windows Installer compares
           # just the first three: a beta's MSI carries its release's number.
           if [ "$RUNNER_OS" = Windows ]; then
+            # SQLCipher's vendored OpenSSL needs Strawberry Perl, which the
+            # release builds get from PowerShell; Git Bash's own perl lacks
+            # the modules OpenSSL's configure uses.
+            export PATH="/c/Strawberry/perl/bin:$PATH"
             version=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n 1)
             args+=(--config "{\"bundle\":{\"windows\":{\"wix\":{\"version\":\"${version%%-*}\"}}}}")
           fi
