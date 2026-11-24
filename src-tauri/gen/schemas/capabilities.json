@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"ZapFast's own commands and events only (REQ-WEBUI-003).","local":true,"windows":["main"],"permissions":["core:default","core:window:allow-start-dragging"]}}

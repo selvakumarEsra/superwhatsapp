@@ -71,37 +71,6 @@ pub enum Action<'a> {
     },
     /// Upload audio for transcription.
     Transcribe,
-    /// A mini-app's action (REQ-MINIAPP-004). `home` is the chat the app
-    /// is installed in; `declared` whether its manifest has the permission
-    /// the act needs; `members` whether it has "answer members".
-    App {
-        app: &'a str,
-        act: AppAct,
-        chat: &'a str,
-        home: &'a str,
-        declared: bool,
-        members: bool,
-    },
-}
-
-/// What a mini-app wants to do.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum AppAct {
-    Send,
-    UseZnga,
-    ReadActivity,
-    Store,
-}
-
-impl AppAct {
-    pub fn label(self) -> &'static str {
-        match self {
-            AppAct::Send => "send",
-            AppAct::UseZnga => "ask Znga",
-            AppAct::ReadActivity => "read activity",
-            AppAct::Store => "store data",
-        }
-    }
 }
 
 impl Action<'_> {
@@ -116,7 +85,6 @@ impl Action<'_> {
             Action::SearchArchive => "search the archive".into(),
             Action::WriteFile { name } => format!("write {name}"),
             Action::Transcribe => "transcribe a voice note".into(),
-            Action::App { app, act, .. } => format!("{app}: {}", act.label()),
         }
     }
 }
@@ -162,32 +130,6 @@ pub fn check(action: &Action, origin: Origin) -> Verdict {
             Origin::Schedule => Verdict::refuse("tools run only when you ask"),
             Origin::OthersText => Verdict::refuse("others' messages cannot use tools"),
         },
-        Action::App {
-            act,
-            chat,
-            home,
-            declared,
-            members,
-            ..
-        } => {
-            if !declared {
-                Verdict::refuse("the app did not declare this permission")
-            } else if *act == AppAct::Send && chat != home {
-                Verdict::refuse("apps send only to the chat they are installed in")
-            } else if origin == Origin::OthersText {
-                match act {
-                    AppAct::UseZnga | AppAct::ReadActivity => {
-                        Verdict::refuse("others' messages cannot use Znga or your activity")
-                    }
-                    AppAct::Send | AppAct::Store if !members => {
-                        Verdict::refuse("the app may not answer other people")
-                    }
-                    AppAct::Send | AppAct::Store => Verdict::allow("the app answers members"),
-                }
-            } else {
-                Verdict::allow("the app's own chat")
-            }
-        }
     }
 }
 
@@ -234,7 +176,7 @@ impl Audit {
         verdict.allowed
     }
 
-    /// Logs a decision made elsewhere (a mini-app's caps).
+    /// Logs a decision.
     pub fn log(&mut self, entry: Entry) {
         if !entry.allowed {
             log::info!(target: "zapfast::znga", "sentinel refused: {}", entry.action);
@@ -353,32 +295,6 @@ mod tests {
             assert!(check(&action, Origin::OwnChat).allowed);
         }
         assert!(check(&Action::Draft { chat: "x" }, Origin::OthersText).allowed);
-    }
-
-    #[test]
-    fn mini_apps_send_only_home_and_never_for_others_with_znga() {
-        let app = |act, chat, declared, members| Action::App {
-            app: "Goal of the day",
-            act,
-            chat,
-            home: "me",
-            declared,
-            members,
-        };
-        assert!(check(&app(AppAct::Send, "me", true, false), Origin::OwnChat).allowed);
-        assert!(check(&app(AppAct::Send, "me", true, false), Origin::Schedule).allowed);
-        assert!(!check(&app(AppAct::Send, "mom", true, true), Origin::Person).allowed);
-        assert!(!check(&app(AppAct::Send, "me", false, true), Origin::Person).allowed);
-        assert!(!check(&app(AppAct::Send, "me", true, false), Origin::OthersText).allowed);
-        assert!(check(&app(AppAct::Send, "me", true, true), Origin::OthersText).allowed);
-        for act in [AppAct::UseZnga, AppAct::ReadActivity] {
-            assert!(!check(&app(act, "me", true, true), Origin::OthersText).allowed);
-            assert!(check(&app(act, "me", true, false), Origin::Schedule).allowed);
-        }
-        assert_eq!(
-            app(AppAct::Send, "me", true, false).label(),
-            "Goal of the day: send"
-        );
     }
 
     #[test]

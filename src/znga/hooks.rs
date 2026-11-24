@@ -545,10 +545,6 @@ pub fn observe_messages(app: &mut App, chat: &str, messages: &[Message], older: 
             Content::Text { text, .. } => Some(text.as_str()),
             _ => None,
         };
-        #[cfg(feature = "miniapps")]
-        if crate::miniapps::hooks::claims(app, &account, chat, message) {
-            continue; // miniapps hook
-        }
         if app.znga.selfchat.accept(
             &message.id,
             text,
@@ -624,11 +620,6 @@ fn pump_self_chat(app: &mut App) {
 
 /// The self-chat thread arrived: plan the search.
 fn self_chat_history(app: &mut App, ask: u64, messages: Vec<(bool, String)>) {
-    #[cfg(feature = "miniapps")]
-    let messages: Vec<_> = messages
-        .into_iter()
-        .filter(|(_, text)| !crate::miniapps::is_app_text(text))
-        .collect(); // miniapps hook
     let Some(asking) = app.znga.asking.get_mut(&ask) else {
         return;
     };
@@ -1002,12 +993,6 @@ fn apply(app: &mut App, effects: Vec<Effect>) {
                 pump_self_chat(app);
             }
             Effect::Search { ask, terms } => search_for(app, ask, terms),
-            Effect::App { key, tag, answer } => {
-                #[cfg(feature = "miniapps")]
-                crate::miniapps::hooks::znga_answered(app, &key, &tag, answer); // miniapps hook
-                #[cfg(not(feature = "miniapps"))]
-                let _ = (key, tag, answer);
-            }
         }
     }
 }

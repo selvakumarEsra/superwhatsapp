@@ -1,0 +1,209 @@
+/*
+ * WhatsApp Desktop for macOS, as tokens (REQ-WEBUI-004). Components use
+ * only these, never literal values.
+ *
+ * Dark values are measured from the baseline capture of 2026-11-24
+ * (dark, 1288×806 pt; 1 pt = 1 CSS px). Text sizes were calibrated by
+ * rendering the same words in the system font and matching their
+ * measured widths. Light values are not measured yet: they follow the
+ * same structure with WhatsApp's light palette until a light capture
+ * exists [REQ-WEBUI-004, needs review].
+ */
+:root {
+  color-scheme: light;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  /* Surfaces (light: unmeasured) */
+  --app-bg: #ffffff;
+  --sidebar-bg: #f2f1f0;
+  --sidebar-selected: #e3e2e1;
+  --panel-bg: #ffffff;
+  --panel-border: #dcdcdc;
+  --search-bg: #ededed;
+  --row-hover: #f4f4f4;
+  --row-selected: #e9e9e9;
+  --divider: #e6e6e6;
+  --round-button-bg: #ededed;
+  --conversation-bg: #f5f1eb;
+  --conversation-header-bg: #f7f7f7;
+  --conversation-header-border: #e2e2e2;
+  --header-pill-bg: #ececec;
+  --wallpaper-opacity: 0.06;
+  --wallpaper-filter: none;
+  --bubble-in: #ffffff;
+  --bubble-out: #d9fdd3;
+  --composer-button-bg: #ffffff;
+  --input-bg: #ffffff;
+  --input-border: rgba(0, 0, 0, 0.12);
+  --date-chip-bg: #ffffff;
+  --empty-bg: #f7f7f7;
+  --menu-bg: #ffffff;
+  --menu-hover: #f0f0f0;
+  --shadow-bubble: 0 0.5px 0.5px rgba(0, 0, 0, 0.13);
+  --shadow-menu: 0 6px 24px rgba(0, 0, 0, 0.18);
+
+  /* Text and icons */
+  --text-primary: #111111;
+  --text-secondary: #737373;
+  --text-section: #8a8a8a;
+  --text-meta: rgba(0, 0, 0, 0.45);
+  --text-call-sub: #555555;
+  --icon: #4f4f4f;
+  --icon-active: #111111;
+  --accent: #1daa61;
+  --accent-text: #1a9c57;
+  --accent-fg: #ffffff;
+  --new-chat-bg: #1daa61;
+  --unread: #1daa61;
+  --unread-time: #1a9c57;
+  --unread-fg: #ffffff;
+  --tick: #8c8c8c;
+  --tick-read: #53bdeb;
+  --link: #027eb5;
+  --quote-bar: #06cf9c;
+  --quote-bg: rgba(0, 0, 0, 0.05);
+
+  /* Default avatars: a tint per chat (dark measured: indigo, plum) */
+  --avatar-0-bg: #e1e1f7; --avatar-0-fg: #5f5fc4;
+  --avatar-1-bg: #f7e1ea; --avatar-1-fg: #c4517a;
+  --avatar-2-bg: #dff3e4; --avatar-2-fg: #2f9a4f;
+  --avatar-3-bg: #dcecf7; --avatar-3-fg: #3a84b8;
+  --avatar-4-bg: #f7ecdc; --avatar-4-fg: #b8792f;
+  --avatar-5-bg: #e6e6e6; --avatar-5-fg: #8a8a8a;
+  --reaction-border: #f5f1eb;
+
+  /* Geometry (measured) */
+  --titlebar-h: 33.5px;
+  --sidebar-w: 194px;
+  --sidebar-item-h: 26.5px;
+  --sidebar-item-gap: 0.5px;
+  --sidebar-inset-l: 7px;
+  --sidebar-inset-r: 8.5px;
+  --sidebar-radius: 7px;
+  --sidebar-icon: 20px;
+  --list-w: 320px;
+  --hairline: 0.5px;
+  --list-header-h: 44px;
+  --round-button: 30px;
+  --search-h: 30px;
+  --search-inset: 13.5px;
+  --row-h: 59px;
+  --row-inset: 13.5px;
+  --row-radius: 10px;
+  --row-pad-l: 7px;
+  --row-pad-r: 8px;
+  --row-gap: 9.5px;
+  --avatar-row: 40px;
+  --badge-h: 14px;
+  --conv-header-h: 45.5px;
+  --avatar-header: 30px;
+  --header-pill-h: 29.5px;
+  --bubble-gutter: 14px;
+  --bubble-pad-x: 10.5px;
+  --bubble-pad-y: 6.25px;
+  --bubble-radius: 12px;
+  --bubble-max: 70%;
+  --bubble-gap: 3px;
+  --bubble-gap-run: 10.5px;
+  --date-chip-h: 19px;
+  --date-chip-w: 85.5px;
+  --date-chip-gap: 13px;
+  --composer-button: 34px;
+  --composer-input-h: 27.5px;
+  --composer-pad-x: 9px;
+  --composer-pad-b: 7px;
+  --composer-gap: 7.5px;
+
+  /* Type. Sizes match the baseline's measured text widths in the system
+     font as Core Text renders it (the Tauri window's WebKit does the same). */
+  --fs-title: 11.25px;
+  --fw-title: 600;
+  --fs-sidebar: 11.25px;
+  --fs-section: 9px;
+  --fs-sidebar-count: 11px;
+  --fs-search: 11.25px;
+  --fs-archived: 12.25px;
+  --fs-row-title: 11.75px;
+  --fw-row-title: 600;
+  --fs-row-text: 10.75px;
+  --fs-meta: 10.75px;
+  --fs-badge: 9px;
+  --fs-msg: 11px;
+  --lh-msg: 15px;
+  --fs-msg-meta: 9px;
+  --fs-sender: 9.5px;
+  --fs-date-chip: 9.25px;
+  --fs-header-title: 11.75px;
+  --fs-header-sub: 9.25px;
+  --fs-input: 11px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --dur-panel: 250ms;
+  --dur-fade: 150ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --app-bg: #1e1e1e;
+    --sidebar-bg: #272625;
+    --sidebar-selected: #353434;
+    --panel-bg: #1e1e1e;
+    --panel-border: #3a3a3a;
+    --search-bg: #3b3b3b;
+    --row-hover: #2a2a2a;
+    --row-selected: #353535;
+    --divider: #3b3b3b;
+    --round-button-bg: #3c3c3c;
+    --conversation-bg: #0a0a0a;
+    --conversation-header-bg: #161616;
+    --conversation-header-border: #28282a;
+    --header-pill-bg: #2c2c2c;
+    --wallpaper-opacity: 0.07;
+    --wallpaper-filter: invert(1);
+    --bubble-in: #242626;
+    --bubble-out: #274d3a;
+    --composer-button-bg: #2b2b2b;
+    --input-bg: #2c2c2c;
+    --input-border: rgba(255, 255, 255, 0.22);
+    --date-chip-bg: #161717;
+    --empty-bg: #161616;
+    --menu-bg: #2c2c2c;
+    --menu-hover: #3a3a3a;
+    --shadow-bubble: none;
+    --shadow-menu: 0 6px 24px rgba(0, 0, 0, 0.5);
+    --text-primary: #ffffff;
+    --text-secondary: #a8a6a6;
+    --text-section: #81807f;
+    --text-meta: rgba(255, 255, 255, 0.72);
+    --text-call-sub: #c4c4c4;
+    --icon: #d9d9d9;
+    --icon-active: #ffffff;
+    --accent: #5ab96b;
+    --accent-text: #66d27a;
+    --accent-fg: #060105;
+    --new-chat-bg: #1eac62;
+    --unread: #5ab96b;
+    --unread-time: #66d27a;
+    --unread-fg: #060105;
+    --avatar-0-bg: #242445; --avatar-0-fg: #9d9df2;
+    --avatar-1-bg: #321a29; --avatar-1-fg: #ee7aa0;
+    --avatar-2-bg: #1a3224; --avatar-2-fg: #6fd58e;
+    --avatar-3-bg: #1a2a36; --avatar-3-fg: #79b8e6;
+    --avatar-4-bg: #352a1a; --avatar-4-fg: #e6ae6f;
+    --avatar-5-bg: #3a3a3a; --avatar-5-fg: #b3b3b3;
+    --reaction-border: #0a0a0a;
+    --tick: #989696;
+    --tick-read: #64b5e0;
+    --link: #53bdeb;
+    --quote-bg: rgba(255, 255, 255, 0.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-panel: 0ms;
+    --dur-fade: 0ms;
+  }
+}

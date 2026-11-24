@@ -69,10 +69,6 @@ stays in memory.
 
 ## More in this build
 
-- **Goal of the day** — a mini-app for your own "Message yourself" chat
-  (target button on the left rail). Each morning Znga proposes one goal,
-  checks in at midday and recaps in the evening; reply `/goal help` for its
-  commands.
 - **Favourites** — the heart on the left rail opens your favourite chats and
   groups, the way Archived opens archived ones, and the Forward dialog has a
   Favourites tab.

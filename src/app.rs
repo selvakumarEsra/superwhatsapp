@@ -467,8 +467,6 @@ pub struct App {
     pub znga: crate::znga::Znga, // znga hook
     #[cfg(feature = "extras")]
     pub extras: crate::extras::Extras, // extras hook
-    #[cfg(feature = "miniapps")]
-    pub miniapps: crate::miniapps::hooks::MiniApps, // miniapps hook
     pub adding_account: bool,
     /// The account on screen when "Add account" was chosen, for Cancel.
     account_before_adding: Option<AccountId>,
@@ -1570,8 +1568,6 @@ impl App {
             znga: crate::znga::Znga::load(&dirs.config, &dirs.cache, waker.clone()), // znga hook
             #[cfg(feature = "extras")]
             extras: crate::extras::Extras::load(&dirs.config), // extras hook
-            #[cfg(feature = "miniapps")]
-            miniapps: crate::miniapps::hooks::MiniApps::load(&dirs.config, waker.clone()), // miniapps hook
             dirs,
             settings,
             locale,
@@ -3972,8 +3968,6 @@ impl App {
                 }
                 #[cfg(feature = "znga")]
                 crate::znga::hooks::observe_messages(self, &chat, &messages, older); // znga hook
-                #[cfg(feature = "miniapps")]
-                crate::miniapps::hooks::observe_messages(self, &chat, &messages, older); // miniapps hook
                 let conversation = self.conversations.entry(chat.clone()).or_default();
                 let was_empty = conversation.messages.is_empty();
                 let messages_empty = messages.is_empty();
@@ -9066,10 +9060,9 @@ impl App {
             // `Event::ChatCleared`; the chat stays either way.
             Action::ClearChat(chat) => self.backend.send(Command::ClearChat(chat)),
             Action::SetPinned(chat, pinned) => {
-                if pinned && self.pinned_count() >= self.pin_limit {
-                    self.toast(format!("You can only pin {} chats", self.pin_limit));
-                    return;
-                }
+                // Past WhatsApp's limit the phone would drop an older pin,
+                // so the extra pin stays on this computer (REQ-EXTRAS-016).
+                let here_only = pinned && self.pinned_count() >= self.pin_limit;
                 if let Some(known) = self.chat_mut(&chat) {
                     known.pinned = pinned;
                     known.pinned_at = if pinned {
@@ -9078,7 +9071,15 @@ impl App {
                         0
                     };
                 }
-                self.backend.send(Command::SetPinned(chat, pinned));
+                if here_only {
+                    self.toast(crate::i18n::gettext(
+                        self.locale,
+                        "Pinned on this computer only",
+                    ));
+                    self.backend.send(Command::PinHere(chat));
+                } else {
+                    self.backend.send(Command::SetPinned(chat, pinned));
+                }
             }
             Action::SetMessagePinned {
                 chat,
@@ -10488,8 +10489,6 @@ impl App {
         crate::znga::hooks::tick(self); // znga hook
         #[cfg(feature = "extras")]
         crate::extras::tick(self); // extras hook
-        #[cfg(feature = "miniapps")]
-        crate::miniapps::hooks::tick(self); // miniapps hook
         for uri in std::mem::take(&mut self.stale_images) {
             crate::image_cache::forget(ctx, &uri);
         }
@@ -11490,8 +11489,6 @@ impl App {
         crate::znga::ui::show(self, ctx); // znga hook
         #[cfg(feature = "extras")]
         crate::extras::ui::show(self, ctx); // extras hook
-        #[cfg(feature = "miniapps")]
-        crate::miniapps::ui::show(self, ctx); // miniapps hook
         self.apply_actions(ctx);
         // After the view and its actions, so a change this frame starts the
         // pause from now. Nobody types behind the lock screen.
@@ -19775,7 +19772,7 @@ mod tests {
     }
 
     #[test]
-    fn a_fourth_pin_is_refused_like_on_the_phone() {
+    fn pins_beyond_the_limit_stay_on_this_computer() {
         let mut app = app();
         let (backend, mut commands) = Backend::recording();
         app.backend = backend;
@@ -19785,21 +19782,18 @@ mod tests {
             chat.archived = index == 4;
             app.chats.push(chat);
         }
-        app.apply(
-            Action::SetPinned("3@s.whatsapp.net".into(), true),
-            &egui::Context::default(),
-        );
-        assert!(!app.chat("3@s.whatsapp.net").unwrap().pinned);
-        assert!(commands.try_recv().is_err());
-        app.apply(
-            Action::SetPinned("0@s.whatsapp.net".into(), false),
-            &egui::Context::default(),
-        );
-        app.apply(
-            Action::SetPinned("3@s.whatsapp.net".into(), true),
-            &egui::Context::default(),
-        );
+        let ctx = egui::Context::default();
+        let mut sent = || std::iter::from_fn(|| commands.try_recv().ok()).collect::<Vec<_>>();
+        app.apply(Action::SetPinned("3@s.whatsapp.net".into(), true), &ctx);
         assert!(app.chat("3@s.whatsapp.net").unwrap().pinned);
+        assert!(app.chat("3@s.whatsapp.net").unwrap().pinned_at > 0);
+        assert!(matches!(sent().as_slice(), [Command::PinHere(id)] if id == "3@s.whatsapp.net"));
+        app.apply(Action::SetPinned("0@s.whatsapp.net".into(), false), &ctx);
+        assert!(matches!(sent().as_slice(), [Command::SetPinned(id, false)] if id == "0@s.whatsapp.net"));
+        app.apply(Action::SetPinned("1@s.whatsapp.net".into(), false), &ctx);
+        sent();
+        app.apply(Action::SetPinned("0@s.whatsapp.net".into(), true), &ctx);
+        assert!(matches!(sent().as_slice(), [Command::SetPinned(id, true)] if id == "0@s.whatsapp.net"));
     }
 
     #[test]

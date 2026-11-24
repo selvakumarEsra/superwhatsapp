@@ -942,6 +942,9 @@ pub enum Command {
         through: i64,
     },
     SetPinned(ChatId, bool),
+    /// Pins a chat on this computer only, beyond WhatsApp's pin limit
+    /// (REQ-EXTRAS-016). The phone is not told.
+    PinHere(ChatId),
     /// Pins or unpins one message for everyone in the chat.
     SetMessagePinned {
         chat: ChatId,

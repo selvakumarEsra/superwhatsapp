@@ -110,11 +110,6 @@ pub enum Purpose {
     ExplainEdit {
         key: String,
     },
-    /// A mini-app's request (REQ-MINIAPP-007): `key` is its install.
-    App {
-        key: String,
-        tag: String,
-    },
     Test,
 }
 
@@ -130,7 +125,6 @@ impl Purpose {
                 }
                 | Purpose::Promises { .. }
                 | Purpose::Facts { .. }
-                | Purpose::App { .. }
         )
     }
 }
@@ -157,12 +151,6 @@ pub enum Effect {
     },
     /// Search the archive for an ask in progress (REQ-ZNGA-020).
     Search { ask: u64, terms: Vec<String> },
-    /// A mini-app's answer, success or failure (REQ-MINIAPP-007.A2).
-    App {
-        key: String,
-        tag: String,
-        answer: Result<String, String>,
-    },
 }
 
 /// A catch-up on one chat (REQ-ZNGA-021).
@@ -774,7 +762,6 @@ impl Znga {
             (Purpose::ExplainEdit { key }, answer) => {
                 self.explanations.insert(key, answer);
             }
-            (Purpose::App { key, tag }, answer) => effects.push(Effect::App { key, tag, answer }),
             (Purpose::Test, Ok(_)) => self.set_status("Connected. Znga is ready.", false),
             (Purpose::Briefing { proactive: true }, Err(error))
             | (

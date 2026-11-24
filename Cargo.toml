@@ -10,6 +10,10 @@ repository = "https://github.com/crmne/zapfast"
 keywords = ["whatsapp", "chat", "egui", "messaging"]
 categories = ["gui"]
 
+# The Tauri app (specs/tauri-ui.md) shares this lock file and target folder.
+[workspace]
+members = ["src-tauri"]
+
 [lib]
 name = "zapfast"
 path = "src/lib.rs"
@@ -331,11 +335,9 @@ harness = false
 [features]
 # znga hook: the fork's AI companion (src/znga/), on by default here.
 # extras hook: Favourites, Insights and Keep (src/extras/).
-# miniapps hook: apps that live in a chat (src/miniapps/), built on Znga.
-default = ["znga", "extras", "miniapps"]
+default = ["znga", "extras"]
 znga = []
 extras = []
-miniapps = ["znga"]
 # Sample data, layout tests, and screenshots. Not used in release builds.
 demo = []
 

@@ -511,3 +511,34 @@ verifies:
 - The chips are not shown while reviewing recipients, nor in a window too
   short for them and two chat rows (every chat then shows); without the
   extras feature the dialog is unchanged.
+
+<!-- id: REQ-EXTRAS-016 -->
+## Any number of chats MAY be pinned
+
+WhatsApp keeps three pinned chats (twenty with WhatsApp Plus), and the
+phone silently unpins an older chat when a linked device pins one more.
+ZapFast lets the person pin as many chats as they like: pins up to
+WhatsApp's limit go to the phone as before, and each pin beyond it is kept
+on this computer only, so the phone's pins are never displaced. A
+"pinned on this computer only" note says so when such a pin is made.
+
+implementations:
+  - src/app.rs:App::apply
+  - src/backend/worker.rs:Worker::handle
+
+verifies:
+  - src/app.rs:pins_beyond_the_limit_stay_on_this_computer
+
+## Acceptance
+<!-- id: REQ-EXTRAS-016.A1 -->
+- With three chats pinned (no WhatsApp Plus), pinning a fourth pins it in
+  the list, sorted with the other pins by pin time, and sends nothing to
+  the phone.
+<!-- id: REQ-EXTRAS-016.A2 -->
+- A pin made while fewer than the limit are pinned is sent to the phone,
+  as before.
+<!-- id: REQ-EXTRAS-016.A3 -->
+- A pin kept on this computer survives a restart and is not undone by
+  history or app-state that is older than it.
+<!-- id: REQ-EXTRAS-016.A4 -->
+- Unpinning any chat unpins it here and tells the phone.

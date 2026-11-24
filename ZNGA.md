@@ -56,23 +56,6 @@ Three more fork features live in `src/extras/` (contract:
   Messages you delete yourself are not kept, and nothing about keeping
   reaches WhatsApp.
 
-## Mini-apps: Goal of the day
-
-Mini-apps live in `src/miniapps/` behind the `miniapps` feature (needs
-`znga`; contract: [`specs/miniapps.md`](specs/miniapps.md)). The target
-button on the rail opens the Mini-apps window. An app is installed in one
-chat after the person sees its permissions; it is handed only the events
-addressed to it (`/command`, quote-replies to its messages, its cards, its
-wake-ups) and answers with actions the host checks with the Sentinel and
-caps (20 sends a day, 10 s apart). Its data is kept per install in an
-encrypted `miniapps.db` beside the archive. A failing app is turned off in
-that install only.
-
-**Goal of the day** (own chat only) proposes a goal at 08:00 from
-yesterday's goal, promises and today's plans, checks in at 13:00 and
-recaps at 20:00 (at most three scheduled messages a day), and keeps 90
-days of history. `/goal help` lists its commands.
-
 ## Engines
 
 | Engine | Credentials | Leaves your machine? |
@@ -101,11 +84,11 @@ The feature is on by default (`znga` in `Cargo.toml`). To build without it:
 
 ## Merging from upstream
 
-All the code is in `src/znga/`, `src/extras/` and `src/miniapps/`. Upstream files carry only
-small hooks, each marked `znga hook`, `extras hook` or `miniapps hook`:
+All the code is in `src/znga/` and `src/extras/`. Upstream files carry only
+small hooks, each marked `znga hook` or `extras hook`:
 
 ```
-git grep -n -e "znga hook" -e "extras hook" -e "miniapps hook"
+git grep -n -e "znga hook" -e "extras hook"
 ```
 
 | File | Hook |
@@ -114,7 +97,6 @@ git grep -n -e "znga hook" -e "extras hook" -e "miniapps hook"
 | `src/lib.rs` | `pub mod znga;` |
 | `src/app.rs` | the `znga` field and its init; `pub(crate)` on `waker`, `notifications`, `notification_opens`, `deferred_account_actions`; calls in `Event::Incoming`, `background_frame`, `frame_ui` |
 | `src/demo.rs` | `--demo-page znga`, `znga-drafts`, `znga-ask`, `znga-setup` |
-| `src/demo.rs` (miniapps) | `--demo-page miniapps`, `miniapps-add` |
 | `src/ui/dialogs.rs` | extras: the Forward dialog's All / Favourites tabs, list filter and empty text |
 | `src/ui/rail.rs` | extras: Chats is dark while Favourites is lit, and leads back to every chat |
 | `src/archive.rs` | extras: `keep::preserve` before a revoke or edit overwrites a message; `extras_connection` |

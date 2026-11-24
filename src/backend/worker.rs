@@ -8647,6 +8647,10 @@ impl Worker {
                     ));
                 }
             }
+            Command::PinHere(chat) => {
+                let _ = self.archive.set_pinned(&chat, true);
+                self.emit_chat(&chat);
+            }
             Command::SetPinned(chat, pinned) => {
                 let _ = self.archive.set_pinned(&chat, pinned);
                 self.emit_chat(&chat);

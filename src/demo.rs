@@ -2025,10 +2025,6 @@ pub fn apply_flags(app: &mut App, page: Option<&str>) {
         if crate::extras::demo::apply(app, part) {
             continue; // extras hook
         }
-        #[cfg(feature = "miniapps")]
-        if crate::miniapps::demo::apply(app, part) {
-            continue; // miniapps hook
-        }
         match part {
             "history-date" => history_date_sample(app),
             "chat" | "" => {}
