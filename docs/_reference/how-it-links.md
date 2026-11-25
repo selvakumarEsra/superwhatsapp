@@ -9,9 +9,8 @@ nav_order: 1
 SuperWhatsapp registers as a linked device through
 [whatsapp-rust](https://github.com/oxidezap/whatsapp-rust). Messages are
 end-to-end encrypted for each device. Pair with a QR code or phone-number
-code. New links list SuperWhatsapp under **Linked devices**; an existing link may
-retain the earlier name FastsApp until you link again. There you can unlink
-it at any time.
+code. Your phone lists SuperWhatsapp under **Linked devices**, where you can
+unlink it at any time.
 
 WhatsApp answers a limited number of QR codes on one connection and then ends
 it. SuperWhatsapp opens a fresh connection for a new set, so the linking screen keeps

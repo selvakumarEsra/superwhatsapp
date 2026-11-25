@@ -82,7 +82,7 @@ jekyll_vitepress:
     enabled: true
     show_on_docs: true
     message: >-
-      SuperWhatsapp is built on <a href="https://github.com/crmne/zapfast" target="_blank" rel="noreferrer">ZapFast</a> by Carmine Paolino, under the MIT license.
+      SuperWhatsapp is open source under the <a href="https://github.com/selvakumarEsra/superwhatsapp/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT license</a>.
     copyright: >-
       SuperWhatsapp is an independent project, not affiliated with, endorsed by or sponsored by WhatsApp LLC or Meta Platforms, Inc. WhatsApp is a trademark of WhatsApp LLC.
   doc_footer:

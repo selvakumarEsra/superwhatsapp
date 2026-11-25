@@ -39,7 +39,7 @@ A fast desktop app for macOS, Windows and Linux, with Znga built in: it spots th
   reminds you before it is due.
 - **Private by design.** An encrypted archive on your computer, an app lock,
   locked chats, and the AI of your choice, including fully local models.
-- **Native and fast.** Rust, no browser engine, opens in under a second.
+- **Native and fast.** Rust, no browser engine, quick to start and light on memory.
 - **Everything else you expect.** Voice messages, media, stickers, polls,
   calls (beta), several numbers, favourites, insights, themes and keyboard
   shortcuts, in 12 languages.
@@ -77,13 +77,11 @@ Tags `v*` on `main` build macOS, Windows, Linux and Flatpak packages, sign
 ([`release.yml`](.github/workflows/release.yml)). Run the workflow by hand
 for a dry run that builds every file without publishing.
 
-## Credits
+## License
 
-SuperWhatsapp is built on [ZapFast](https://github.com/crmne/zapfast) by
-Carmine Paolino, which connects through
-[whatsapp-rust](https://github.com/oxidezap/whatsapp-rust) and is built with
-[egui](https://www.egui.rs) and [fastframe](https://fastframe.dev). Thank you
-to everyone who contributed to them. Licensed under the [MIT license](LICENSE).
+SuperWhatsapp is open source under the [MIT license](LICENSE). It connects
+through [whatsapp-rust](https://github.com/oxidezap/whatsapp-rust) and draws
+its interface with [egui](https://www.egui.rs).
 
 ## Disclaimer
 

@@ -1,9 +1,6 @@
 ---
 title: Using SuperWhatsapp
 description: Send messages, open chats from links, and use attachments, interactive messages, voice messages, and keyboard shortcuts.
-redirect_from:
-  - /using-zapfast/
-  - /using-fastsapp/
 nav_order: 4
 ---
 

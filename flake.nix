@@ -204,7 +204,7 @@
 
             meta = {
               description = "Fast native WhatsApp client";
-              homepage = "https://zapfast.rocks";
+              homepage = "https://selvakumaresra.github.io/superwhatsapp";
               license = with pkgs.lib.licenses; [ mit gpl2Only ];
               mainProgram = "superwhatsapp";
               # The flake publishes only aarch64-darwin. Older nixpkgs, for

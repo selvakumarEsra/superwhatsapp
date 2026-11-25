@@ -65,11 +65,7 @@ On macOS, settings, state, and the logs are in
 `%LOCALAPPDATA%\paolino\zapfast\data`, and the caches in
 `%LOCALAPPDATA%\paolino\zapfast\cache`.
 
-On first start, SuperWhatsapp moves the corresponding `fastsapp` directories (or
-`fastwhatsapp` from earlier versions), including the session, archive, saved
-stickers, and window state. Existing SuperWhatsapp directories are never overwritten.
-Quit FastsApp first; launching SuperWhatsapp while it is running brings the existing
-window forward. A single-number setup from before 0.19 moves into
+A single-number setup from before 0.19 moves into
 `accounts/1/` on first start, keyring key included; if that cannot finish (a
 locked keyring, or a folder already in the way), SuperWhatsapp stops without moving
 anything and says why in its log. If `accounts/1/` already holds a linked
@@ -256,8 +252,7 @@ name or description, in the interface language or in English.
   and video do not: they travel over UDP straight to WhatsApp's call relays,
   which see this computer's address.
 - **GIPHY API key**: for GIF search, unless the build includes one. Set
-  `ZAPFAST_GIPHY_KEY` at compile time to include a default key. The earlier
-  `FASTSAPP_GIPHY_KEY` remains a fallback for existing builds.
+  `ZAPFAST_GIPHY_KEY` at compile time to include a default key.
 
 **Account** edits your WhatsApp name, About, and picture, and unlinks this
 computer. **Files** shows the archive, the downloads folder (which you can

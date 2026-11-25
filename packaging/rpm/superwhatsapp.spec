@@ -7,8 +7,8 @@ Version:        @VERSION@
 Release:        1%{?dist}
 Summary:        Fast native WhatsApp client
 License:        MIT
-URL:            https://zapfast.rocks
-Source0:        https://github.com/crmne/zapfast/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
+URL:            https://selvakumaresra.github.io/superwhatsapp
+Source0:        https://github.com/selvakumarEsra/superwhatsapp/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 # ring compiles its own C, and LTO objects in its archive leave the link
 # without ring_core_* symbols, as on Arch.
@@ -77,4 +77,4 @@ install -Dm755 contrib/omarchy/zapfast-theme %{buildroot}%{_datadir}/superwhatsa
 
 %changelog
 * @DATE@ Carmine Paolino <carmine@paolino.me> - @VERSION@-1
-- SuperWhatsapp @VERSION@: https://github.com/crmne/zapfast/releases/tag/v@VERSION@
+- SuperWhatsapp @VERSION@: https://github.com/selvakumarEsra/superwhatsapp/releases/tag/v@VERSION@

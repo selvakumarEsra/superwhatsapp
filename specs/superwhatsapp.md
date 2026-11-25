@@ -6,12 +6,12 @@ priority: high
 ---
 
 <!-- id: SUPERWA-DOC -->
-# SuperWhatsapp: the fork becomes its own product
+# SuperWhatsapp: an independent product
 
-The fork of ZapFast with Znga becomes **SuperWhatsapp**: a fast desktop
-WhatsApp client with a proactive AI agent (Znga). It lives in its own
-repository, `selvakumarEsra/superwhatsapp`, with its own name, logo,
-releases and website.
+**SuperWhatsapp** is a fast desktop WhatsApp client with a proactive AI agent
+(Znga). It is an independent project in its own repository,
+`selvakumarEsra/superwhatsapp`, with its own name, logo, releases, website and
+roadmap, and presents no earlier project as its parent.
 
 Non-goals: renaming internal identifiers. The Rust library stays `zapfast`,
 and the data folders, keychain entries, bundle identifiers, Flatpak ID and
@@ -26,8 +26,9 @@ Meta; the product says so wherever it introduces itself.
 Window titles, menus, the tray, notifications, dialogs, Settings › About,
 both interfaces, the translations, installers, the app bundle and the
 release files name the product SuperWhatsapp. The program is
-`superwhatsapp`. History (release notes of earlier versions, the
-changelog) and credit to upstream ZapFast stay as written.
+`superwhatsapp`. Nothing a person sees names or links to an earlier project;
+the only exception is the copyright notice the MIT license requires in
+`LICENSE`, kept while that code remains.
 
 implementations:
   - src/znga/update.rs:CONFIG
@@ -42,8 +43,9 @@ verifies:
 
 ## Acceptance
 <!-- id: REQ-SUPERWA-001.A1 -->
-- No interface text, translation or installer shows "ZapFast" except where
-  it credits upstream or describes an earlier version.
+- No interface text, translation, installer, package metadata, README or
+  website page shows "ZapFast", "FastsApp" or links to their sites or
+  repositories.
 <!-- id: REQ-SUPERWA-001.A2 -->
 - `superwhatsapp --version` prints `superwhatsapp <version>`.
 <!-- id: REQ-SUPERWA-001.A3 -->
@@ -127,4 +129,4 @@ implementations:
   only to pages and files that exist.
 <!-- id: REQ-SUPERWA-004.A3 -->
 - The site says SuperWhatsapp is not affiliated with WhatsApp or Meta, and
-  credits ZapFast under its MIT license.
+  that it is open source under the MIT license.

@@ -1181,7 +1181,7 @@ fn theme_picker(ui: &mut egui::Ui, app: &mut App) {
 }
 
 /// The website's page on writing a theme.
-const THEMES_GUIDE: &str = "https://zapfast.rocks/themes/";
+const THEMES_GUIDE: &str = "https://selvakumaresra.github.io/superwhatsapp/themes/";
 
 /// The interface language menu.
 fn font_picker(ui: &mut egui::Ui, app: &mut App) {

@@ -53,12 +53,6 @@ SuperWhatsapp is unofficial. It behaves like a normal linked device and never
 automates sending, but WhatsApp may restrict accounts that use unofficial
 clients. Read [Account safety](/privacy/#account-safety) before you start.
 
-## I use ZapFast. Can I switch?
-
-Yes. SuperWhatsapp is built on ZapFast and uses the same folders, so your
-linked numbers, chats and settings carry over. Quit ZapFast before you start
-SuperWhatsapp. See [Download](/download/#coming-from-zapfast).
-
 ## Is SuperWhatsapp made by WhatsApp?
 
 No. SuperWhatsapp is an independent project, not affiliated with, endorsed by

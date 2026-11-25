@@ -37,9 +37,9 @@
 
     <Icon Id="SuperWhatsappIcon" SourceFile="$(sys.SOURCEFILEDIR)superwhatsapp.ico" />
     <Property Id="ARPPRODUCTICON" Value="SuperWhatsappIcon" />
-    <Property Id="ARPURLINFOABOUT" Value="https://zapfast.rocks" />
-    <Property Id="ARPHELPLINK" Value="https://github.com/crmne/zapfast/issues" />
-    <Property Id="ARPURLUPDATEINFO" Value="https://github.com/crmne/zapfast/releases" />
+    <Property Id="ARPURLINFOABOUT" Value="https://selvakumaresra.github.io/superwhatsapp" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/selvakumarEsra/superwhatsapp/issues" />
+    <Property Id="ARPURLUPDATEINFO" Value="https://github.com/selvakumarEsra/superwhatsapp/releases" />
     <Property Id="ARPCOMMENTS" Value="© 2026 Carmine Paolino. MIT License. Not affiliated with WhatsApp or Meta." />
     <Property Id="ARPNOMODIFY" Value="1" />
     <Property Id="ARPNOREPAIR" Value="1" />

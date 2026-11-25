@@ -1,9 +1,6 @@
 ---
 title: What is SuperWhatsapp?
 description: What SuperWhatsapp and its AI agent Znga do for you, what it supports, and its current limitations.
-redirect_from:
-  - /what-is-fastsapp/
-  - /what-is-zapfast/
 nav_order: 0
 ---
 
@@ -32,10 +29,8 @@ works ahead of you:
 [Meet Znga](/znga/) to see each of these in detail.
 
 Under the hood SuperWhatsapp is a native app written in Rust, with no browser
-engine inside. It is built on [ZapFast](https://github.com/crmne/zapfast) by
-Carmine Paolino and connects through
-[whatsapp-rust](https://github.com/oxidezap/whatsapp-rust). It opens in under
-a second and stays light on memory: [see the measurements](/benchmarks/).
+engine inside, so it starts quickly and stays light on memory. It connects
+through [whatsapp-rust](https://github.com/oxidezap/whatsapp-rust).
 
 <img class="VPImage dark" src="{{ '/screenshot.png' | relative_url }}" alt="SuperWhatsapp with Znga's Today panel beside a chat" width="1800" height="1157">
 <img class="VPImage light" src="{{ '/screenshot-light.png' | relative_url }}" alt="SuperWhatsapp in its light theme, showing a conversation with photos, voice messages and reactions" width="1800" height="1157">
@@ -126,9 +121,8 @@ cannot accept that risk.
 SuperWhatsapp connects through
 [whatsapp-rust](https://github.com/oxidezap/whatsapp-rust), which grew out
 of the [whatsmeow](https://github.com/tulir/whatsmeow) lineage. WhatsApp
-Web defines the companion-device model. SuperWhatsapp is built on
-[ZapFast](https://github.com/crmne/zapfast) by Carmine Paolino (MIT license),
-which uses [fastframe](https://fastframe.dev) and [egui](https://www.egui.rs).
+Web defines the companion-device model. The interface is drawn with
+[egui](https://www.egui.rs).
 
 SuperWhatsapp is an independent project, not affiliated with, endorsed by or
 sponsored by WhatsApp LLC or Meta Platforms, Inc. WhatsApp is a trademark of WhatsApp LLC.

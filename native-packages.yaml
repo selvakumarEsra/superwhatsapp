@@ -16,7 +16,7 @@ libraries:
 nfpm:
   name: superwhatsapp
   maintainer: Carmine Paolino <carmine@paolino.me>
-  homepage: https://zapfast.rocks
+  homepage: https://selvakumaresra.github.io/superwhatsapp
   description: Fast native WhatsApp client
   license: MIT
   provides: [fastsapp]
@@ -156,7 +156,7 @@ targets:
       local: dist/superwhatsapp-v@VERSION@-aarch64-unknown-linux-gnu.tar.gz
       release_asset: superwhatsapp-v@VERSION@-aarch64-unknown-linux-gnu.tar.gz
 release:
-  repository: crmne/zapfast
+  repository: selvakumarEsra/superwhatsapp
   checksums: checksums.txt
   prereleases: true
 assets:
@@ -171,7 +171,7 @@ assets:
     local: dist/superwhatsapp-v@VERSION@-macos-universal.dmg
   SOURCE:
     file: superwhatsapp-@VERSION@.tar.gz
-    url: https://github.com/crmne/zapfast/archive/refs/tags/v@VERSION@.tar.gz
+    url: https://github.com/selvakumarEsra/superwhatsapp/archive/refs/tags/v@VERSION@.tar.gz
     checksummed: false
     local: dist/superwhatsapp-@VERSION@.tar.gz
 templates:

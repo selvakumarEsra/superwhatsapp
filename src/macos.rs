@@ -231,7 +231,9 @@ fn action(id: &str) -> Option<Action> {
         "zoom-out" => Action::ZoomBy(-0.1),
         "zoom-reset" => Action::ResetZoom,
         "shortcuts" => Action::ShowDialog(Dialog::Shortcuts),
-        "help" => Action::OpenUrl("https://zapfast.rocks/using-zapfast/".into()),
+        "help" => Action::OpenUrl(
+            "https://selvakumaresra.github.io/superwhatsapp/using-superwhatsapp/".into(),
+        ),
         "show-window" => Action::ShowWindow,
         _ => return None,
     })

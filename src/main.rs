@@ -265,7 +265,7 @@ fn run() -> eframe::Result<()> {
             }
             single_instance::Outcome::Surfaced => {
                 eprintln!(
-                    "SuperWhatsapp or FastsApp is already running; asked it to {}",
+                    "SuperWhatsapp is already running; asked it to {}",
                     if target.is_some() {
                         "open the chat"
                     } else if invite.is_some() {

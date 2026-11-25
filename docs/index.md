@@ -52,9 +52,9 @@ features:
     link_text: Privacy and security
   - icon: ⚡
     title: Native and fast
-    details: Written in Rust, with no browser inside. Opens in under a second, scrolls smoothly through years of history and stays light on memory and battery.
-    link: /benchmarks/
-    link_text: The numbers
+    details: Written in Rust, with no browser inside. It starts quickly, scrolls smoothly through years of history and stays light on memory and battery.
+    link: /how-it-links/
+    link_text: How it connects
   - icon: 📊
     title: Insights about your chats
     details: Your busiest hours, reply times, streaks and the people you have drifted from, worked out on your computer. Nothing leaves it.

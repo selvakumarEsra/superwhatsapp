@@ -98,12 +98,6 @@ out. Installed copies update themselves after verifying the release's
 signature; a copy that cannot (the Flatpak, for example) shows where to
 download the new version.
 
-## Coming from ZapFast?
-
-{{ app }} is built on ZapFast and uses the same folders, so installing it
-keeps your linked numbers, chats, archive and settings. Quit ZapFast first:
-only one of the two runs at a time.
-
 ## Try the new interface
 
 Each release also carries **{{ app }} Preview**, a new interface modelled on

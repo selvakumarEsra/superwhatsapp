@@ -2891,7 +2891,8 @@ pub fn apply_flags(app: &mut App, page: Option<&str>) {
                 use crate::updates::{DownloadState, Installation, Kind, Prepared};
                 app.update = Some(crate::updates::Release {
                     version: "99.0.0".to_owned(),
-                    url: "https://github.com/crmne/zapfast/releases/latest".to_owned(),
+                    url: "https://github.com/selvakumarEsra/superwhatsapp/releases/latest"
+                        .to_owned(),
                 });
                 app.show_update = true;
                 let installation = Installation {
@@ -22173,7 +22174,10 @@ mod tests {
                     }),
             );
         }
-        assert_eq!(opened, ["https://zapfast.rocks/themes/"]);
+        assert_eq!(
+            opened,
+            ["https://selvakumaresra.github.io/superwhatsapp/themes/"]
+        );
     }
 
     /// The chat list is one clickable surface: each row starts where the one
