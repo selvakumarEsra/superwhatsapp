@@ -11187,7 +11187,7 @@ dependencies = [
 
 [[package]]
 name = "zapfast"
-version = "0.21.1-beta.7"
+version = "0.21.1-beta.8"
 dependencies = [
  "aes 0.9.3",
  "anyhow",
@@ -11289,7 +11289,7 @@ dependencies = [
 
 [[package]]
 name = "zapfast-desktop"
-version = "0.21.1-beta.7"
+version = "0.21.1-beta.8"
 dependencies = [
  "egui",
  "fastframe-dock",
