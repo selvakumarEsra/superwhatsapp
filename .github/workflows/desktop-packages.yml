@@ -27,7 +27,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: desktop-packages-${{ github.event.pull_request.number || github.ref }}
+  # A release's preview has a group of its own, so a push to main never
+  # cancels it.
+  group: desktop-packages-${{ inputs.preview && 'release' || 'push' }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
