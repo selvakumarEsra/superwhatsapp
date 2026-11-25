@@ -387,6 +387,7 @@ fn start() -> Start {
     let mut start = Start {
         demo: false,
         demo_page: None,
+        instance: None,
     };
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -410,7 +411,15 @@ pub fn run() {
         println!("{}", serde_json::to_string_pretty(&state).expect("state"));
         return;
     }
-    let start = start();
+    let mut start = start();
+    // One ZapFast per account: a copy already running, this interface or
+    // the egui one, comes forward instead (REQ-WEBUI-012.A2).
+    if !start.demo {
+        match engine::claim() {
+            Some(instance) => start.instance = Some(instance),
+            None => return,
+        }
+    }
     let start_hidden = std::env::args().any(|arg| arg == desktop::START_HIDDEN);
     tauri::Builder::default()
         // A second start brings the first window forward (REQ-WEBUI-012.A2).

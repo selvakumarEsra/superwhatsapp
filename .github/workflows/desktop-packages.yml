@@ -3,8 +3,15 @@ name: Desktop packages
 # Installers for the Tauri app (specs/tauri-ui.md, REQ-WEBUI-017) on the
 # platforms the Release workflow covers today. They are uploaded as
 # workflow artifacts to try out; release.yml keeps shipping the egui app
-# until the new interface is complete, and switches to these jobs then.
+# until the new interface is complete, and attaches these as a preview
+# (`preview: true`) beside it until then.
 on:
+  workflow_call:
+    inputs:
+      preview:
+        description: Build "ZapFast Preview" for a release, named zapfast-preview-*.
+        type: boolean
+        default: false
   push:
     branches: [main, feat/tauri-ui]
     paths: [src-tauri/**, web/**, src/**, Cargo.toml, Cargo.lock, .github/workflows/desktop-packages.yml]
@@ -101,8 +108,40 @@ jobs:
             version=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n 1)
             args+=(--config "{\"bundle\":{\"windows\":{\"wix\":{\"version\":\"${version%%-*}\"}}}}")
           fi
+          # A release's preview installs beside ZapFast under its own name
+          # and identifier, so it never replaces the egui app; the Mac app
+          # is signed ad hoc, as Apple silicon requires.
+          if [ "${{ inputs.preview }}" = true ]; then
+            args+=(--config '{"productName":"ZapFast Preview","identifier":"me.paolino.fastsapp.preview","bundle":{"macOS":{"signingIdentity":"-"}}}')
+          fi
           web/node_modules/.bin/tauri build "${args[@]}"
+      # Release names: zapfast-preview-<tag>-<target>, never the
+      # zapfast-v* names the egui app's updater looks for.
+      - name: Preview names
+        if: inputs.preview
+        shell: bash
+        run: |
+          mkdir -p preview
+          bundle="target/${{ matrix.target }}/release/bundle"
+          target="${{ matrix.target }}"
+          [ "$target" = universal-apple-darwin ] && target=macos-universal
+          name="zapfast-preview-${GITHUB_REF_NAME}-$target"
+          for file in "$bundle"/deb/*.deb "$bundle"/rpm/*.rpm "$bundle"/appimage/*.AppImage \
+            "$bundle"/msi/*.msi "$bundle"/dmg/*.dmg; do
+            [ -f "$file" ] && cp "$file" "preview/$name.${file##*.}"
+          done
+          for file in "$bundle"/nsis/*.exe; do
+            [ -f "$file" ] && cp "$file" "preview/$name-setup.exe"
+          done
+          ls -l preview
       - uses: actions/upload-artifact@v5
+        if: inputs.preview
+        with:
+          name: preview-${{ matrix.target }}
+          path: preview/*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v5
+        if: ${{ !inputs.preview }}
         with:
           name: zapfast-desktop-${{ matrix.target }}
           path: |

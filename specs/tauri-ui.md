@@ -444,6 +444,7 @@ implementations:
   - src-tauri/src/desktop.rs:set_badge
   - src-tauri/src/lib.rs:set_custom_theme
   - src-tauri/src/lib.rs:wallpaper_image
+  - src-tauri/src/engine.rs:claim
 
 ## Acceptance
 <!-- id: REQ-WEBUI-012.A1 -->
@@ -451,7 +452,8 @@ implementations:
   egui build, and takes effect without a restart where it does today.
 <!-- id: REQ-WEBUI-012.A2 -->
 - Starting ZapFast a second time brings the first window forward instead
-  of opening another.
+  of opening another, whichever interface each copy uses: the egui app and
+  the new interface never run at once on the same account.
 <!-- id: REQ-WEBUI-012.A3 -->
 - An installed beta.5 build updates to the first Tauri release, and the
   Tauri build accepts only updates signed with the fork's key.
@@ -558,7 +560,9 @@ today. Linux packages declare the WebKitGTK dependency.
 Until the new interface is complete, the Desktop packages workflow builds
 these installers as workflow artifacts on every change to the app, and the
 Release workflow keeps shipping the egui app; the release switches to the
-new packages only once the other requirements here are met.
+new packages only once the other requirements here are met. Until then
+each release also attaches the new packages as "ZapFast Preview", which
+installs beside ZapFast under its own name and never replaces it.
 
 implementations:
   - .github/workflows/release.yml:jobs
@@ -579,6 +583,10 @@ implementations:
   pull requests and on Linux, macOS and Windows on `main`; a change that
   breaks either fails CI, and the desktop crate's version must equal the
   core's.
+<!-- id: REQ-WEBUI-017.A5 -->
+- Before the switch, a release also carries `zapfast-preview-<tag>-<target>`
+  installers for every platform above, and none of them is named like the
+  files the egui app's updater installs.
 
 <!-- id: REQ-WEBUI-018 -->
 ## A demo mode and tests MUST cover the new interface

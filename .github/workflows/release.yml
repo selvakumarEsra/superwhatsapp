@@ -299,9 +299,20 @@ jobs:
           path: "*.flatpak"
           if-no-files-found: error
 
+  # The Tauri interface's installers as "ZapFast Preview", beside the egui
+  # app, until it replaces it (specs/tauri-ui.md, REQ-WEBUI-017).
+  preview:
+    name: Tauri preview
+    needs: release-source
+    permissions:
+      contents: read
+    uses: ./.github/workflows/desktop-packages.yml
+    with:
+      preview: true
+
   publish:
     name: GitHub release
-    needs: [build, macos, flatpak]
+    needs: [build, macos, flatpak, preview]
     runs-on: ubuntu-latest
     environment: release-signing
     permissions:

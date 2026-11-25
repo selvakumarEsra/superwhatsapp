@@ -80,6 +80,49 @@ impl Engine {
 pub struct Start {
     pub demo: bool,
     pub demo_page: Option<String>,
+    /// The account's single-instance slot, held for the whole run; demo
+    /// runs take none.
+    pub instance: Option<Instance>,
+}
+
+/// The slot that keeps one ZapFast, this interface or the egui one, on an
+/// account's archive and linked device at a time.
+pub struct Instance {
+    waker: zapfast::backend::Waker,
+    guard: zapfast::single_instance::Guard,
+}
+
+/// Becomes the running ZapFast, or asks the copy already running to show
+/// its window and returns `None`, as the egui build's launch does.
+pub fn claim() -> Option<Instance> {
+    use zapfast::single_instance::{Outcome, acquire};
+    let dirs = zapfast::paths::AppDirs::discover();
+    let waker = zapfast::backend::Waker::default();
+    match acquire(&dirs.runtime, &waker, "show") {
+        Outcome::Only(guard) => Some(Instance { waker, guard }),
+        _ => {
+            eprintln!("ZapFast is already running; asked it to show its window");
+            None
+        }
+    }
+}
+
+impl Instance {
+    /// Whether a later launch asked for the window, before the core takes
+    /// the request: the core's own answer only reaches an egui window.
+    fn wants_window(&self) -> bool {
+        use zapfast::single_instance::ControlCommand;
+        self.guard.commands().lock().is_ok_and(|queue| {
+            queue.iter().any(|command| {
+                matches!(
+                    command,
+                    ControlCommand::Show
+                        | ControlCommand::OpenChat(_)
+                        | ControlCommand::OpenInvite(_)
+                )
+            })
+        })
+    }
 }
 
 pub fn spawn(handle: AppHandle, start: Start) -> Engine {
@@ -112,13 +155,19 @@ fn make_app(start: &Start) -> App {
     dirs.ensure().expect("app folders");
     dirs.adopt_single_account().expect("account folder");
     let settings = Settings::load(&dirs.settings_file());
-    App::new(
-        &zapfast::backend::Waker::default(),
+    let instance = start
+        .instance
+        .as_ref()
+        .expect("a linked run holds the slot");
+    let mut app = App::new(
+        &instance.waker,
         dirs,
         settings,
         zapfast::app::AppOptions { tray: false },
     )
-    .expect("core")
+    .expect("core");
+    app.set_remote_control(&instance.guard);
+    app
 }
 
 fn run(
@@ -161,6 +210,10 @@ fn run(
                 Input::Refresh => force = true,
                 Input::Wake => {}
             }
+        }
+        if start.instance.as_ref().is_some_and(Instance::wants_window) {
+            let shown = handle.clone();
+            let _ = handle.run_on_main_thread(move || crate::desktop::show(&shown));
         }
         let since = last_step.elapsed();
         if since < MIN_STEP {
@@ -213,6 +266,7 @@ pub fn dump(page: Option<String>) -> view::State {
     let mut app = make_app(&Start {
         demo: true,
         demo_page: page,
+        instance: None,
     });
     let ctx = egui::Context::default();
     app.attach(&ctx);
