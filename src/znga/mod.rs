@@ -1,4 +1,4 @@
-//! Znga: ZapFast's on-device AI companion (fork-only, feature `znga`).
+//! Znga: SuperWhatsapp's on-device AI companion (fork-only, feature `znga`).
 //!
 //! Znga briefs the person on what happened, flags what needs them, and
 //! drafts messages in their voice (the "digital twin"). It never sends to
@@ -8,7 +8,7 @@
 //! Upstream files only call [`hooks`] and [`ui`] from lines marked
 //! `znga hook`.
 //!
-//! - [`config`]: `znga.json`, separate from ZapFast's settings
+//! - [`config`]: `znga.json`, separate from SuperWhatsapp's settings
 //! - [`keys`]: API keys from the environment or the OS keyring
 //! - [`provider`] and [`runner`]: model calls on a worker thread
 //! - [`triage`], [`proactive`]: alerts, briefings, notes to self, check-ins

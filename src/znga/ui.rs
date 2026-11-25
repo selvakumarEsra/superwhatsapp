@@ -238,7 +238,7 @@ fn welcome(app: &mut App, ui: &mut Ui) {
     let palette = app.palette;
     card(ui, &palette, |ui| {
         ui.label(RichText::new("Meet Znga").heading());
-        ui.label("Your AI companion, inside ZapFast:");
+        ui.label("Your AI companion, inside SuperWhatsapp:");
         for line in [
             "🔔  Tells you when a message really needs you",
             "📋  Briefs you on what happened while you were away, with a to-do list",
@@ -1151,7 +1151,7 @@ fn setup(app: &mut App, ui: &mut Ui) {
                 ui.label(
                     RichText::new(
                         "Uses your installed Claude Code and its own sign-in (your saved \
-                         login, or CLAUDE_CODE_OAUTH_TOKEN in its environment). ZapFast \
+                         login, or CLAUDE_CODE_OAUTH_TOKEN in its environment). SuperWhatsapp \
                          never reads or stores the token. Meant for your own use on this \
                          computer; requests count toward your Claude plan.",
                     )

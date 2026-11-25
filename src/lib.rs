@@ -1,4 +1,4 @@
-//! ZapFast internals exposed for diagnostics and tests.
+//! SuperWhatsapp internals exposed for diagnostics and tests.
 
 pub mod a11y;
 pub mod account;

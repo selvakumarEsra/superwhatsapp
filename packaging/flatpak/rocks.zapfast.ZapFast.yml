@@ -1,4 +1,4 @@
-# ZapFast as a Flatpak, built from source: the manifest Flathub builds
+# SuperWhatsapp as a Flatpak, built from source: the manifest Flathub builds
 # from. The copy in the Flathub repository names a tag and its commit in
 # the source below and carries cargo-sources.json next to it; flathub.sh
 # writes both. For a local build, this one takes the checkout as it is:
@@ -18,7 +18,7 @@ sdk-extensions:
   # libclang, for the bindings fastframe-audio's PipeWire output generates
   # against the SDK's libpipewire headers.
   - org.freedesktop.Sdk.Extension.llvm22
-command: zapfast
+command: superwhatsapp
 finish-args:
   # Wayland first, X11 when that is what there is.
   - --socket=wayland
@@ -42,20 +42,20 @@ finish-args:
 build-options:
   append-path: /usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/llvm22/bin
   env:
-    CARGO_HOME: /run/build/zapfast/cargo
+    CARGO_HOME: /run/build/superwhatsapp/cargo
     LIBCLANG_PATH: /usr/lib/sdk/llvm22/lib
 modules:
-  - name: zapfast
+  - name: superwhatsapp
     buildsystem: simple
     build-commands:
       - cargo --offline fetch --manifest-path Cargo.toml --verbose
       - cargo --offline build --release --locked
-      - install -Dm755 target/release/zapfast /app/bin/zapfast
+      - install -Dm755 target/release/superwhatsapp /app/bin/superwhatsapp
       - install -Dm644 packaging/applications/*.desktop /app/share/applications/rocks.zapfast.ZapFast.desktop
-      - sed -i 's/^Icon=.*$/Icon=rocks.zapfast.ZapFast/;s/^StartupWMClass=zapfast$/StartupWMClass=rocks.zapfast.ZapFast/' /app/share/applications/rocks.zapfast.ZapFast.desktop
-      - install -Dm644 packaging/icons/zapfast.svg /app/share/icons/hicolor/scalable/apps/rocks.zapfast.ZapFast.svg
+      - sed -i 's/^Icon=.*$/Icon=rocks.zapfast.ZapFast/;s/^StartupWMClass=superwhatsapp$/StartupWMClass=rocks.zapfast.ZapFast/' /app/share/applications/rocks.zapfast.ZapFast.desktop
+      - install -Dm644 packaging/icons/superwhatsapp.svg /app/share/icons/hicolor/scalable/apps/rocks.zapfast.ZapFast.svg
       - install -Dm644 packaging/flatpak/rocks.zapfast.ZapFast.metainfo.xml /app/share/metainfo/rocks.zapfast.ZapFast.metainfo.xml
-      - install -Dm644 LICENSE /app/share/licenses/zapfast/LICENSE
+      - install -Dm644 LICENSE /app/share/licenses/superwhatsapp/LICENSE
     sources:
       - type: dir
         path: ../..

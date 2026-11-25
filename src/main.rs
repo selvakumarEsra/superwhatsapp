@@ -8,7 +8,7 @@ use clap::Parser;
 
 /// A fast, native WhatsApp client.
 #[derive(Debug, Parser)]
-#[command(name = "zapfast", version, about)]
+#[command(name = "superwhatsapp", version, about)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Control>,
@@ -16,7 +16,7 @@ struct Cli {
     #[arg(short, long)]
     verbose: bool,
     /// Start in the tray without opening a window, when the tray is available
-    /// and ZapFast keeps running in the background. For login autostart.
+    /// and SuperWhatsapp keeps running in the background. For login autostart.
     #[arg(long)]
     start_hidden: bool,
 
@@ -76,7 +76,7 @@ struct Cli {
     #[arg(long, requires = "demo")]
     demo_macos: bool,
 
-    /// Draw ZapFast's own title bar and window buttons, as Settings >
+    /// Draw SuperWhatsapp's own title bar and window buttons, as Settings >
     /// Appearance > Custom title bar does, on Windows and Linux (demo only).
     #[cfg(feature = "demo")]
     #[arg(long, conflicts_with = "demo_macos")]
@@ -116,9 +116,9 @@ struct Cli {
 
 #[derive(Debug, clap::Subcommand)]
 enum Control {
-    /// Reload palettes in an already-running ZapFast without showing its window.
+    /// Reload palettes in an already-running SuperWhatsapp without showing its window.
     ReloadThemes,
-    /// Quit an already-running ZapFast, which closing its window leaves in the tray.
+    /// Quit an already-running SuperWhatsapp, which closing its window leaves in the tray.
     Quit,
 }
 
@@ -141,20 +141,20 @@ fn control(command: &Control, sent: single_instance::Sent) -> (i32, Option<Strin
         (_, Sent::Taken) | (Control::Quit, Sent::NotRunning) => (0, None),
         (Control::ReloadThemes, Sent::NotRunning) => (
             1,
-            Some("ZapFast is not running, so there are no themes to reload.".to_owned()),
+            Some("SuperWhatsapp is not running, so there are no themes to reload.".to_owned()),
         ),
         (Control::ReloadThemes, Sent::Older) => (
             1,
-            Some("The running ZapFast is too old to reload themes from the command line.".to_owned()),
+            Some("The running SuperWhatsapp is too old to reload themes from the command line.".to_owned()),
         ),
         (Control::Quit, Sent::Older) => (
             1,
             Some(
-                "The running ZapFast is too old to quit from the command line; use Quit in its tray menu."
+                "The running SuperWhatsapp is too old to quit from the command line; use Quit in its tray menu."
                     .to_owned(),
             ),
         ),
-        (_, Sent::Failed(error)) => (1, Some(format!("Could not reach the running ZapFast: {error}"))),
+        (_, Sent::Failed(error)) => (1, Some(format!("Could not reach the running SuperWhatsapp: {error}"))),
     }
 }
 
@@ -208,7 +208,7 @@ fn run() -> eframe::Result<()> {
     let cli = Cli::parse_from(&launch.arguments);
     let discovered = paths::AppDirs::discover();
     // A control command only talks to the running copy: whatever the answer,
-    // it never starts ZapFast and never stops a process itself.
+    // it never starts SuperWhatsapp and never stops a process itself.
     if let Some(command) = &cli.command {
         let (code, message) = control(
             command,
@@ -236,7 +236,7 @@ fn run() -> eframe::Result<()> {
         && target.is_none()
         && invite.is_none()
     {
-        eprintln!("ZapFast cannot read a phone number or group invite link from {argument}");
+        eprintln!("SuperWhatsapp cannot read a phone number or group invite link from {argument}");
         std::process::exit(2);
     }
     let waker = backend::Waker::default();
@@ -260,12 +260,12 @@ fn run() -> eframe::Result<()> {
             single_instance::Outcome::Surfaced
                 if cli.start_hidden && target.is_none() && invite.is_none() =>
             {
-                eprintln!("ZapFast is already running");
+                eprintln!("SuperWhatsapp is already running");
                 return Ok(());
             }
             single_instance::Outcome::Surfaced => {
                 eprintln!(
-                    "ZapFast or FastsApp is already running; asked it to {}",
+                    "SuperWhatsapp or FastsApp is already running; asked it to {}",
                     if target.is_some() {
                         "open the chat"
                     } else if invite.is_some() {
@@ -278,19 +278,19 @@ fn run() -> eframe::Result<()> {
             }
             single_instance::Outcome::Outdated => {
                 eprintln!(
-                    "ZapFast is already running, but that copy is too old to open the link; \
+                    "SuperWhatsapp is already running, but that copy is too old to open the link; \
                      asked it to show its window instead. Quit it and try again to open the link."
                 );
                 return Ok(());
             }
             single_instance::Outcome::Unanswered => {
-                eprintln!("ZapFast is already running but did not answer");
+                eprintln!("SuperWhatsapp is already running but did not answer");
                 return Ok(());
             }
         }
     };
     let default_filter = default_log_filter(cli.verbose);
-    // A demo must not create empty ZapFast directories that would prevent a
+    // A demo must not create empty SuperWhatsapp directories that would prevent a
     // later real launch from adopting the existing FastsApp session.
     let demo_root = demo.then(|| {
         std::env::temp_dir().join(format!(
@@ -333,11 +333,11 @@ fn run() -> eframe::Result<()> {
         log::error!("could not move the linked account into its folder: {error}");
         return Err(eframe::Error::AppCreation(error.into()));
     }
-    // The name and icon volume mixers show for every sound ZapFast plays or records; set before
+    // The name and icon volume mixers show for every sound SuperWhatsapp plays or records; set before
     // anything opens or lists a device.
     let _ = fastframe_audio::set_app_info(fastframe_audio::AppInfo {
-        name: "ZapFast".into(),
-        icon: Some("zapfast".into()),
+        name: "SuperWhatsapp".into(),
+        icon: Some("superwhatsapp".into()),
     });
     let settings = settings::Settings::load(&dirs.settings_file());
     // The drawn title bar (Windows and Linux): GNOME's button layout and
@@ -468,7 +468,7 @@ fn run() -> eframe::Result<()> {
                 )
             });
             eframe::run_native(
-                "ZapFast",
+                "SuperWhatsapp",
                 native_options(demo_persistence.clone(), geometry, transparent),
                 Box::new(move |cc| {
                     let mut app = lease.take(&cc.egui_ctx);
@@ -523,19 +523,19 @@ fn is_graphics_failure(error: &eframe::Error) -> bool {
     )
 }
 
-/// The text of the dialog shown when ZapFast cannot start, kept apart from
+/// The text of the dialog shown when SuperWhatsapp cannot start, kept apart from
 /// the dialog so it is tested on every platform.
 #[cfg(any(windows, test))]
 fn startup_failure_text(graphics: bool, details: &str, log: &std::path::Path) -> String {
     let summary = if graphics {
-        "ZapFast could not start because the graphics driver does not offer \
-         OpenGL 2.1 or newer, which ZapFast needs to draw its window.\n\n\
+        "SuperWhatsapp could not start because the graphics driver does not offer \
+         OpenGL 2.1 or newer, which SuperWhatsapp needs to draw its window.\n\n\
          Install the current driver from the maker of the graphics chip \
          (Intel, AMD or NVIDIA). The Microsoft Basic Display Adapter, some \
          virtual machines and some remote desktop sessions offer no usable \
          OpenGL."
     } else {
-        "ZapFast could not start."
+        "SuperWhatsapp could not start."
     };
     format!(
         "{summary}\n\nDetails: {details}\n\nThe log may say more: {}",
@@ -558,7 +558,7 @@ fn startup_failure_dialog(error: &eframe::Error) {
         &paths::AppDirs::discover().log_file(),
     );
     let wide = |text: &str| text.encode_utf16().chain([0]).collect::<Vec<u16>>();
-    let (text, caption) = (wide(&text), wide("ZapFast"));
+    let (text, caption) = (wide(&text), wide("SuperWhatsapp"));
     // SAFETY: both strings are NUL-terminated and outlive the call.
     unsafe {
         MessageBoxW(
@@ -614,11 +614,15 @@ fn native_options(
     let default_size = demo_size_arg().unwrap_or([1180.0, 780.0]);
     let demo = demo_persistence.is_some();
     let viewport = egui::ViewportBuilder::default()
-        .with_title(if demo { "ZapFast Demo" } else { "ZapFast" })
+        .with_title(if demo {
+            "SuperWhatsapp Demo"
+        } else {
+            "SuperWhatsapp"
+        })
         .with_app_id(if demo {
             "zapfast-demo".to_owned()
         } else {
-            fastframe_desktop::desktop_entry("zapfast")
+            fastframe_desktop::desktop_entry("superwhatsapp")
         });
     // The remembered size and position, from the settings, over the default
     // size. Demo runs keep their fixed screenshot size.
@@ -641,7 +645,7 @@ fn native_options(
         .with_transparent(transparent)
         .with_titlebar_shown(false)
         .with_title_shown(false)
-        // Windows and Linux: no frame when ZapFast draws its own title bar.
+        // Windows and Linux: no frame when SuperWhatsapp draws its own title bar.
         // Fixed for the window's life; a new choice replaces the window.
         .with_decorations(!fastframe_titlebar::enabled());
     eframe::NativeOptions {
@@ -1105,7 +1109,7 @@ mod startup_failure_tests {
             "The directory is not writable",
             std::path::Path::new("zapfast.log"),
         );
-        assert!(text.starts_with("ZapFast could not start."));
+        assert!(text.starts_with("SuperWhatsapp could not start."));
         assert!(!text.contains("OpenGL"));
         assert!(text.contains("The directory is not writable"));
     }

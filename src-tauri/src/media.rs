@@ -1,5 +1,5 @@
 //! `zapmedia:` serves avatars and media files to the page, only from
-//! ZapFast's own cache folders (REQ-WEBUI-003.A2).
+//! SuperWhatsapp's own cache folders (REQ-WEBUI-003.A2).
 
 use std::path::{Path, PathBuf};
 
@@ -22,7 +22,7 @@ fn decode(text: &str) -> Option<String> {
     String::from_utf8(out).ok()
 }
 
-/// The folders media may come from: ZapFast's cache and the temporary
+/// The folders media may come from: SuperWhatsapp's cache and the temporary
 /// folder demo runs use.
 fn allowed(path: &Path) -> bool {
     let Ok(path) = path.canonicalize() else {

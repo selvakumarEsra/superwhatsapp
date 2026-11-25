@@ -766,9 +766,10 @@ pub fn hue(seed: &str) -> f32 {
 }
 
 /// Embedded SVG app logo used across platform surfaces.
-const MARK: &[u8] = include_bytes!("../packaging/icons/zapfast.svg");
-/// The same mark without its rim and shading, which blur below this size.
-const SMALL_MARK: &[u8] = include_bytes!("../packaging/icons/zapfast-small.svg");
+const MARK: &[u8] = include_bytes!("../packaging/icons/superwhatsapp.svg");
+/// The same mark without its gradients and small sparkle, which blur below
+/// this size.
+const SMALL_MARK: &[u8] = include_bytes!("../packaging/icons/superwhatsapp-small.svg");
 const SMALL_BELOW: usize = 40;
 
 /// Rasterizes the logo to straight-alpha RGBA.
@@ -813,25 +814,26 @@ fn plain_disc(size: usize) -> Vec<u8> {
             let distance = ((px - center).powi(2) + (py - center).powi(2)).sqrt();
             let coverage = (radius - distance + 0.5).clamp(0.0, 1.0);
             let index = (y * size + x) * 4;
-            rgba[index] = 0;
-            rgba[index + 1] = 168;
-            rgba[index + 2] = 132;
+            rgba[index] = 109;
+            rgba[index + 1] = 40;
+            rgba[index + 2] = 217;
             rgba[index + 3] = (coverage * 255.0) as u8;
         }
     }
     rgba
 }
 
-/// Converts the logo to a monochrome macOS menu-bar template: the disc,
-/// with the bubble cut out of it.
+/// Converts the logo to a monochrome macOS menu-bar template: the rounded
+/// square, with the bubble cut out of it and the sparkle left in.
 pub fn tray_template_rgba(size: usize) -> Vec<u8> {
     // The flat mark at every size: a template has no room for shading.
     let mut rgba = render_mark(SMALL_MARK, size).unwrap_or_else(|| plain_disc(size));
-    // The disc's green against the ink's says how much of a pixel is disc.
-    const INK: f32 = 14.0;
-    const DISC: f32 = 168.0;
+    // The violet's green against the white bubble's says how much of a
+    // pixel is background.
+    const INK: f32 = 255.0;
+    const DISC: f32 = 40.0;
     for pixel in rgba.as_chunks_mut::<4>().0 {
-        let disc = ((f32::from(pixel[1]) - INK) / (DISC - INK)).clamp(0.0, 1.0);
+        let disc = ((INK - f32::from(pixel[1])) / (INK - DISC)).clamp(0.0, 1.0);
         pixel[3] = (f32::from(pixel[3]) * disc).round() as u8;
         pixel[0] = 0;
         pixel[1] = 0;
@@ -1207,7 +1209,10 @@ mod tests {
         // tray that asks for the themed icon then draws a missing-icon
         // marker (#396).
         let svg = std::str::from_utf8(MARK).expect("the icon is UTF-8");
-        assert!(!svg.contains("<filter"), "packaging/icons/zapfast.svg");
+        assert!(
+            !svg.contains("<filter"),
+            "packaging/icons/superwhatsapp.svg"
+        );
     }
 
     #[test]

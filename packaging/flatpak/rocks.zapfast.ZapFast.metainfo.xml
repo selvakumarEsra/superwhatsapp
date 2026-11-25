@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
   <id>rocks.zapfast.ZapFast</id>
-  <name>ZapFast</name>
+  <name>SuperWhatsapp</name>
   <summary>A native WhatsApp client</summary>
   <developer id="me.paolino">
     <name>Carmine Paolino</name>
@@ -13,7 +13,7 @@
     without a browser engine. Link your phone to read and send messages.</p>
     <p>Browse chats, search your local archive, send attachments and voice messages,
     and use emoji, GIFs and stickers. Closing the window can keep the connection
-    running in the system tray. ZapFast is an independent project, not affiliated
+    running in the system tray. SuperWhatsapp is an independent project, not affiliated
     with WhatsApp or Meta.</p>
   </description>
   <launchable type="desktop-id">rocks.zapfast.ZapFast.desktop</launchable>

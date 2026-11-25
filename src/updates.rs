@@ -3,7 +3,7 @@
 //! The crate checks for a newer release, refuses package-managed copies,
 //! downloads and verifies the update against the publisher signature, and
 //! hands it to a helper that installs it and rolls back if it does not start.
-//! ZapFast keeps its names, its key, its proxy and its interface.
+//! SuperWhatsapp keeps its names, its key, its proxy and its interface.
 
 pub use fastframe_update::{
     CHECK_INTERVAL, DownloadState, Installation, Kind, Prepared, Release, Source, Unsupported,
@@ -12,7 +12,7 @@ pub use fastframe_update::{
 #[cfg_attr(feature = "znga", allow(unused_imports))] // znga hook
 use fastframe_update::{MacConfig, ReqwestTransport, UpdateConfig};
 
-/// ZapFast's releases and the names its installations have had.
+/// SuperWhatsapp's releases and the names its installations have had.
 #[cfg(not(feature = "znga"))] // znga hook
 pub const CONFIG: UpdateConfig = UpdateConfig {
     // Cask and bundle names from before the rename. This also accepts
@@ -30,7 +30,7 @@ pub const CONFIG: UpdateConfig = UpdateConfig {
     additional_publisher_keys: &[include_str!("../assets/update-public-key-next.hex")],
     ..UpdateConfig::new(
         "crmne/zapfast",
-        "ZapFast",
+        "SuperWhatsapp",
         "zapfast",
         env!("CARGO_PKG_VERSION"),
     )
@@ -55,7 +55,13 @@ mod tests {
     fn update_config_is_valid() {
         CONFIG.validate().unwrap();
         assert_eq!(CONFIG.current_version, env!("CARGO_PKG_VERSION"));
-        assert_eq!(CONFIG.slug, "zapfast");
+        // SuperWhatsapp's own releases (znga hook); upstream's otherwise.
+        if cfg!(feature = "znga") {
+            assert_eq!(CONFIG.slug, "superwhatsapp");
+            assert!(CONFIG.legacy_names.contains(&"zapfast"));
+        } else {
+            assert_eq!(CONFIG.slug, "zapfast");
+        }
     }
 
     #[test]

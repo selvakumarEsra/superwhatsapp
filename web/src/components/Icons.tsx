@@ -1,4 +1,4 @@
-// ZapFast's own icons, drawn to WhatsApp Desktop's sizes and positions
+// SuperWhatsapp's own icons, drawn to WhatsApp Desktop's sizes and positions
 // (REQ-WEBUI-004.A6): no WhatsApp icon files are used.
 import type { JSX } from "solid-js";
 

@@ -1,6 +1,6 @@
-# Contributing to ZapFast
+# Contributing to SuperWhatsapp
 
-ZapFast is a small native WhatsApp client. Changes should improve the desktop
+SuperWhatsapp is a small native WhatsApp client. Changes should improve the desktop
 app without adding a browser engine, telemetry, a hosted backend, or another
 protocol implementation.
 
@@ -19,10 +19,10 @@ Product boundaries and upstream responsibilities:
 - The protocol comes from [whatsapp-rust](https://github.com/oxidezap/whatsapp-rust).
   A capability it does not support is fixed upstream first, not reimplemented
   here.
-- ZapFast will not embed a browser engine, add telemetry, or introduce a
-  ZapFast-operated service. Features that send message content to a third
+- SuperWhatsapp will not embed a browser engine, add telemetry, or introduce a
+  SuperWhatsapp-operated service. Features that send message content to a third
   party are out of scope.
-- ZapFast will never automate WhatsApp: no bots, MCP server, or API,
+- SuperWhatsapp will never automate WhatsApp: no bots, MCP server, or API,
   command-line or scripting interface that reads or sends messages, and no
   scheduled, bulk or automatic replies. WhatsApp's terms forbid automated
   use and it bans accounts for it.
@@ -69,7 +69,7 @@ release status stated. Reopen the issue if it persists after updating.
 
 Keep each pull request to one change. A pull request that bundles unrelated
 fixes or features will be closed with a request to split it. Explain why the
-change belongs in ZapFast, what changed, and how you tested it. Avoid unrelated
+change belongs in SuperWhatsapp, what changed, and how you tested it. Avoid unrelated
 formatting, refactors, generated prose, and large mechanical rewrites.
 
 `main` has a linear history. Outside pull requests are squash-merged into one

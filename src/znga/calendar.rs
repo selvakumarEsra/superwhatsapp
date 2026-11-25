@@ -101,7 +101,7 @@ pub fn ics(event: &Event, now: i64, uid: &str) -> String {
     let mut lines = vec![
         "BEGIN:VCALENDAR".to_owned(),
         "VERSION:2.0".to_owned(),
-        "PRODID:-//ZapFast//Znga//EN".to_owned(),
+        "PRODID:-//SuperWhatsapp//Znga//EN".to_owned(),
         "BEGIN:VEVENT".to_owned(),
         format!("UID:{uid}@znga.zapfast"),
         format!("DTSTAMP:{}", utc(now)),

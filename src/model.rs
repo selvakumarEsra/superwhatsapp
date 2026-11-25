@@ -116,7 +116,7 @@ impl ChatKind {
 }
 
 /// A local chat label: a name, a colour, and nothing that leaves this computer.
-/// Not a WhatsApp Business label; ZapFast neither reads nor syncs those.
+/// Not a WhatsApp Business label; SuperWhatsapp neither reads nor syncs those.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Label {
     pub id: String,
@@ -910,7 +910,7 @@ pub enum Content {
         once: Option<OnceMedia>,
     },
     /// A call in this chat, where it falls among the messages, as WhatsApp
-    /// shows it. `from_me` on the message says who placed it. Entries ZapFast
+    /// shows it. `from_me` on the message says who placed it. Entries SuperWhatsapp
     /// writes itself carry an id that starts with [`CALL_ENTRY_PREFIX`] and are
     /// never sent anywhere.
     Call {
@@ -932,7 +932,7 @@ pub enum Content {
     },
 }
 
-/// The id prefix of the call entries ZapFast files from call records: the
+/// The id prefix of the call entries SuperWhatsapp files from call records: the
 /// calls it handled and the phone's call log. They are local, so no receipt,
 /// reaction or deletion is ever sent for them.
 pub const CALL_ENTRY_PREFIX: &str = "zapfast-call-";
@@ -942,11 +942,11 @@ pub const CALL_ENTRY_PREFIX: &str = "zapfast-call-";
 /// the Calls page alone, never in the chat list.
 pub const CALL_LINK_CHAT: &str = "zapfast-call-link";
 
-/// The id prefix of the disappearing-timer notices ZapFast files from live
+/// The id prefix of the disappearing-timer notices SuperWhatsapp files from live
 /// setting changes. They are local system rows, never sent anywhere.
 pub const TIMER_NOTICE_PREFIX: &str = "zapfast-timer-";
 
-/// Whether `id` is one ZapFast made up for a row of its own, which no server
+/// Whether `id` is one SuperWhatsapp made up for a row of its own, which no server
 /// ever issued: a call entry, or a disappearing-timer notice. Nothing sent to
 /// WhatsApp may name such an id.
 pub fn local_message_id(id: &str) -> bool {
@@ -2391,7 +2391,7 @@ pub struct StickerPack {
     pub name: String,
     pub dir: PathBuf,
     pub stickers: Vec<PathBuf>,
-    /// Put together in ZapFast, so stickers can be filed into it.
+    /// Put together in SuperWhatsapp, so stickers can be filed into it.
     pub local: bool,
 }
 
@@ -2579,7 +2579,7 @@ pub struct Recipient {
 }
 
 /// Per-recipient receipts for one of our group messages, as far as they are
-/// known. Receipts are only kept from when ZapFast began recording them.
+/// known. Receipts are only kept from when SuperWhatsapp began recording them.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct MessageReceipts {
     pub chat: ChatId,
@@ -2924,7 +2924,7 @@ pub enum Action {
     SendRecording,
     /// Drops a voice message the worker refused to send.
     DiscardUnsentVoice,
-    /// Opens a downloaded image in ZapFast's native preview. Only the file
+    /// Opens a downloaded image in SuperWhatsapp's native preview. Only the file
     /// extension and existence are checked here, and anything else opens
     /// externally; an image that then fails to decode shows a message with an
     /// Open externally button inside the preview.
@@ -2958,7 +2958,7 @@ pub enum Action {
     PreviewSticker(PathBuf),
     CloseStickerPreview,
     OpenFile(PathBuf),
-    /// Opens ZapFast's log, or shows it in its folder when no application
+    /// Opens SuperWhatsapp's log, or shows it in its folder when no application
     /// takes it, and says so when neither works.
     OpenLog(PathBuf),
     OpenFolder(PathBuf),
@@ -3299,7 +3299,7 @@ pub enum Action {
     SetTheme(crate::settings::ThemeChoice),
     /// Draws the interface in the platform's font or in the bundled Inter.
     SetFont(crate::settings::FontChoice),
-    /// Windows and Linux: draws ZapFast's own title bar and window buttons
+    /// Windows and Linux: draws SuperWhatsapp's own title bar and window buttons
     /// (`true`) or the desktop's. Decorations are fixed when a window is
     /// made, so the window is replaced.
     SetCustomTitlebar(bool),
@@ -3319,7 +3319,7 @@ pub enum Action {
         kind: crate::privacy::PrivacyKind,
         choice: crate::privacy::PrivacyChoice,
     },
-    /// Registers or removes the login entry that starts ZapFast in the tray.
+    /// Registers or removes the login entry that starts SuperWhatsapp in the tray.
     SetStartWithSystem(bool),
     /// Sets the sound for mentions and replies to us (`true`) or for
     /// other new messages.
@@ -3408,7 +3408,7 @@ pub enum Action {
     AppLockForm(Option<crate::app_lock::FormMode>),
     /// Submits the Settings password form.
     SubmitAppLockForm,
-    /// How long ZapFast may go unused before it locks.
+    /// How long SuperWhatsapp may go unused before it locks.
     SetAutoLock(crate::settings::AutoLock),
     Reconnect,
     /// Sets aside an archive whose key is gone and links again.

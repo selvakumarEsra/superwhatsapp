@@ -4,9 +4,9 @@ version = "0.21.1-beta.8"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
-description = "A native WhatsApp client built with Rust and egui"
-homepage = "https://zapfast.rocks"
-repository = "https://github.com/crmne/zapfast"
+description = "SuperWhatsapp: a fast desktop WhatsApp client with a proactive AI agent"
+homepage = "https://selvakumaresra.github.io/superwhatsapp/"
+repository = "https://github.com/selvakumarEsra/superwhatsapp"
 keywords = ["whatsapp", "chat", "egui", "messaging"]
 categories = ["gui"]
 
@@ -19,7 +19,7 @@ name = "zapfast"
 path = "src/lib.rs"
 
 [[bin]]
-name = "zapfast"
+name = "superwhatsapp"
 path = "src/main.rs"
 
 [dependencies]
@@ -63,7 +63,7 @@ image = { version = "0.25", default-features = false, features = ["jpeg", "png",
 # and recent sticker sync events (#1538), boolean AB props (#1539), favorite
 # chats sync (#1544), media re-upload that works and expired downloads that no
 # longer force a media_conn refresh each (#1648, #1653, #1659; the 429s of
-# ZapFast #405), and the typed send, edit, picture and poll APIs (#1614, #1626,
+# SuperWhatsapp #405), and the typed send, edit, picture and poll APIs (#1614, #1626,
 # #1630, #1640). Protobuf structs are non-exhaustive since #1676, so they are
 # built from `Default` and assigned field by field. Device-store
 # compatibility retains the legacy created_at column. All carried fixes have
@@ -187,10 +187,10 @@ fastframe-theme = { git = "https://github.com/crmne/fastframe", tag = "v0.15.4" 
 fastframe-log = { git = "https://github.com/crmne/fastframe", tag = "v0.15.4" }
 # The tray item: StatusNotifier on Linux, tray-icon on Windows and macOS.
 fastframe-tray = { git = "https://github.com/crmne/fastframe", tag = "v0.15.4" }
-# Keeps ZapFast running without a window, remembers its geometry, recovers it
+# Keeps SuperWhatsapp running without a window, remembers its geometry, recovers it
 # off screen, and brings it forward on niri.
 fastframe-shell = { git = "https://github.com/crmne/fastframe", tag = "v0.15.4" }
-# Window chrome: centres the macOS traffic lights on ZapFast's own header and
+# Window chrome: centres the macOS traffic lights on SuperWhatsapp's own header and
 # lets its headers move the window.
 fastframe-titlebar = { git = "https://github.com/crmne/fastframe", tag = "v0.15.4" }
 # One running copy per user: the lock, and the channel a second launch uses.

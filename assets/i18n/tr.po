@@ -1,8 +1,8 @@
-# Turkish translation of ZapFast.
-# Distributed under the same MIT license as ZapFast.
+# Turkish translation of SuperWhatsapp.
+# Distributed under the same MIT license as SuperWhatsapp.
 msgid ""
 msgstr ""
-"Project-Id-Version: ZapFast\n"
+"Project-Id-Version: SuperWhatsapp\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/zapfast/issues/new?"
 "template=translation.yml\n"
 "POT-Creation-Date: 2026-11-01 20:11+0100\n"
@@ -609,8 +609,8 @@ msgid "You left this channel"
 msgstr "Bu kanaldan ayrıldınız"
 
 #: src/ui/conversation.rs:1530
-msgid "Channels are read-only in ZapFast"
-msgstr "ZapFast'te kanallar salt okunurdur"
+msgid "Channels are read-only in SuperWhatsapp"
+msgstr "SuperWhatsapp'te kanallar salt okunurdur"
 
 #: src/ui/conversation.rs:1553
 msgid "You left this group"
@@ -1084,18 +1084,18 @@ msgstr "Kilitli sohbetleri ayarla"
 #: src/ui/dialogs.rs:358
 msgid ""
 "Choose a local code to open the Locked tab. It is separate from your phone's "
-"code. This hides chats in ZapFast, it does not add another encryption layer."
+"code. This hides chats in SuperWhatsapp, it does not add another encryption layer."
 msgstr ""
 "Kilitli sekmesini açmak için yerel bir kod belirleyin. Bu kod telefonunuzun "
-"kodundan ayrıdır. Bu işlem sohbetleri ZapFast'te gizler, ek bir şifreleme "
+"kodundan ayrıdır. Bu işlem sohbetleri SuperWhatsapp'te gizler, ek bir şifreleme "
 "katmanı eklemez."
 
 #: src/ui/dialogs.rs:363
 msgid ""
-"Enter your local ZapFast code. Leaving the Locked tab or closing the window "
+"Enter your local SuperWhatsapp code. Leaving the Locked tab or closing the window "
 "locks it again."
 msgstr ""
-"Yerel ZapFast kodunuzu girin. Kilitli sekmesinden çıkmak veya pencereyi "
+"Yerel SuperWhatsapp kodunuzu girin. Kilitli sekmesinden çıkmak veya pencereyi "
 "kapatmak sekmenin yeniden kilitlenmesini sağlar."
 
 #: src/ui/dialogs.rs:374
@@ -1135,11 +1135,11 @@ msgstr "Bu sohbet kilitlensin mi?"
 msgid ""
 "This moves the chat to the Locked tab, hiding it from the normal chat list, "
 "search, unread badges, and notifications. The lock status also syncs to your "
-"phone. Open Locked with a separate local ZapFast code to read it."
+"phone. Open Locked with a separate local SuperWhatsapp code to read it."
 msgstr ""
 "Bu işlem sohbeti Kilitli sekmesine taşır; normal sohbet listesinden, "
 "aramadan, okunmamış rozetlerinden ve bildirimlerden gizler. Kilit durumu "
-"telefonunuzla da eşitlenir. Okumak için ayrı bir yerel ZapFast koduyla "
+"telefonunuzla da eşitlenir. Okumak için ayrı bir yerel SuperWhatsapp koduyla "
 "Kilitli sekmesini açın."
 
 #: src/ui/dialogs.rs:489
@@ -1354,15 +1354,15 @@ msgstr "Baştan başlansın mı?"
 
 #: src/ui/dialogs.rs:1446
 msgid ""
-"ZapFast keeps your unreadable archive as a separate file, creates a new one, "
+"SuperWhatsapp keeps your unreadable archive as a separate file, creates a new one, "
 "and asks you to link again. Linking again brings back recent history from "
-"your phone. Afterwards, remove the old ZapFast entry under Linked devices on "
+"your phone. Afterwards, remove the old SuperWhatsapp entry under Linked devices on "
 "your phone."
 msgstr ""
-"ZapFast okunamayan arşivinizi ayrı bir dosya olarak saklar, yenisini "
+"SuperWhatsapp okunamayan arşivinizi ayrı bir dosya olarak saklar, yenisini "
 "oluşturur ve sizden tekrar bağlamanızı ister. Tekrar bağlandığınızda son "
 "geçmiş telefonunuzdan geri gelir. Ardından telefonunuzda Bağlı cihazlar "
-"altındaki eski ZapFast kaydını kaldırın."
+"altındaki eski SuperWhatsapp kaydını kaldırın."
 
 #: src/ui/dialogs.rs:1450
 msgid ""
@@ -1691,9 +1691,9 @@ msgstr "Özel başlık çubuğu"
 
 #: src/ui/settings.rs:422
 msgid ""
-"Draw ZapFast's own title bar and window buttons instead of the desktop's."
+"Draw SuperWhatsapp's own title bar and window buttons instead of the desktop's."
 msgstr ""
-"Masaüstünün yerine ZapFast'in kendi başlık çubuğunu ve pencere düğmelerini "
+"Masaüstünün yerine SuperWhatsapp'in kendi başlık çubuğunu ve pencere düğmelerini "
 "çiz."
 
 #: src/ui/settings.rs:428 src/ui/rail.rs:293
@@ -1834,9 +1834,9 @@ msgstr "Etiketleri yönet"
 
 #: src/ui/settings.rs:615
 msgid ""
-"Could not load your account privacy. Trying again when ZapFast reconnects."
+"Could not load your account privacy. Trying again when SuperWhatsapp reconnects."
 msgstr ""
-"Hesap gizliliğiniz yüklenemedi. ZapFast yeniden bağlandığında tekrar "
+"Hesap gizliliğiniz yüklenemedi. SuperWhatsapp yeniden bağlandığında tekrar "
 "denenecek."
 
 #: src/ui/settings.rs:620
@@ -1876,9 +1876,9 @@ msgid "Check for updates"
 msgstr "Güncellemeleri denetle"
 
 #: src/ui/settings.rs:703
-msgid "Asks GitHub once a day, sending only the ZapFast version."
+msgid "Asks GitHub once a day, sending only the SuperWhatsapp version."
 msgstr ""
-"Günde bir kez yalnızca ZapFast sürümünü göndererek GitHub'ı kontrol eder."
+"Günde bir kez yalnızca SuperWhatsapp sürümünü göndererek GitHub'ı kontrol eder."
 
 #: src/ui/settings.rs:708
 msgid "Download updates automatically"
@@ -1887,10 +1887,10 @@ msgstr "Güncellemeleri otomatik indir"
 #: src/ui/settings.rs:711
 msgid ""
 "You still choose when to restart. Package managers and Flatpak update "
-"ZapFast themselves."
+"SuperWhatsapp themselves."
 msgstr ""
 "Yeniden başlatma zamanını yine siz seçersiniz. Paket yöneticileri ve "
-"Flatpak, ZapFast'i kendileri günceller."
+"Flatpak, SuperWhatsapp'i kendileri günceller."
 
 #: src/ui/settings.rs:724
 #, rust-format
@@ -2043,10 +2043,10 @@ msgstr "Kilitlenme süresi"
 
 #: src/ui/settings.rs:952
 msgid ""
-"Time without using ZapFast, also counted while it is in the tray. "
+"Time without using SuperWhatsapp, also counted while it is in the tray. "
 "Ctrl+Shift+L locks it at once."
 msgstr ""
-"ZapFast kullanılmadan geçen süre (sistem tepsisindeyken de sayılır). "
+"SuperWhatsapp kullanılmadan geçen süre (sistem tepsisindeyken de sayılır). "
 "Ctrl+Shift+L anında kilitler."
 
 #: src/ui/settings.rs:994
@@ -2466,19 +2466,19 @@ msgstr "Gelen arama"
 #: src/app/calls.rs:620
 #, rust-format
 msgid ""
-"{caller} is calling {group}. ZapFast can't join group calls yet: answer on "
+"{caller} is calling {group}. SuperWhatsapp can't join group calls yet: answer on "
 "your phone."
 msgstr ""
-"{caller}, {group} grubunu arıyor. ZapFast henüz grup aramalarına "
+"{caller}, {group} grubunu arıyor. SuperWhatsapp henüz grup aramalarına "
 "katılamıyor: telefonunuzdan yanıtlayın."
 
 #: src/app/calls.rs:628
 #, rust-format
 msgid ""
-"{caller} is calling you and others. ZapFast can't join group calls yet: "
+"{caller} is calling you and others. SuperWhatsapp can't join group calls yet: "
 "answer on your phone."
 msgstr ""
-"{caller} sizi ve başkalarını arıyor. ZapFast henüz grup aramalarına "
+"{caller} sizi ve başkalarını arıyor. SuperWhatsapp henüz grup aramalarına "
 "katılamıyor: telefonunuzdan yanıtlayın."
 
 #. Translators: {name} is replaced by the author's name, shown as a link.
@@ -2624,9 +2624,9 @@ msgstr ""
 "Gruptan birinin aramasını isteyin ve buradan yanıtlayın."
 
 #: src/app.rs:4907 src/app.rs:8029
-msgid "ZapFast can't join group calls yet: open the link on your phone."
+msgid "SuperWhatsapp can't join group calls yet: open the link on your phone."
 msgstr ""
-"ZapFast henüz grup aramalarına katılamıyor: bağlantıyı telefonunuzda açın."
+"SuperWhatsapp henüz grup aramalarına katılamıyor: bağlantıyı telefonunuzda açın."
 
 #: src/app.rs:4913
 #, fuzzy
@@ -2669,7 +2669,7 @@ msgid "Could not confirm unarchiving on WhatsApp. Try again"
 msgstr "Grup oluşturulamadı. Tekrar deneyin."
 
 #: src/app.rs:4980
-msgid "WhatsApp updated this chat, but ZapFast could not save the change"
+msgid "WhatsApp updated this chat, but SuperWhatsapp could not save the change"
 msgstr ""
 
 #: src/app.rs:5068
@@ -2681,8 +2681,8 @@ msgid "Unblock this contact to send messages."
 msgstr ""
 
 #: src/app.rs:5740
-msgid "Not sent: ZapFast is not connected to WhatsApp."
-msgstr "Gönderilmedi: ZapFast WhatsApp'a bağlı değil."
+msgid "Not sent: SuperWhatsapp is not connected to WhatsApp."
+msgstr "Gönderilmedi: SuperWhatsapp WhatsApp'a bağlı değil."
 
 #: src/app.rs:5744
 msgid ""
@@ -2712,8 +2712,8 @@ msgstr "Çıkartma paketi gönderiliyor…"
 
 #: src/app.rs:9279 src/ui/labels.rs:257
 #, rust-format
-msgid "You have {limit} labels, the most ZapFast keeps."
-msgstr "ZapFast'in tutabileceği maksimum sınır olan {limit} etikete ulaştınız."
+msgid "You have {limit} labels, the most SuperWhatsapp keeps."
+msgstr "SuperWhatsapp'in tutabileceği maksimum sınır olan {limit} etikete ulaştınız."
 
 #: src/app.rs:9446
 msgid "No chat open"
@@ -3200,8 +3200,8 @@ msgid "Play motion photo"
 msgstr "Hareketli fotoğrafı oynat"
 
 #: src/ui/image_preview.rs:738
-msgid "This image could not be displayed in ZapFast."
-msgstr "Bu görüntü ZapFast'te gösterilemedi."
+msgid "This image could not be displayed in SuperWhatsapp."
+msgstr "Bu görüntü SuperWhatsapp'te gösterilemedi."
 
 #: src/ui/image_preview.rs:741
 msgid "Open externally"
@@ -3212,8 +3212,8 @@ msgid "Play or pause the video"
 msgstr "Videoyu oynat veya duraklat"
 
 #: src/ui/lock.rs:17
-msgid "ZapFast is locked"
-msgstr "ZapFast kilitli"
+msgid "SuperWhatsapp is locked"
+msgstr "SuperWhatsapp kilitli"
 
 #: src/ui/lock.rs:23
 msgid "Unlinking this computer…"
@@ -3609,8 +3609,8 @@ msgstr "Sohbet geçmişi yükleniyor…"
 
 #: src/ui/mod.rs:579
 #, rust-format
-msgid "ZapFast {version} is available"
-msgstr "ZapFast {version} sürümü mevcut"
+msgid "SuperWhatsapp {version} is available"
+msgstr "SuperWhatsapp {version} sürümü mevcut"
 
 #: src/ui/mod.rs:596
 #, rust-format
@@ -3894,8 +3894,8 @@ msgid "Participant details are not available yet"
 msgstr "Katılımcı ayrıntıları henüz mevcut değil"
 
 #: src/ui/update.rs:25 src/ui/update.rs:38
-msgid "Update ZapFast"
-msgstr "ZapFast'i Güncelle"
+msgid "Update SuperWhatsapp"
+msgstr "SuperWhatsapp'i Güncelle"
 
 #: src/ui/update.rs:49
 msgid "Close update"
@@ -3924,11 +3924,11 @@ msgstr "Yüklemeye hazır"
 
 #: src/ui/update.rs:113
 msgid ""
-"Finish any unsent messages or recordings before restarting. ZapFast will "
+"Finish any unsent messages or recordings before restarting. SuperWhatsapp will "
 "briefly disconnect, then reconnect automatically."
 msgstr ""
 "Yeniden başlatmadan önce gönderilmemiş mesajları veya kayıtları tamamlayın. "
-"ZapFast'in bağlantısı kısa süreliğine kesilecek ve ardından otomatik olarak "
+"SuperWhatsapp'in bağlantısı kısa süreliğine kesilecek ve ardından otomatik olarak "
 "yeniden bağlanacaktır."
 
 #: src/ui/update.rs:121

@@ -1,9 +1,10 @@
 ---
-title: Using ZapFast
+title: Using SuperWhatsapp
 description: Send messages, open chats from links, and use attachments, interactive messages, voice messages, and keyboard shortcuts.
 redirect_from:
+  - /using-zapfast/
   - /using-fastsapp/
-nav_order: 3
+nav_order: 4
 ---
 
 ## Writing
@@ -12,7 +13,7 @@ Undo and redo in the message field apply to its current chat and account.
 Switching chats or accounts, closing a chat, or unlinking clears the editor's
 undo history. Saved drafts remain available when you return to their chat.
 
-ZapFast reconnects by itself after a lost connection, within about five
+SuperWhatsapp reconnects by itself after a lost connection, within about five
 seconds once it notices. Text refused while offline goes back to its chat's
 composer, unless that chat already has other text there.
 
@@ -55,17 +56,17 @@ page keeps the earlier results and offers **Retry**; pressing Enter with the
 same search also retries that page. GIF search results play when they come into
 view and pause when they scroll away.
 
-When you write a new text message with a web link and pause, ZapFast fetches
+When you write a new text message with a web link and pause, SuperWhatsapp fetches
 that page, and its picture from wherever the page says it is, directly, through
 your proxy if one is set, and shows a preview card above the message box, for the first link. Edits
-and captions get no card. The card is sent with the message. ZapFast identifies
-itself to the site as ZapFast, and some sites give no preview to apps they do
-not recognise, in which case the message goes out with a plain link. ZapFast
+and captions get no card. The card is sent with the message. SuperWhatsapp identifies
+itself to the site as SuperWhatsapp, and some sites give no preview to apps they do
+not recognise, in which case the message goes out with a plain link. SuperWhatsapp
 never looks up or contacts addresses on this computer or your local network
 itself, and refuses links that name one outright. With a proxy set, the proxy
 looks up the name instead. Click the cross on the card to send the link without
 a preview. If your phone has **Privacy > Advanced > Disable link previews** on,
-ZapFast makes no previews either, and it makes none until it has read that
+SuperWhatsapp makes no previews either, and it makes none until it has read that
 setting from your phone.
 
 Right-click a message to reply, react with any emoji, edit, forward, delete, or
@@ -89,7 +90,7 @@ WhatsApp; a message labelled as forwarded many times goes to one chat at a
 time. With one chat selected, **Forward** sends it straight away. With
 several, **Review recipients** lists them for you to confirm, and **Back**
 returns to the picker without losing the selection. If a destination becomes
-locked or read-only, ZapFast returns to selection instead of sending a partial
+locked or read-only, SuperWhatsapp returns to selection instead of sending a partial
 batch. Switching accounts discards the open forwarding selection.
 In a large window the dialog takes more of the window, so more recipients fit
 at once; it still stays inside a narrow or short one, and searching or changing
@@ -169,7 +170,7 @@ by sender, time, and a short summary.
 **Development builds** can star messages. Right-click a message and choose
 **Star**; once WhatsApp confirms it, a small star shows beside the message's
 time. Stars made on your phone or another linked device show up here too, and
-the other way round. Stars made before your copy of ZapFast followed them are
+the other way round. Stars made before your copy of SuperWhatsapp followed them are
 read from the phone once, the next time it connects. The star near the foot of the rail on the left of the chat list, above
 **Archived** and **Settings**, opens
 **Starred**, which lists every starred message, newest star first, with its
@@ -183,7 +184,7 @@ Click **Chats** in the rail, or press Escape, to go back to the chats.
 
 **Development builds** can pin a message for everyone in the chat. Choose
 **Pin message** in a message's menu; WhatsApp keeps the pin for seven days. A
-chat holds three pins at a time, and ZapFast refuses a fourth instead of
+chat holds three pins at a time, and SuperWhatsapp refuses a fourth instead of
 quietly replacing one. A line under the chat's header shows the newest pin,
 with a small bar at its left marking how many pins there are and which one is
 shown. Click the line to open that message; the line then moves on to the next
@@ -198,7 +199,7 @@ again later.
 
 The sticker tab works like WhatsApp's: a row of tabs holds **Recent**
 (the clock), **Favorites** (the star), each of your packs, and **+** for
-adding more. ZapFast adds **Received** (the speech bubble) after Favorites.
+adding more. SuperWhatsapp adds **Received** (the speech bubble) after Favorites.
 <<<<<<< HEAD
 Click a WebP sticker to send it. Animated stickers play on hover.
 Lottie (`.was`) stickers received from WhatsApp also play here; sending
@@ -233,7 +234,7 @@ express in their metadata, as WhatsApp's own stickers do.
 Under **+**, paste a `signal.art` link from
 [signalstickers.org](https://signalstickers.org) (or click **Find packs**), or
 open a `.wastickers` file, to import a pack. Signal packs keep each sticker's
-emoji. Open a pack's tab and use its delete button to remove it; ZapFast asks
+emoji. Open a pack's tab and use its delete button to remove it; SuperWhatsapp asks
 first, since that deletes the pack's files. Packs are stored as WebP files on
 your computer.
 
@@ -283,13 +284,13 @@ discards all staged files, the caption and its reply quote.
 With exactly one supported photo (JPEG, PNG, or WebP) staged, select
 the **View once** icon (a 1 inside a dashed circle) beside the caption. It lights
 up when enabled, and sends the photo as a WhatsApp view-once message. You can still
-add a caption. The sent message appears as a view-once placeholder in ZapFast;
+add a caption. The sent message appears as a view-once placeholder in SuperWhatsapp;
 the recipient opens it on their phone. You can reply to a view-once message
 like any other. This option is not available for
 documents or batches of attachments.
 If you add more attachments, or a refused send returns to a draft with other
 attachments, remove the extras or turn off **View once** before sending.
-ZapFast keeps this choice until you switch it off, send, or clear the draft.
+SuperWhatsapp keeps this choice until you switch it off, send, or clear the draft.
 
 Pictures sent this way become photos, which WhatsApp shows inline but
 compresses: transparency and the file's metadata are lost. To send a picture as
@@ -299,14 +300,14 @@ bytes, pictures included, and show as files in the review area until you send
 them.
 
 Videos go as playable video messages only when they are MP4. WhatsApp does
-not deliver a video message in another format, and ZapFast does not convert
+not deliver a video message in another format, and SuperWhatsapp does not convert
 videos, so a QuickTime `.mov`, WebM, MKV, or AVI file goes as a document
 instead and arrives as the original file. Audio works the same way: MP3, M4A,
 AAC, AMR, and OGG go as audio messages, other formats as documents.
 
 Staged attachments stay with their chat, along with their caption and reply,
 when you switch chats or accounts, and come back when you return. Unlike text
-drafts, they are kept only while ZapFast runs. A refused attachment send goes
+drafts, they are kept only while SuperWhatsapp runs. A refused attachment send goes
 back to the chat it was meant for.
 
 Pinned chats stay first. Other chats with unsent text or attachments appear
@@ -330,7 +331,7 @@ cropper puts focus on the check (**Keep this crop**), Tab moves between its
 buttons, and Enter or Space presses the focused one, so Enter on the close
 button cancels. The region itself moves and resizes with the pointer only.
 
-Keeping a crop does not change the file you picked. ZapFast writes the cropped
+Keeping a crop does not change the file you picked. SuperWhatsapp writes the cropped
 picture beside its other media and sends that one, keeping any see-through
 parts of it. Opening the cropper again
 starts from your original with the crop you chose, so you can widen it back out
@@ -357,9 +358,9 @@ click one, or choose **Download** in its right-click menu, and it downloads
 whatever its size. While it downloads, the ring over it fills as the file
 arrives. A download may take longer the larger the file is, at
 least two minutes plus one second for every 128 KiB, before it gives up and
-offers a retry. If an attachment has expired, ZapFast asks your phone to upload
+offers a retry. If an attachment has expired, SuperWhatsapp asks your phone to upload
 it again. A live-location share shows the position this linked device received;
-WhatsApp sends later positions only to the phone. ZapFast marks when newer
+WhatsApp sends later positions only to the phone. SuperWhatsapp marks when newer
 positions are available there, but cannot follow the moving location here.
 
 ## Locations
@@ -371,15 +372,15 @@ Coordinates may be separated by a comma or a space, and written with a dot or a
 comma as the decimal mark. The dialog shows the spot and a link to it before
 anything is sent, and refuses text it cannot read instead of guessing a place.
 
-ZapFast reads the text on this computer and fetches nothing: no map, no place
+SuperWhatsapp reads the text on this computer and fetches nothing: no map, no place
 name, and no address. Links to other sites are not read, even when they carry
 coordinates. Short links such as `maps.app.goo.gl` only say where they lead when
 opened online, so the dialog asks for the full link or the coordinates instead;
 open the short link in your browser and copy the address it ends up at.
 
 What goes out is a location that stays where it was sent. A position that keeps
-moving is shared from the phone only, so a linked device such as ZapFast sends
-the spot. It has no place name or address, since ZapFast does not look one up.
+moving is shared from the phone only, so a linked device such as SuperWhatsapp sends
+the spot. It has no place name or address, since SuperWhatsapp does not look one up.
 If the location cannot be sent, the dialog comes back with the spot in it; if
 you have moved to another chat or opened something else since, the coordinates
 wait in that chat's message field instead.
@@ -398,7 +399,7 @@ include its option labels, and find these messages through search.
 - **Web links** have an external-link icon. Click one to open it in your browser,
   or focus it with the keyboard and press Enter.
 - **Reply buttons** send the selected response immediately, quoting the original
-  message. ZapFast includes the option identifier so the business can recognize
+  message. SuperWhatsapp includes the option identifier so the business can recognize
   the choice. Legacy buttons, hydrated templates, and native-flow quick replies
   are supported.
 - **Simple lists** open a dialog with section headings and descriptions. Select an
@@ -437,8 +438,8 @@ Edited messages keep their current text, and downloaded images stay available.
 
 Embedded videos, documents, and templates containing only
 a reference to server-side text still need another client. A **More content in
-WhatsApp Web or on your phone** note marks content ZapFast cannot display.
-Interactive messages cannot yet be forwarded from ZapFast.
+WhatsApp Web or on your phone** note marks content SuperWhatsapp cannot display.
+Interactive messages cannot yet be forwarded from SuperWhatsapp.
 
 ### Lists, polls, and carousels
 
@@ -480,7 +481,7 @@ Click a video to download it to the local cache and play it in its message,
 with sound, a seek bar, a speed chip, and a mute switch; round video messages
 play inside their circle. Click the speed chip to cycle 1x, 1.5x, and 2x, as on
 voice messages: voices keep their pitch, stereo sound stays stereo, and the
-speed stays for the next video until ZapFast quits. Already downloaded videos
+speed stays for the next video until SuperWhatsapp quits. Already downloaded videos
 play from their local file. Playback
 waits for the download to finish; videos over the
 [64 MiB automatic download limit](#attachments) download when you click them.
@@ -539,14 +540,14 @@ speed. The first play sends
 a played receipt, so your phone marks the voice message as heard. With read
 receipts off in your account privacy, the receipt goes only to your own
 devices and the sender is not told. With **Send read receipts** off in
-ZapFast's settings, no played receipt is sent. A voice message you have not
+SuperWhatsapp's settings, no played receipt is sent. A voice message you have not
 heard yet shows a dot beside its length; it goes away once you play it here or
 on another device. When the composer is empty, the send button becomes a
 microphone. The light beside the time turns red, and the time starts, once the
 microphone delivers sound: one the system had put to sleep can take a moment to
 wake, and anything said before then is not recorded. Press Enter or the send
 button to send the recording, or Escape or
-the delete button to discard it. ZapFast raises the volume of quiet recordings.
+the delete button to discard it. SuperWhatsapp raises the volume of quiet recordings.
 Starting a reply before recording includes the quoted message.
 When someone else records a voice message, a microphone replaces the typing dots.
 
@@ -587,8 +588,8 @@ your camera stays off.
 
 Your picture follows the connection. A call starts at a moderate quality and
 rises to 720p at 25 frames a second while the other side reports a clean
-connection; when it reports loss, or receives much less than ZapFast sends, or
-the connection cannot keep up, ZapFast sends a smaller picture rather than one
+connection; when it reports loss, or receives much less than SuperWhatsapp sends, or
+the connection cannot keep up, SuperWhatsapp sends a smaller picture rather than one
 that freezes. In a one-to-one call some repair data goes with the picture, so
 the other side can rebuild a lost packet instead of freezing until the next
 full picture; it comes out of the same budget, so the call uses no more of your
@@ -604,7 +605,7 @@ permission for cameras. On Linux, YU12 (I420) cameras, including Iriun Webcam,
 are read natively without an external converter. Start Iriun on the computer
 and connect the phone before selecting its camera in a call.
 Calls use your platform's own audio (PipeWire, PulseAudio or ALSA on Linux, Core Audio on
-macOS, WASAPI on Windows). ZapFast cancels echo itself, with the echo canceller
+macOS, WASAPI on Windows). SuperWhatsapp cancels echo itself, with the echo canceller
 browsers use (WebRTC's), so you can call with speakers and a microphone and the
 other side does not hear themselves: what the speaker plays is taken back out of
 what the microphone picks up before it is sent, including the room's
@@ -636,7 +637,7 @@ screen still rings, under that number's own names.
 Every call takes its place among the chat's messages, as on the phone: who
 called, voice or video, how long it lasted, or that it was missed, declined, or
 not answered. Calls made here are filed when they end, and so are the phone's:
-the ones it reports as they happen, the calls missed while ZapFast was closed,
+the ones it reports as they happen, the calls missed while SuperWhatsapp was closed,
 and the call history it sends when the computer is linked. Right-click a call
 in a chat to call back from there.
 
@@ -650,7 +651,7 @@ took part. Its phone or camera button calls back the same way. The search
 field finds calls by name or number. The chips under it show **All** calls or
 only the **Missed** ones (calls
 to you that nobody answered, group calls included); a search looks among the
-calls the chip shows, and ZapFast remembers the chip for each number. The chat
+calls the chip shows, and SuperWhatsapp remembers the chip for each number. The chat
 you had open stays beside the list; clicking a row opens that
 person's chat there instead, at the call, with the voice and video buttons in
 its header. With no chat open, the pane beside the list offers **Start call**.
@@ -688,7 +689,7 @@ any caption; their files are not copied. Copying keeps the selection open.
 
 Someone without a saved contact or profile name shows as their phone number. In
 a group that hides numbers, WhatsApp sends only a masked one such as
-`+233∙∙∙∙∙∙42`, and ZapFast shows that until WhatsApp reveals the whole number.
+`+233∙∙∙∙∙∙42`, and SuperWhatsapp shows that until WhatsApp reveals the whole number.
 
 To find a contact in **New chat**, type part of their name or number. Each
 word you type matches the start of a word in the name, in order: `will shak`
@@ -705,7 +706,7 @@ available in the notice.
 To message someone without saving their number, open **New chat**, choose
 **Add contact**, enter the number with its country code, leave the name blank,
 and choose **Message**. A leading `+`, spaces, hyphens and brackets are fine;
-anything else, such as an extension, is refused rather than dropped. ZapFast
+anything else, such as an extension, is refused rather than dropped. SuperWhatsapp
 asks WhatsApp whether the number is registered before it opens the chat, and
 a failed check can be retried. Add a name instead to save the contact.
 
@@ -717,7 +718,7 @@ characters), optionally choose **Add group photo** (cropped to a centred
 square, as the group details' photo is), and choose **Create**. You are the
 group's admin, and the new group opens straight away. Some people's privacy
 settings only let certain contacts add them to groups: when WhatsApp does not
-add someone, ZapFast names them after the group is created, and you can send
+add someone, SuperWhatsapp names them after the group is created, and you can send
 them the group's invite link from its details. **Back** steps back, unchecking everyone returns to the
 contact list, and Escape closes the dialog.
 
@@ -751,7 +752,7 @@ stays at the top of the transcript, and fades away a moment after you stop.
 
 A shared contact message shows the name from its vCard. When the card names a
 WhatsApp account, **Chat** opens a private conversation with it and, if the
-person is not already in ZapFast's contacts, **Add** saves them, adding them to
+person is not already in SuperWhatsapp's contacts, **Add** saves them, adding them to
 your phone's contacts if you chose that for the last contact you added. A card with only a local number shows the number.
 
 The contact or group details, opened from the chat header or by right-clicking
@@ -761,19 +762,19 @@ it has been turned off. Click the timer to choose **Off**, **24 hours**,
 group lets members edit its info, any member can change the timer; when only
 admins may, only admins can. Members who cannot change it can still see a known
 timer. While a timer change is pending, the row is disabled and shows
-**Saving…** for both direct chats and groups. Messages you send from ZapFast
-follow the timer; messages you receive stay in ZapFast's archive after they
+**Saving…** for both direct chats and groups. Messages you send from SuperWhatsapp
+follow the timer; messages you receive stay in SuperWhatsapp's archive after they
 disappear on your other devices.
 
 To block or unblock a person, open their contact info or either chat menu and
 choose **Block contact** or **Unblock contact**, then confirm. Blocking keeps
 the conversation and its history; the composer shows an **Unblock contact**
 button and keeps your unsent draft. Blocked contacts cannot be sent new direct
-messages or called from ZapFast. Shared groups are unaffected. Under
+messages or called from SuperWhatsapp. Shared groups are unaffected. Under
 **Settings > Privacy > Blocked contacts**, you can also see the account's full
 blocked list and unblock people with no chat on this computer.
 
-Changes apply to your WhatsApp account after the server accepts them. ZapFast
+Changes apply to your WhatsApp account after the server accepts them. SuperWhatsapp
 refreshes the list when connecting, after blocking or unblocking, and when
 opening the blocked list. Changes made on your phone
 appear at the next refresh, rather than immediately. A failed lookup keeps the
@@ -787,7 +788,7 @@ on the left above **Settings**, opens the archived chats in the list, and
 shows how many of them are unread. A chip with unread chats shows how many it
 has. Click the active chip again, or **All**, to see every chat. The
 filter applies only to this list: search and the archive still show everything.
-ZapFast remembers the chip or label each account last showed and comes back
+SuperWhatsapp remembers the chip or label each account last showed and comes back
 to it at the next start.
 As on the phone, the list leaves out people you have never exchanged a
 message or call with, though your phone sends their chats along with the
@@ -809,14 +810,14 @@ can be left from the same menu, keeping their history here. `Ctrl+E`
 (Command+E on macOS) archives the open chat, or unarchives it from
 **Archived**, as in WhatsApp.
 Archiving and unarchiving need a connection. The chat moves only after
-WhatsApp accepts the change. If syncing fails, ZapFast shows an error and
+WhatsApp accepts the change. If syncing fails, SuperWhatsapp shows an error and
 keeps the last confirmed archive state so you can try again. Failed changes
 are not queued.
 
-ZapFast follows your phone's **Keep chats archived** (in WhatsApp's chat
+SuperWhatsapp follows your phone's **Keep chats archived** (in WhatsApp's chat
 settings): with it off, a new message, received or sent, brings an archived
 chat back to the list, as on the phone. Until a phone has sent its setting,
-**Keep chats archived** in ZapFast's Settings decides for that account.
+**Keep chats archived** in SuperWhatsapp's Settings decides for that account.
 Messages older than the archiving, duplicate deliveries, and history replay
 leave archived chats in place.
 
@@ -829,7 +830,7 @@ chat's actions. When WhatsApp lets you edit a group's info, change its descripti
 pencil beside it, and rename it with the
 pencil beside its name and click its photo to change it. Clicking a
 `chat.whatsapp.com` invite link shows the group and joins it without leaving
-ZapFast.
+SuperWhatsapp.
 
 The details of a group you run (as one of its admins) also let you manage it,
 as WhatsApp's own apps do:
@@ -843,7 +844,7 @@ as WhatsApp's own apps do:
 - **Add members** opens the same list as **New group**, without the people
   already in it: check the ones to add and choose **Add**. When someone's
   privacy settings do not let you add them, or they left the group recently,
-  ZapFast names them; send them the invite link instead.
+  SuperWhatsapp names them; send them the invite link instead.
 - **Group permissions** has WhatsApp's switches: whether members (not only
   admins) may edit the group's settings, send messages and add other members,
   and whether admins approve new members before they join. A switch moves
@@ -854,7 +855,7 @@ as WhatsApp's own apps do:
   or removed.
 
 Members who are not admins see **Add members** and **Invite via link** only
-when the group lets every member add people or share its link. ZapFast keeps
+when the group lets every member add people or share its link. SuperWhatsapp keeps
 the link only while the details are open, never on disk.
 
 **Media, links and docs** in the panel lists the photos and videos, the
@@ -882,15 +883,15 @@ description, use your phone.
 A phone number in a message is a link: clicking it offers to start a chat
 with that number or to copy the number as it is written.
 
-ZapFast registers the `whatsapp:` and `wa:` schemes, so a link that names a
+SuperWhatsapp registers the `whatsapp:` and `wa:` schemes, so a link that names a
 chat opens that chat here. This works from a terminal, a script, or anything
 else that hands a link to the desktop.
 
 ```sh
 xdg-open 'whatsapp://send?phone=20123456789'
-zapfast 'https://wa.me/20123456789?text=Invoice%20%23123%20is%20attached'
-zapfast +20123456789
-zapfast 'https://chat.whatsapp.com/AbCdEf1234567890XyZ'
+superwhatsapp 'https://wa.me/20123456789?text=Invoice%20%23123%20is%20attached'
+superwhatsapp +20123456789
+superwhatsapp 'https://chat.whatsapp.com/AbCdEf1234567890XyZ'
 ```
 
 A number on its own, a `wa.me` or `api.whatsapp.com` link, and the
@@ -900,20 +901,20 @@ edit it or add to it before sending. The composer keeps whatever you were
 already typing, and a chat with unsent text of your own keeps it: a template
 never replaces a draft you wrote.
 
-A `chat.whatsapp.com` group invite link given to `zapfast` shows the same
+A `chat.whatsapp.com` group invite link given to `superwhatsapp` shows the same
 invite as clicking it in a message: the group is looked up, and you choose
 whether to join.
 
-When ZapFast is already running the link brings its window forward on that
+When SuperWhatsapp is already running the link brings its window forward on that
 chat rather than starting a second copy, and when it is not it starts and
-opens the chat. A running copy of an older ZapFast that cannot open the link
+opens the chat. A running copy of an older SuperWhatsapp that cannot open the link
 only brings its window forward, and the command says so: quit it and run the
 command again. While the app lock is up links wait for the unlock rather than
 opening anything the lock hides, and then open in the order they arrived.
 
 A `https://wa.me/...` link opened in a browser still opens WhatsApp Web: the
 desktop decides what a web link means, and a browser cannot be told to hand
-one link to another app. Use the `whatsapp:` form, or `zapfast`, for that.
+one link to another app. Use the `whatsapp:` form, or `superwhatsapp`, for that.
 
 An unreadable argument opens nothing and says so, rather than opening a chat
 it guessed at.
@@ -926,17 +927,17 @@ notification. The lock syncs with your phone and other linked devices.
 
 Choose **Locked** in the rail on the left, above **Settings**, and type your
 local code to open
-them; the first time, ZapFast offers to set one up. The code is separate from
+them; the first time, SuperWhatsapp offers to set one up. The code is separate from
 your phone's and adds no encryption beyond the encrypted message archive.
 Leaving the tab, changing the code, or closing the window hides them again.
 
 ## Labels
 
 Labels are yours alone. They stay on this computer, they never reach your phone,
-and nobody else sees them. They are not WhatsApp Business labels, and ZapFast
+and nobody else sees them. They are not WhatsApp Business labels, and SuperWhatsapp
 does not read or change those. Open **Labels** in any chat's right-click menu
 and choose **Manage labels…** to make one, with a name and one of the offered
-colours. ZapFast keeps up to twenty.
+colours. SuperWhatsapp keeps up to twenty.
 
 A chat can wear several labels at once. The **Labels** submenu of a chat's
 right-click menu lists them, with a checkmark beside the ones the chat wears;
@@ -965,17 +966,17 @@ Shift+Tab bring the focused button into view, too.
 
 ## Notifications and the tray
 
-Closing the window keeps ZapFast linked in the tray, unless **Keep running when
+Closing the window keeps SuperWhatsapp linked in the tray, unless **Keep running when
 the window closes** is off, which also leaves out the tray icon. On macOS,
-closing the window always keeps ZapFast running in the Dock, as other Mac apps
+closing the window always keeps SuperWhatsapp running in the Dock, as other Mac apps
 do: click the Dock icon to reopen the window, and turn off **Show in the menu
 bar** if you do not want the menu bar icon. With the icon, click it to open its
-menu, then choose **Show or hide ZapFast**. On Linux and Windows, click the tray icon to reopen it, and click it
+menu, then choose **Show or hide SuperWhatsapp**. On Linux and Windows, click the tray icon to reopen it, and click it
 again to hide a window that is in front. Launching the
 app again reopens the window on every platform. To quit, use **Quit** in the
-tray menu, or **Quit** in the Dock icon's menu on macOS, or on Linux **Quit ZapFast** in the
+tray menu, or **Quit** in the Dock icon's menu on macOS, or on Linux **Quit SuperWhatsapp** in the
 launcher's right-click menu (KDE Plasma's task manager and application menu,
-GNOME's Dash). On every platform, `zapfast quit` in a terminal or a script quits
+GNOME's Dash). On every platform, `superwhatsapp quit` in a terminal or a script quits
 the running copy the same way, and does nothing when none runs. A copy from
 before this command is left running, and the command says so and fails.
 With several numbers linked, a notification's title also names the number it
@@ -986,23 +987,23 @@ that does not say keeps the green icon. Launchers that support
 the Unity Launcher API
 show the unread count as a badge on the app icon: KDE Plasma's taskbar, with
 **Show badges** enabled in the Task Manager settings, and GNOME's Dash to Dock
-or Dash to Panel. Windows overlays a compact unread-message count on ZapFast's
+or Dash to Panel. Windows overlays a compact unread-message count on SuperWhatsapp's
 taskbar button while the window is open, using `99+` above 99. Windows must use
 its regular taskbar icon size for overlays to appear. The count
 does not count toasts remaining in Windows notification history. On macOS, the
 Dock icon shows the number of unread chats in a red badge. The icon and
 badge stay with the app when its window is closed and reopened. A macOS
-source build run through Cargo uses ZapFast's icon too. Starting hidden
+source build run through Cargo uses SuperWhatsapp's icon too. Starting hidden
 lets you open the first window from the menu-bar menu. On Linux and
 Windows, notifications show the chat picture. On Linux, Windows, and macOS, a
 click on a notification opens the chat at the message it announced. This holds for the 32 most recent tracked notifications on all three platforms;
 older notifications remain in system history without a message click listener.
 Reading a chat removes its tracked notifications, including Windows toasts.
-On Windows, while every display is off, ZapFast leaves new-message notifications
+On Windows, while every display is off, SuperWhatsapp leaves new-message notifications
 to the phone instead of queuing desktop banners to appear when the display turns on.
 Fastframe provides the same delivery and cancellation interface on each platform. macOS
 asks once for permission to show notifications. On Linux, a notification that arrives while the
-window is open behind others also highlights ZapFast in the taskbar until you
+window is open behind others also highlights SuperWhatsapp in the taskbar until you
 switch to it. GNOME and Hyprland get no highlight: GNOME would show a second
 notice, and Hyprland can bring the window to the front instead. Muted chats do not send notifications, and
 archived chats stay quiet while they remain archived. You can change both settings.
@@ -1022,7 +1023,7 @@ shortcuts.
 
 ## Screen readers
 
-ZapFast announces confirmations, errors, connection changes and history loading
+SuperWhatsapp announces confirmations, errors, connection changes and history loading
 through the screen reader without moving focus. While the app is locked, only
 connection and history changes are announced.
 
@@ -1037,7 +1038,7 @@ it. The list is a single Tab stop: Alt+2 (Control+2 on macOS) also moves there.
 In the list, Up and Down move one item, Home and End go to the oldest loaded
 and the newest message, and PgUp and PgDn move about a screen; Home on the
 oldest loaded message loads older history. The current message stays put when
-new messages arrive, and follows when ZapFast itself takes you to a message:
+new messages arrive, and follows when SuperWhatsapp itself takes you to a message:
 the next voice message playing on, a quoted message, or a search result. After
 keyboard navigation it is outlined like any other focused control.
 

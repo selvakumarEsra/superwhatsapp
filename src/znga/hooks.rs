@@ -143,7 +143,10 @@ fn notify(
         return;
     }
     let (title, body) = if app.app_lock.is_locked() {
-        ("Znga".to_owned(), "Open ZapFast to see it.".to_owned())
+        (
+            "Znga".to_owned(),
+            "Open SuperWhatsapp to see it.".to_owned(),
+        )
     } else {
         (title, body)
     };

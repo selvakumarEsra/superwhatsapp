@@ -11,7 +11,7 @@ use std::process::{Command, Output};
 
 /// Runs the built executable with every per-user location inside `home`.
 fn zapfast(home: &Path, arguments: &[&str]) -> Output {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_zapfast"));
+    let mut command = Command::new(env!("CARGO_BIN_EXE_superwhatsapp"));
     command.args(arguments).env_remove("RUST_LOG");
     for variable in [
         "HOME",
@@ -67,11 +67,12 @@ fn update_receipt_and_error_are_taken_off_the_command_line() {
     );
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    // The helper of every earlier release checks this exact answer.
+    // The update helper checks this exact answer (REQ-SUPERWA-001.A2); it
+    // also accepts the earlier names, `zapfast` and `fastsapp`.
     assert!(output.status.success(), "stderr: {stderr}");
     assert_eq!(
         stdout.trim(),
-        format!("zapfast {}", env!("CARGO_PKG_VERSION")),
+        format!("superwhatsapp {}", env!("CARGO_PKG_VERSION")),
         "stderr: {stderr}"
     );
     assert_eq!(entries(home.path()), Vec::<String>::new());

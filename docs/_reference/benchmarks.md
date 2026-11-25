@@ -5,6 +5,12 @@ permalink: /benchmarks/
 nav_order: 4
 ---
 
+SuperWhatsapp runs on the same native engine as
+[ZapFast](https://github.com/crmne/zapfast), the app it is built on. These
+measurements were taken on ZapFast releases before SuperWhatsapp existed, and
+are kept here as they were published.
+
+
 ## Results
 
 ZapFast used **150 MB of idle RAM**, compared with **1.13 GB for WhatsApp Web

@@ -109,8 +109,8 @@
             libxi
             libxrandr
           ];
-          zapfast = rustPlatform.buildRustPackage rec {
-            pname = "zapfast";
+          superwhatsapp = rustPlatform.buildRustPackage rec {
+            pname = "superwhatsapp";
             version = (pkgs.lib.importTOML ./Cargo.toml).package.version;
             src = self;
 
@@ -163,7 +163,7 @@
               # The GUI dlopens its Wayland, X11 and GL libraries at run time.
               pkgs.lib.optionalString isLinux ''
                 find $out/bin -type f -exec remove-references-to -t ${pkgs.stdenv.cc} {} +
-                wrapProgram $out/bin/zapfast \
+                wrapProgram $out/bin/superwhatsapp \
                   --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath runtimeLibs}
               ''
               # Sign after the strip hook, which would invalidate the signature.
@@ -171,42 +171,42 @@
               + pkgs.lib.optionalString isDarwin ''
                 rcodesign sign \
                   --entitlements-xml-file packaging/macos/entitlements.plist \
-                  $out/Applications/ZapFast.app
+                  $out/Applications/SuperWhatsapp.app
               '';
 
             postInstall =
               pkgs.lib.optionalString isLinux ''
-                install -Dm644 packaging/applications/zapfast.desktop \
-                  $out/share/applications/zapfast.desktop
-                install -Dm644 packaging/icons/zapfast.svg \
-                  $out/share/icons/hicolor/scalable/apps/zapfast.svg
+                install -Dm644 packaging/applications/superwhatsapp.desktop \
+                  $out/share/applications/superwhatsapp.desktop
+                install -Dm644 packaging/icons/superwhatsapp.svg \
+                  $out/share/icons/hicolor/scalable/apps/superwhatsapp.svg
                 install -Dm644 contrib/omarchy/zapfast.json.tpl \
                   $out/share/zapfast/omarchy/zapfast.json.tpl
                 install -Dm755 contrib/omarchy/zapfast-theme \
                   $out/share/zapfast/omarchy/zapfast-theme
               ''
-              # Mirrors packaging/macos/bundle.sh: ZapFast.app around the built
+              # Mirrors packaging/macos/bundle.sh: SuperWhatsapp.app around the built
               # binary, with the version stripped of any prerelease suffix.
               + pkgs.lib.optionalString isDarwin ''
-                app=$out/Applications/ZapFast.app
+                app=$out/Applications/SuperWhatsapp.app
                 mkdir -p $app/Contents/MacOS $app/Contents/Resources
-                mv $out/bin/zapfast $app/Contents/MacOS/zapfast
-                chmod 755 $app/Contents/MacOS/zapfast
+                mv $out/bin/superwhatsapp $app/Contents/MacOS/superwhatsapp
+                chmod 755 $app/Contents/MacOS/superwhatsapp
                 # The command runs the bundled executable, so macOS applies the
                 # bundle's Info.plist and entitlements, and start at login
                 # records the bundled path.
-                makeWrapper $app/Contents/MacOS/zapfast $out/bin/zapfast
+                makeWrapper $app/Contents/MacOS/superwhatsapp $out/bin/superwhatsapp
                 sed "s/__VERSION__/''${version%%-*}/g" packaging/macos/Info.plist \
                   > $app/Contents/Info.plist
                 icnsify packaging/macos/icon-1024.png \
-                  --output $app/Contents/Resources/zapfast.icns
+                  --output $app/Contents/Resources/superwhatsapp.icns
               '';
 
             meta = {
               description = "Fast native WhatsApp client";
               homepage = "https://zapfast.rocks";
               license = with pkgs.lib.licenses; [ mit gpl2Only ];
-              mainProgram = "zapfast";
+              mainProgram = "superwhatsapp";
               # The flake publishes only aarch64-darwin. Older nixpkgs, for
               # example through follows, still list x86_64-darwin.
               platforms = pkgs.lib.platforms.linux ++ [ "aarch64-darwin" ];
@@ -214,14 +214,14 @@
           };
         in
         {
-          default = zapfast;
-          inherit zapfast;
+          default = superwhatsapp;
+          inherit superwhatsapp;
         }
       );
 
       homeManagerModules = {
-        default = self.homeManagerModules.zapfast;
-        zapfast = import ./nix/home-manager.nix self;
+        default = self.homeManagerModules.superwhatsapp;
+        superwhatsapp = import ./nix/home-manager.nix self;
       };
 
       formatter = forAllSystems (pkgs: pkgs.nixfmt-tree);

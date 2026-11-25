@@ -1,7 +1,7 @@
-//! Znga's own configuration file, `znga.json` beside ZapFast's settings.
+//! Znga's own configuration file, `znga.json` beside SuperWhatsapp's settings.
 //!
 //! Kept apart from [`crate::settings::Settings`] on purpose: upstream
-//! ZapFast owns that struct, and a fork-only field there would conflict on
+//! Upstream ZapFast owns that struct, and a fork-only field there would conflict on
 //! every merge. API keys are never stored here (see [`super::keys`]).
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -25,7 +25,7 @@ pub enum Engine {
     OpenAi,
     /// The person's own installed Claude Code CLI, run headless
     /// (`claude -p`). It signs in by itself (its saved login or
-    /// `CLAUDE_CODE_OAUTH_TOKEN`); ZapFast never reads or stores the token.
+    /// `CLAUDE_CODE_OAUTH_TOKEN`); SuperWhatsapp never reads or stores the token.
     /// For personal use on this machine.
     #[serde(rename = "claude-code")]
     ClaudeCode,

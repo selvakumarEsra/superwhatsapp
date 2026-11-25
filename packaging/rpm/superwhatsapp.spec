@@ -1,8 +1,8 @@
-# ZapFast built from its release source, for Fedora COPR (paolino/zapfast) and
+# SuperWhatsapp built from its release source, for Fedora COPR (paolino/superwhatsapp) and
 # openSUSE OBS. Cargo fetches the locked dependencies while building, so the
 # COPR project and the OBS package need network access during builds.
 
-Name:           zapfast
+Name:           superwhatsapp
 Version:        @VERSION@
 Release:        1%{?dist}
 Summary:        Fast native WhatsApp client
@@ -47,7 +47,7 @@ Provides:       fastsapp = %{version}-%{release}
 Obsoletes:      fastsapp < %{version}-%{release}
 
 %description
-ZapFast is a native WhatsApp client for the desktop, written in Rust with
+SuperWhatsapp is a native WhatsApp client for the desktop, written in Rust with
 egui: no browser engine, about 200 MB of memory when idle. It links as a
 companion device of your phone and keeps your chats in an encrypted local
 archive.
@@ -61,20 +61,20 @@ export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=%{_builddir}=/"
 cargo build --locked --release
 
 %install
-install -Dm755 target/release/zapfast %{buildroot}%{_bindir}/zapfast
-install -Dm644 packaging/applications/zapfast.desktop %{buildroot}%{_datadir}/applications/zapfast.desktop
-install -Dm644 packaging/icons/zapfast.svg %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/zapfast.svg
-install -Dm644 contrib/omarchy/zapfast.json.tpl %{buildroot}%{_datadir}/zapfast/omarchy/zapfast.json.tpl
-install -Dm755 contrib/omarchy/zapfast-theme %{buildroot}%{_datadir}/zapfast/omarchy/zapfast-theme
+install -Dm755 target/release/superwhatsapp %{buildroot}%{_bindir}/superwhatsapp
+install -Dm644 packaging/applications/superwhatsapp.desktop %{buildroot}%{_datadir}/applications/superwhatsapp.desktop
+install -Dm644 packaging/icons/superwhatsapp.svg %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/superwhatsapp.svg
+install -Dm644 contrib/omarchy/zapfast.json.tpl %{buildroot}%{_datadir}/superwhatsapp/omarchy/zapfast.json.tpl
+install -Dm755 contrib/omarchy/zapfast-theme %{buildroot}%{_datadir}/superwhatsapp/omarchy/zapfast-theme
 
 %files
 %license LICENSE THIRD-PARTY-NOTICES.md
 %doc README.md
-%{_bindir}/zapfast
-%{_datadir}/applications/zapfast.desktop
-%{_datadir}/icons/hicolor/scalable/apps/zapfast.svg
-%{_datadir}/zapfast/
+%{_bindir}/superwhatsapp
+%{_datadir}/applications/superwhatsapp.desktop
+%{_datadir}/icons/hicolor/scalable/apps/superwhatsapp.svg
+%{_datadir}/superwhatsapp/
 
 %changelog
 * @DATE@ Carmine Paolino <carmine@paolino.me> - @VERSION@-1
-- ZapFast @VERSION@: https://github.com/crmne/zapfast/releases/tag/v@VERSION@
+- SuperWhatsapp @VERSION@: https://github.com/crmne/zapfast/releases/tag/v@VERSION@

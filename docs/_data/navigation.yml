@@ -1,7 +1,9 @@
-- title: Guide
-  url: /what-is-zapfast/
+- title: Product
+  url: /what-is-superwhatsapp/
   collections:
     - guide
+- title: Znga AI
+  url: /znga/
 - title: Reference
   url: /settings-and-files/
   collections:

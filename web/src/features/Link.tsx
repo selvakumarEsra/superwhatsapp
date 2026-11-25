@@ -33,7 +33,7 @@ export default function Link(p: { link: LinkState }) {
         style={{ background: "var(--panel-bg)", "box-shadow": "0 17px 50px rgba(11,20,26,.19), 0 12px 15px rgba(11,20,26,.24)" }}
       >
         <div>
-          <h1 style={{ "font-size": "28px", "font-weight": 300, color: "var(--text-primary)", margin: 0 }}>Use ZapFast on your computer</h1>
+          <h1 style={{ "font-size": "28px", "font-weight": 300, color: "var(--text-primary)", margin: 0 }}>Use SuperWhatsapp on your computer</h1>
           <ol class="mt-[40px] list-decimal pl-[24px]" style={{ "font-size": "18px", "line-height": "28px", color: "var(--text-primary)" }}>
             <li>Open WhatsApp on your phone</li>
             <li>Tap Menu or Settings and select Linked devices</li>

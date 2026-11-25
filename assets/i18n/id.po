@@ -1,14 +1,14 @@
-# Indonesia translation of the ZapFast navigation pilot.
-# Distributed under the same MIT license as ZapFast.
+# Indonesia translation of the SuperWhatsapp navigation pilot.
+# Distributed under the same MIT license as SuperWhatsapp.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: ZapFast\n"
+"Project-Id-Version: SuperWhatsapp\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/zapfast/issues/new?"
 "template=translation.yml\n"
 "POT-Creation-Date: 2026-11-01 20:11+0100\n"
 "PO-Revision-Date: 2026-09-22 00:00-0300\n"
-"Last-Translator: ZapFast contributors\n"
+"Last-Translator: SuperWhatsapp contributors\n"
 "Language-Team: Indonesian\n"
 "Language: id\n"
 "MIME-Version: 1.0\n"
@@ -623,8 +623,8 @@ msgid "You left this channel"
 msgstr "Kamu meninggalkan saluran ini"
 
 #: src/ui/conversation.rs:1530
-msgid "Channels are read-only in ZapFast"
-msgstr "Saluran bersifat read-only di ZapFast"
+msgid "Channels are read-only in SuperWhatsapp"
+msgstr "Saluran bersifat read-only di SuperWhatsapp"
 
 #: src/ui/conversation.rs:1553
 msgid "You left this group"
@@ -1107,12 +1107,12 @@ msgstr "Obrolan terkunci"
 #: src/ui/dialogs.rs:358
 msgid ""
 "Choose a local code to open the Locked tab. It is separate from your phone's "
-"code. This hides chats in ZapFast, it does not add another encryption layer."
+"code. This hides chats in SuperWhatsapp, it does not add another encryption layer."
 msgstr ""
 
 #: src/ui/dialogs.rs:363
 msgid ""
-"Enter your local ZapFast code. Leaving the Locked tab or closing the window "
+"Enter your local SuperWhatsapp code. Leaving the Locked tab or closing the window "
 "locks it again."
 msgstr ""
 
@@ -1158,7 +1158,7 @@ msgstr "chat ini"
 msgid ""
 "This moves the chat to the Locked tab, hiding it from the normal chat list, "
 "search, unread badges, and notifications. The lock status also syncs to your "
-"phone. Open Locked with a separate local ZapFast code to read it."
+"phone. Open Locked with a separate local SuperWhatsapp code to read it."
 msgstr ""
 
 #: src/ui/dialogs.rs:489
@@ -1375,15 +1375,15 @@ msgstr "Mulai dari awal?"
 
 #: src/ui/dialogs.rs:1446
 msgid ""
-"ZapFast keeps your unreadable archive as a separate file, creates a new one, "
+"SuperWhatsapp keeps your unreadable archive as a separate file, creates a new one, "
 "and asks you to link again. Linking again brings back recent history from "
-"your phone. Afterwards, remove the old ZapFast entry under Linked devices on "
+"your phone. Afterwards, remove the old SuperWhatsapp entry under Linked devices on "
 "your phone."
 msgstr ""
-"ZapFast menyimpan arsip Anda yang tidak terbaca sebagai file terpisah, "
+"SuperWhatsapp menyimpan arsip Anda yang tidak terbaca sebagai file terpisah, "
 "membuat arsip baru, dan meminta Anda menautkan lagi. Menautkan lagi akan "
 "mengembalikan riwayat terbaru dari telepon Anda. Setelah itu, hapus entri "
-"ZapFast lama di Perangkat tertaut pada telepon Anda."
+"SuperWhatsapp lama di Perangkat tertaut pada telepon Anda."
 
 #: src/ui/dialogs.rs:1450
 msgid ""
@@ -1709,9 +1709,9 @@ msgstr "Bilah judul khusus"
 
 #: src/ui/settings.rs:422
 msgid ""
-"Draw ZapFast's own title bar and window buttons instead of the desktop's."
+"Draw SuperWhatsapp's own title bar and window buttons instead of the desktop's."
 msgstr ""
-"Gambar bilah judul dan tombol jendela milik ZapFast sendiri, bukan milik "
+"Gambar bilah judul dan tombol jendela milik SuperWhatsapp sendiri, bukan milik "
 "desktop."
 
 #: src/ui/settings.rs:428 src/ui/rail.rs:293
@@ -1852,9 +1852,9 @@ msgstr "Kelola label"
 
 #: src/ui/settings.rs:615
 msgid ""
-"Could not load your account privacy. Trying again when ZapFast reconnects."
+"Could not load your account privacy. Trying again when SuperWhatsapp reconnects."
 msgstr ""
-"Tidak dapat memuat privasi akun Anda. Mencoba lagi saat ZapFast terhubung "
+"Tidak dapat memuat privasi akun Anda. Mencoba lagi saat SuperWhatsapp terhubung "
 "kembali."
 
 #: src/ui/settings.rs:620
@@ -1894,8 +1894,8 @@ msgid "Check for updates"
 msgstr "Periksa pembaruan"
 
 #: src/ui/settings.rs:703
-msgid "Asks GitHub once a day, sending only the ZapFast version."
-msgstr "Memeriksa GitHub sekali sehari, hanya mengirimkan versi ZapFast."
+msgid "Asks GitHub once a day, sending only the SuperWhatsapp version."
+msgstr "Memeriksa GitHub sekali sehari, hanya mengirimkan versi SuperWhatsapp."
 
 #: src/ui/settings.rs:708
 msgid "Download updates automatically"
@@ -1904,10 +1904,10 @@ msgstr "Unduh pembaruan secara otomatis"
 #: src/ui/settings.rs:711
 msgid ""
 "You still choose when to restart. Package managers and Flatpak update "
-"ZapFast themselves."
+"SuperWhatsapp themselves."
 msgstr ""
 "Anda tetap memilih kapan harus memulai ulang. Manajer paket dan Flatpak "
-"memperbarui ZapFast sendiri."
+"memperbarui SuperWhatsapp sendiri."
 
 #: src/ui/settings.rs:724
 #, rust-format
@@ -2058,10 +2058,10 @@ msgstr "Kunci setelah"
 
 #: src/ui/settings.rs:952
 msgid ""
-"Time without using ZapFast, also counted while it is in the tray. "
+"Time without using SuperWhatsapp, also counted while it is in the tray. "
 "Ctrl+Shift+L locks it at once."
 msgstr ""
-"Waktu tidak menggunakan ZapFast, juga dihitung saat berada di baki sistem. "
+"Waktu tidak menggunakan SuperWhatsapp, juga dihitung saat berada di baki sistem. "
 "Tekan Ctrl+Shift+L untuk mengunci seketika."
 
 #: src/ui/settings.rs:994
@@ -2482,19 +2482,19 @@ msgstr "Panggilan masuk"
 #: src/app/calls.rs:620
 #, rust-format
 msgid ""
-"{caller} is calling {group}. ZapFast can't join group calls yet: answer on "
+"{caller} is calling {group}. SuperWhatsapp can't join group calls yet: answer on "
 "your phone."
 msgstr ""
-"{caller} sedang memanggil {group}. ZapFast belum bisa bergabung ke panggilan "
+"{caller} sedang memanggil {group}. SuperWhatsapp belum bisa bergabung ke panggilan "
 "grup: jawab di ponselmu."
 
 #: src/app/calls.rs:628
 #, rust-format
 msgid ""
-"{caller} is calling you and others. ZapFast can't join group calls yet: "
+"{caller} is calling you and others. SuperWhatsapp can't join group calls yet: "
 "answer on your phone."
 msgstr ""
-"{caller} sedang memanggilmu dan orang lain. ZapFast belum bisa bergabung ke "
+"{caller} sedang memanggilmu dan orang lain. SuperWhatsapp belum bisa bergabung ke "
 "panggilan grup: jawab di ponselmu."
 
 #. Translators: {name} is replaced by the author's name, shown as a link.
@@ -2640,9 +2640,9 @@ msgstr ""
 "Minta seseorang di grup untuk menelepon, lalu jawab di sini."
 
 #: src/app.rs:4907 src/app.rs:8029
-msgid "ZapFast can't join group calls yet: open the link on your phone."
+msgid "SuperWhatsapp can't join group calls yet: open the link on your phone."
 msgstr ""
-"ZapFast belum bisa bergabung ke panggilan grup: buka tautannya di ponselmu."
+"SuperWhatsapp belum bisa bergabung ke panggilan grup: buka tautannya di ponselmu."
 
 #: src/app.rs:4913
 #, fuzzy
@@ -2685,7 +2685,7 @@ msgid "Could not confirm unarchiving on WhatsApp. Try again"
 msgstr "Tidak dapat membuat grup. Coba lagi."
 
 #: src/app.rs:4980
-msgid "WhatsApp updated this chat, but ZapFast could not save the change"
+msgid "WhatsApp updated this chat, but SuperWhatsapp could not save the change"
 msgstr ""
 
 #: src/app.rs:5068
@@ -2697,8 +2697,8 @@ msgid "Unblock this contact to send messages."
 msgstr ""
 
 #: src/app.rs:5740
-msgid "Not sent: ZapFast is not connected to WhatsApp."
-msgstr "Tidak terkirim: ZapFast tidak terhubung ke WhatsApp."
+msgid "Not sent: SuperWhatsapp is not connected to WhatsApp."
+msgstr "Tidak terkirim: SuperWhatsapp tidak terhubung ke WhatsApp."
 
 #: src/app.rs:5744
 msgid ""
@@ -2727,8 +2727,8 @@ msgstr "Mengirim paket stiker…"
 
 #: src/app.rs:9279 src/ui/labels.rs:257
 #, rust-format
-msgid "You have {limit} labels, the most ZapFast keeps."
-msgstr "Anda memiliki {limit} label, batas maksimal yang disimpan ZapFast."
+msgid "You have {limit} labels, the most SuperWhatsapp keeps."
+msgstr "Anda memiliki {limit} label, batas maksimal yang disimpan SuperWhatsapp."
 
 #: src/app.rs:9446
 #, fuzzy
@@ -3218,8 +3218,8 @@ msgid "Play motion photo"
 msgstr "Putar foto bergerak"
 
 #: src/ui/image_preview.rs:738
-msgid "This image could not be displayed in ZapFast."
-msgstr "Gambar ini tidak dapat ditampilkan di ZapFast."
+msgid "This image could not be displayed in SuperWhatsapp."
+msgstr "Gambar ini tidak dapat ditampilkan di SuperWhatsapp."
 
 #: src/ui/image_preview.rs:741
 msgid "Open externally"
@@ -3230,8 +3230,8 @@ msgid "Play or pause the video"
 msgstr "Putar atau jeda video"
 
 #: src/ui/lock.rs:17
-msgid "ZapFast is locked"
-msgstr "ZapFast terkunci"
+msgid "SuperWhatsapp is locked"
+msgstr "SuperWhatsapp terkunci"
 
 #: src/ui/lock.rs:23
 msgid "Unlinking this computer…"
@@ -3630,7 +3630,7 @@ msgstr "Memuat riwayat chat"
 
 #: src/ui/mod.rs:579
 #, rust-format
-msgid "ZapFast {version} is available"
+msgid "SuperWhatsapp {version} is available"
 msgstr ""
 
 #: src/ui/mod.rs:596
@@ -3926,7 +3926,7 @@ msgid "Participant details are not available yet"
 msgstr ""
 
 #: src/ui/update.rs:25 src/ui/update.rs:38
-msgid "Update ZapFast"
+msgid "Update SuperWhatsapp"
 msgstr ""
 
 #: src/ui/update.rs:49
@@ -3958,7 +3958,7 @@ msgstr ""
 
 #: src/ui/update.rs:113
 msgid ""
-"Finish any unsent messages or recordings before restarting. ZapFast will "
+"Finish any unsent messages or recordings before restarting. SuperWhatsapp will "
 "briefly disconnect, then reconnect automatically."
 msgstr ""
 

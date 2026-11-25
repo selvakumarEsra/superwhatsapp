@@ -286,7 +286,7 @@ function AppLock() {
       <Show when={state.settings.appLock}>
         <Choice
           title="Lock after"
-          description="Time without using ZapFast, also counted while it is in the tray."
+          description="Time without using SuperWhatsapp, also counted while it is in the tray."
           key="autoLock"
           options={[["oneMinute", "1 minute"], ["fifteenMinutes", "15 minutes"], ["oneHour", "1 hour"]]}
         />
@@ -359,14 +359,14 @@ function Body(p: { page: Page }) {
         <Row title="Phone number">
           <span class="selectable" style={{ "font-size": "var(--fs-row-text)", color: "var(--text-secondary)" }}>{state.settings.phone ?? "—"}</span>
         </Row>
-        <Row title="Unlink this computer" description="ZapFast signs out of WhatsApp. Your archive stays on this computer.">
+        <Row title="Unlink this computer" description="SuperWhatsapp signs out of WhatsApp. Your archive stays on this computer.">
           <Button
             label="Unlink…"
             danger
             onClick={() =>
               ask({
                 title: "Unlink this computer?",
-                body: "ZapFast will sign out of WhatsApp on this computer. You can link it again with your phone.",
+                body: "SuperWhatsapp will sign out of WhatsApp on this computer. You can link it again with your phone.",
                 action: "Unlink",
                 run: () => commands.unlink(),
               })
@@ -451,7 +451,7 @@ function Body(p: { page: Page }) {
         <BlockedContacts />
       </Show>
       <Show when={p.page === "system"}>
-        <Toggle title="Keep running when the window closes" description="Closing the window leaves ZapFast in the menu bar or tray; quit from there or with ⌘Q." key="keepRunning" />
+        <Toggle title="Keep running when the window closes" description="Closing the window leaves SuperWhatsapp in the menu bar or tray; quit from there or with ⌘Q." key="keepRunning" />
         <Show when={state.settings.startWithSystem !== null}>
           <Toggle title="Start at login" description="Starts in the tray, without a window." key="startWithSystem" />
         </Show>
@@ -460,7 +460,7 @@ function Body(p: { page: Page }) {
         <Text title="Proxy" description="For WhatsApp, media, and updates. Empty uses ALL_PROXY or HTTPS_PROXY." key="proxy" placeholder="None" />
       </Show>
       <Show when={p.page === "about"}>
-        <Row title="ZapFast" description="A fast WhatsApp client, with Znga.">
+        <Row title="SuperWhatsapp" description="A fast WhatsApp client, with Znga.">
           <span class="selectable" style={{ "font-size": "var(--fs-row-text)", color: "var(--text-secondary)" }}>{state.settings.version}</span>
         </Row>
       </Show>

@@ -1,113 +1,65 @@
 ---
 title: Download
-description: Get ZapFast for Linux, macOS, or Windows, with install instructions for each.
-nav_order: 1
+description: Download SuperWhatsapp for macOS, Windows or Linux, free during the beta, with install steps for each.
+nav_order: 2
 ---
 
-{% assign v = site.zapfast_version %}
+{% assign v = site.superwhatsapp_version %}
+{% assign repo = site.release_repository %}
 {% assign name = site.release_asset_prefix %}
 {% assign app = site.release_app_name %}
-{% assign base = "https://github.com/crmne/zapfast/releases/download/v" | append: v %}
+{% assign base = "https://github.com/" | append: repo | append: "/releases/download/v" | append: v %}
 
-ZapFast was previously called FastsApp. Version 0.13.0 introduces the new
-package and executable names. Your existing session and local data move
-automatically when you first start ZapFast; quit FastsApp before upgrading.
+The current version is **{{ app }} {{ v }}**, free during the beta. Every
+download is listed with its SHA-256 checksum in
+[checksums.txt]({{ base }}/checksums.txt), signed with the project's update
+key. Older versions are on the
+[releases page](https://github.com/{{ repo }}/releases).
 
-The current version is **v{{ v }}**. SHA-256 checksums are in
-[checksums.txt]({{ base }}/checksums.txt). Older versions are on the
-[releases page](https://github.com/crmne/zapfast/releases).
+<div class="sw-downloads">
+  <a href="{{ base }}/{{ name }}-v{{ v }}-macos-universal.dmg"><strong>macOS</strong><span>Apple silicon and Intel, .dmg</span></a>
+  <a href="{{ base }}/{{ name }}-v{{ v }}-x86_64-pc-windows-msvc.msi"><strong>Windows</strong><span>x64 installer, .msi</span></a>
+  <a href="{{ base }}/{{ name }}-v{{ v }}-x86_64-unknown-linux-gnu.tar.gz"><strong>Linux</strong><span>x86_64, .tar.gz</span></a>
+</div>
+
+After installing, [link your phone](/getting-started/#link-with-your-phone)
+and [turn on Znga](/znga/#set-up-znga) to get the AI agent.
+
+## macOS
+
+One download for both Apple silicon and Intel Macs, macOS 11 or newer:
+
+- [{{ name }}-v{{ v }}-macos-universal.dmg]({{ base }}/{{ name }}-v{{ v }}-macos-universal.dmg)
+
+Open it and drag **{{ app }}** to Applications. The beta is not yet signed
+with an Apple Developer ID, so the first time, right-click {{ app }} in
+Applications and choose **Open**, then **Open** again.
+
+## Windows
+
+The installer is a Windows Installer package. It adds {{ app }} to the Start
+menu and needs no administrator rights. Choose x64 for most PCs and arm64 for
+Windows on ARM:
+
+- [{{ name }}-v{{ v }}-x86_64-pc-windows-msvc.msi]({{ base }}/{{ name }}-v{{ v }}-x86_64-pc-windows-msvc.msi)
+- [{{ name }}-v{{ v }}-aarch64-pc-windows-msvc.msi]({{ base }}/{{ name }}-v{{ v }}-aarch64-pc-windows-msvc.msi)
+
+To run {{ app }} without installing it, extract a zip and run
+`{{ name }}.exe`:
+
+- [{{ name }}-v{{ v }}-x86_64-pc-windows-msvc.zip]({{ base }}/{{ name }}-v{{ v }}-x86_64-pc-windows-msvc.zip)
+- [{{ name }}-v{{ v }}-aarch64-pc-windows-msvc.zip]({{ base }}/{{ name }}-v{{ v }}-aarch64-pc-windows-msvc.zip)
+
+SmartScreen may warn about an unknown publisher on first run, because the
+beta is not code-signed yet. Choose **More info**, then **Run anyway**.
+{{ app }} draws with OpenGL and needs a graphics driver with OpenGL 2.1 or
+newer.
 
 ## Linux
 
-On Arch Linux and derivatives, install from the
-[AUR](https://aur.archlinux.org/packages/{{ name }}-bin):
-
-```sh
-yay -S {{ name }}-bin    # prebuilt
-yay -S {{ name }}        # builds from the release source
-yay -S {{ name }}-git    # builds from the latest commit
-```
-
-With [Nix](https://nixos.org), install from the flake:
-
-```sh
-nix profile install github:crmne/zapfast
-```
-
-NixOS configurations can add the repository as a flake input and include
-`inputs.zapfast.packages.${pkgs.system}.default` in
-`environment.systemPackages`.
-
-With [Home Manager](https://github.com/nix-community/home-manager), the
-flake's module installs ZapFast and declares its settings:
-
-```nix
-imports = [ inputs.zapfast.homeManagerModules.default ];
-
-programs.zapfast = {
-  enable = true;
-  settings = {
-    check_for_updates = false;
-    message_sound = "none";
-  };
-};
-```
-
-`settings` takes the keys of `settings.json` (see
-[Settings & Files](/settings-and-files/)). They are merged into the file on
-every activation, so the window size, recent emoji, and lock verifiers the app
-keeps there are left alone. A declared key that is changed in the app is reset
-on the next activation. Per-account preferences such as read receipts and
-notifications live in each account's own file and cannot be declared here.
-Restart ZapFast after activating: it reads the file at
-start, and its next save writes back the values it already had.
-
-Values in `settings` are copied to the Nix store, which every user on the
-computer can read, so keep secrets such as proxy credentials or a GIPHY key
-out of it. Either set them in the app and leave them undeclared, or name a
-file for each key in `secretFiles`, for example one that sops-nix or agenix
-decrypts. The module reads those files when it activates:
-
-```nix
-programs.zapfast.secretFiles.proxy = config.sops.secrets.zapfast-proxy.path;
-```
-
-On Debian, Ubuntu and their derivatives, install the `.deb`; apt fetches
-the libraries it needs:
-
-```sh
-sudo apt install ./{{ name }}_{{ v }}_amd64.deb    # or _arm64.deb
-```
-
-- [{{ name }}_{{ v }}_amd64.deb]({{ base }}/{{ name }}_{{ v }}_amd64.deb)
-- [{{ name }}_{{ v }}_arm64.deb]({{ base }}/{{ name }}_{{ v }}_arm64.deb)
-
-On Fedora 44 and newer, install from the
-[COPR repository](https://copr.fedorainfracloud.org/coprs/paolino/zapfast/),
-so dnf updates {{ app }} with the rest of your system:
-
-```sh
-sudo dnf copr enable paolino/zapfast
-sudo dnf install zapfast
-```
-
-On openSUSE and other RPM distributions, or to install one release by hand,
-take the `.rpm`:
-
-```sh
-sudo dnf install ./{{ name }}-{{ v }}-1.x86_64.rpm    # or .aarch64.rpm
-```
-
-- [{{ name }}-{{ v }}-1.x86_64.rpm]({{ base }}/{{ name }}-{{ v }}-1.x86_64.rpm)
-- [{{ name }}-{{ v }}-1.aarch64.rpm]({{ base }}/{{ name }}-{{ v }}-1.aarch64.rpm)
-
-These packages do not add a repository yet, so {{ app }} tells you when a
-release is out and you install the new package the same way.
-
 On any distribution with [Flatpak](https://flatpak.org), install the bundle.
-It runs in Flatpak's sandbox: it reaches the network, sound, your devices
-(the camera and microphone for calls), the keyring and notifications, but not
-your files, which you attach through the system's file picker:
+It runs in Flatpak's sandbox and reaches your files only through the system's
+file picker:
 
 ```sh
 flatpak install --user ./{{ name }}-v{{ v }}-x86_64.flatpak
@@ -115,76 +67,54 @@ flatpak install --user ./{{ name }}-v{{ v }}-x86_64.flatpak
 
 - [{{ name }}-v{{ v }}-x86_64.flatpak]({{ base }}/{{ name }}-v{{ v }}-x86_64.flatpak)
 
-For other distributions, download a tarball with the binary, desktop file,
-and icon:
+Or take a tarball with the program, its desktop file and icon, and install it
+for your user with the script inside:
+
+```sh
+tar xzf {{ name }}-v{{ v }}-x86_64-unknown-linux-gnu.tar.gz
+cd {{ name }}-v{{ v }}-x86_64-unknown-linux-gnu
+packaging/install-user.sh ./{{ name }}
+```
 
 - [{{ name }}-v{{ v }}-x86_64-unknown-linux-gnu.tar.gz]({{ base }}/{{ name }}-v{{ v }}-x86_64-unknown-linux-gnu.tar.gz)
 - [{{ name }}-v{{ v }}-aarch64-unknown-linux-gnu.tar.gz]({{ base }}/{{ name }}-v{{ v }}-aarch64-unknown-linux-gnu.tar.gz)
 
-Or take the AppImage: one file to make executable and run, with no
-installation. It uses the same libraries as the tarball and needs FUSE (or
-run it with `--appimage-extract-and-run`). It does not update itself; download
-the new file when {{ app }} says a release is out.
-
-- [{{ name }}-{{ v }}-x86_64.AppImage]({{ base }}/{{ name }}-{{ v }}-x86_64.AppImage)
-- [{{ name }}-{{ v }}-aarch64.AppImage]({{ base }}/{{ name }}-{{ v }}-aarch64.AppImage)
-
 {{ app }} needs glibc 2.36 or newer (Debian 12, Ubuntu 22.10, Fedora 37 and
-newer), the standard egui libraries, ALSA and libpipewire 0.3.53 or newer:
-`libglvnd`, `libxkbcommon`, `wayland`, `libx11`, `alsa-lib` and `libpipewire` (on
-Debian or Ubuntu: `libasound2t64`, `libpipewire-0.3-0t64`, `libgl1`,
-`libxkbcommon0`, `libwayland-client0`). Sound goes to PipeWire itself, else to
-PulseAudio, else to ALSA.
-Emoji come from the desktop's colour emoji font when one is installed
-(`noto-fonts-emoji`, `fonts-noto-color-emoji` on Debian), else from the copy
-{{ app }} bundles. The file picker uses `xdg-desktop-portal`.
+newer), ALSA and libpipewire 0.3.53 or newer, plus the usual graphics
+libraries: `libglvnd`, `libxkbcommon`, `wayland` and `libx11`. On Debian or
+Ubuntu: `libasound2t64`, `libpipewire-0.3-0t64`, `libgl1`, `libxkbcommon0`
+and `libwayland-client0`.
 
-{{ app }} is not on Flathub yet.
-
-## macOS
-
-One download for both Apple Silicon and Intel:
-
-- [{{ name }}-v{{ v }}-macos-universal.dmg]({{ base }}/{{ name }}-v{{ v }}-macos-universal.dmg)
-
-Open it and drag **{{ app }}** to Applications.
-
-If you use [Homebrew](https://brew.sh), you can install it with:
+With [Nix](https://nixos.org), install from the flake:
 
 ```sh
-brew install --cask crmne/tap/zapfast
+nix profile install github:{{ repo }}
 ```
 
-The app is signed with Developer ID and notarized by Apple. The DMG includes
-a validated notarization ticket.
+## Updates
 
-When upgrading from FastsApp, remove the old FastsApp application bundle
-after installing ZapFast.
+{{ app }} checks this project's releases and tells you when a new version is
+out. Installed copies update themselves after verifying the release's
+signature; a copy that cannot (the Flatpak, for example) shows where to
+download the new version.
 
-## Windows
+## Coming from ZapFast?
 
-The installer is a Windows Installer package (`.msi`). It adds {{ app }} to
-the Start menu and needs no administrator rights. Choose x86_64 for most PCs
-or aarch64 for Windows on ARM:
+{{ app }} is built on ZapFast and uses the same folders, so installing it
+keeps your linked numbers, chats, archive and settings. Quit ZapFast first:
+only one of the two runs at a time.
 
-- [{{ name }}-v{{ v }}-x86_64-pc-windows-msvc.msi]({{ base }}/{{ name }}-v{{ v }}-x86_64-pc-windows-msvc.msi)
-- [{{ name }}-v{{ v }}-aarch64-pc-windows-msvc.msi]({{ base }}/{{ name }}-v{{ v }}-aarch64-pc-windows-msvc.msi)
+## Try the new interface
 
-If you installed {{ app }} with the older setup program (`-setup.exe`), 0.20.0
-and later move to the package through their own updates. On 0.19.0 or earlier,
-run the `.msi` once: it installs into the same folder and replaces the old
-installer's entry in Settings > Apps. Your session, chats and settings stay.
+Each release also carries **{{ app }} Preview**, a new interface modelled on
+the desktop WhatsApp you know. It installs beside {{ app }}, opens the same
+account, and is still missing some features. Look for the
+`{{ name }}-preview-*` files on the
+[release page](https://github.com/{{ repo }}/releases/tag/v{{ v }}).
 
-To run {{ app }} without installing it, download a zip, extract it, and run
-`{{ name }}.exe`.
-
-- [{{ name }}-v{{ v }}-x86_64-pc-windows-msvc.zip]({{ base }}/{{ name }}-v{{ v }}-x86_64-pc-windows-msvc.zip)
-- [{{ name }}-v{{ v }}-aarch64-pc-windows-msvc.zip]({{ base }}/{{ name }}-v{{ v }}-aarch64-pc-windows-msvc.zip)
-
-{{ app }} draws with OpenGL and needs a graphics driver with OpenGL 2.1 or
-newer. Install the driver from the maker of your graphics chip: the Microsoft
-Basic Display Adapter, some virtual machines, and some remote desktop sessions
-offer no usable OpenGL, and Windows then shows a message instead of starting.
-
-SmartScreen may warn about an unknown publisher on first run. Choose **More
-info**, then **Run anyway**.
+<style>
+  .sw-downloads { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 24px 0; }
+  .sw-downloads a { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; border-radius: 12px; background: var(--vp-c-brand-soft); text-decoration: none !important; }
+  .sw-downloads strong { color: var(--vp-c-brand-1); font-size: 17px; }
+  .sw-downloads span { color: var(--vp-c-text-2); font-size: 13px; }
+</style>

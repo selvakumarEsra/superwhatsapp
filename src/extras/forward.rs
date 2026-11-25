@@ -19,7 +19,7 @@ const ROWS: f32 = 2.0 * 52.0;
 /// Draws the All / Favourites chips above a list that ends at `bottom`,
 /// and returns whether only favourites are shown. In a window too short
 /// for the chips and two rows, no chips are drawn and every chat shows.
-/// The choice lasts until ZapFast quits (REQ-EXTRAS-015.A5).
+/// The choice lasts until SuperWhatsapp quits (REQ-EXTRAS-015.A5).
 pub fn tabs(app: &mut App, ui: &mut egui::Ui, bottom: f32) -> bool {
     if bottom - ui.cursor().top() < CHIPS + ROWS {
         return false;

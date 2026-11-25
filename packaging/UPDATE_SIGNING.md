@@ -1,9 +1,9 @@
 # Update signatures
 
-ZapFast verifies `checksums.txt.sig`, a raw 64-byte Ed25519 signature over the
+SuperWhatsapp verifies `checksums.txt.sig`, a raw 64-byte Ed25519 signature over the
 exact bytes of `checksums.txt`, before parsing checksums or downloading a package.
 The trusted 32-byte public key is embedded from `assets/update-public-key.hex`
-as the `publisher_key` of ZapFast's configuration for
+as the `publisher_key` of SuperWhatsapp's configuration for
 [fastframe-update](https://github.com/crmne/fastframe/tree/main/crates/fastframe-update),
 which performs the verification.
 Missing, truncated, or invalid signatures fail closed. There is no unsigned
@@ -21,7 +21,7 @@ checks that the secret matches the embedded public key, checks the artifact
 hashes, signs the checksums, and verifies its output. The key is read in-process;
 no temporary private-key file is created. Never enable shell tracing in this
 step or print the signing secret. Signing and attestation machinery are shared;
-ZapFast still owns its key, approval environment and updater verification.
+SuperWhatsapp still owns its key, approval environment and updater verification.
 See the [shared signing guide](https://github.com/crmne/native-packages/blob/dc0cb1586894ca0239c53fd02d4da8064712671c/docs/_guides/release-signing.md).
 
 Build jobs also publish GitHub artifact attestations. These identify the

@@ -1,14 +1,14 @@
-# Italian translation of the ZapFast navigation pilot.
-# Distributed under the same MIT license as ZapFast.
+# Italian translation of the SuperWhatsapp navigation pilot.
+# Distributed under the same MIT license as SuperWhatsapp.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: ZapFast\n"
+"Project-Id-Version: SuperWhatsapp\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/zapfast/issues/new?"
 "template=translation.yml\n"
 "POT-Creation-Date: 2026-11-01 20:11+0100\n"
 "PO-Revision-Date: 2026-09-22 00:00-0300\n"
-"Last-Translator: ZapFast contributors\n"
+"Last-Translator: SuperWhatsapp contributors\n"
 "Language-Team: Italian\n"
 "Language: it\n"
 "MIME-Version: 1.0\n"
@@ -624,8 +624,8 @@ msgid "You left this channel"
 msgstr "Hai lasciato questo canale"
 
 #: src/ui/conversation.rs:1530
-msgid "Channels are read-only in ZapFast"
-msgstr "I canali sono di sola lettura in ZapFast"
+msgid "Channels are read-only in SuperWhatsapp"
+msgstr "I canali sono di sola lettura in SuperWhatsapp"
 
 #: src/ui/conversation.rs:1553
 msgid "You left this group"
@@ -1109,12 +1109,12 @@ msgstr "Chat bloccata"
 #: src/ui/dialogs.rs:358
 msgid ""
 "Choose a local code to open the Locked tab. It is separate from your phone's "
-"code. This hides chats in ZapFast, it does not add another encryption layer."
+"code. This hides chats in SuperWhatsapp, it does not add another encryption layer."
 msgstr ""
 
 #: src/ui/dialogs.rs:363
 msgid ""
-"Enter your local ZapFast code. Leaving the Locked tab or closing the window "
+"Enter your local SuperWhatsapp code. Leaving the Locked tab or closing the window "
 "locks it again."
 msgstr ""
 
@@ -1160,7 +1160,7 @@ msgstr "questa chat"
 msgid ""
 "This moves the chat to the Locked tab, hiding it from the normal chat list, "
 "search, unread badges, and notifications. The lock status also syncs to your "
-"phone. Open Locked with a separate local ZapFast code to read it."
+"phone. Open Locked with a separate local SuperWhatsapp code to read it."
 msgstr ""
 
 #: src/ui/dialogs.rs:489
@@ -1380,14 +1380,14 @@ msgstr "Ricominciare da capo?"
 
 #: src/ui/dialogs.rs:1446
 msgid ""
-"ZapFast keeps your unreadable archive as a separate file, creates a new one, "
+"SuperWhatsapp keeps your unreadable archive as a separate file, creates a new one, "
 "and asks you to link again. Linking again brings back recent history from "
-"your phone. Afterwards, remove the old ZapFast entry under Linked devices on "
+"your phone. Afterwards, remove the old SuperWhatsapp entry under Linked devices on "
 "your phone."
 msgstr ""
-"ZapFast conserva il tuo archivio illeggibile come file a parte, ne crea uno "
+"SuperWhatsapp conserva il tuo archivio illeggibile come file a parte, ne crea uno "
 "nuovo e ti chiede di collegarti di nuovo. Ricollegandoti recuperi la "
-"cronologia recente dal telefono. Poi rimuovi la vecchia voce di ZapFast in "
+"cronologia recente dal telefono. Poi rimuovi la vecchia voce di SuperWhatsapp in "
 "Dispositivi collegati sul telefono."
 
 #: src/ui/dialogs.rs:1450
@@ -1713,9 +1713,9 @@ msgstr "Barra del titolo personalizzata"
 
 #: src/ui/settings.rs:422
 msgid ""
-"Draw ZapFast's own title bar and window buttons instead of the desktop's."
+"Draw SuperWhatsapp's own title bar and window buttons instead of the desktop's."
 msgstr ""
-"Disegna la barra del titolo e i pulsanti della finestra di ZapFast al posto "
+"Disegna la barra del titolo e i pulsanti della finestra di SuperWhatsapp al posto "
 "di quelli del desktop."
 
 #: src/ui/settings.rs:428 src/ui/rail.rs:293
@@ -1855,10 +1855,10 @@ msgstr "Gestisci etichette"
 
 #: src/ui/settings.rs:615
 msgid ""
-"Could not load your account privacy. Trying again when ZapFast reconnects."
+"Could not load your account privacy. Trying again when SuperWhatsapp reconnects."
 msgstr ""
 "Impossibile caricare la privacy del tuo account. Nuovo tentativo quando "
-"ZapFast si riconnette."
+"SuperWhatsapp si riconnette."
 
 #: src/ui/settings.rs:620
 msgid "Connect to WhatsApp to change your account privacy."
@@ -1897,9 +1897,9 @@ msgid "Check for updates"
 msgstr "Controlla gli aggiornamenti"
 
 #: src/ui/settings.rs:703
-msgid "Asks GitHub once a day, sending only the ZapFast version."
+msgid "Asks GitHub once a day, sending only the SuperWhatsapp version."
 msgstr ""
-"Chiede a GitHub una volta al giorno, inviando solo la versione di ZapFast."
+"Chiede a GitHub una volta al giorno, inviando solo la versione di SuperWhatsapp."
 
 #: src/ui/settings.rs:708
 msgid "Download updates automatically"
@@ -1908,10 +1908,10 @@ msgstr "Scarica gli aggiornamenti automaticamente"
 #: src/ui/settings.rs:711
 msgid ""
 "You still choose when to restart. Package managers and Flatpak update "
-"ZapFast themselves."
+"SuperWhatsapp themselves."
 msgstr ""
 "Decidi tu quando riavviare. I gestori di pacchetti e Flatpak aggiornano "
-"ZapFast da soli."
+"SuperWhatsapp da soli."
 
 #: src/ui/settings.rs:724
 #, rust-format
@@ -2061,10 +2061,10 @@ msgstr "Blocca dopo"
 
 #: src/ui/settings.rs:952
 msgid ""
-"Time without using ZapFast, also counted while it is in the tray. "
+"Time without using SuperWhatsapp, also counted while it is in the tray. "
 "Ctrl+Shift+L locks it at once."
 msgstr ""
-"Tempo senza usare ZapFast, contato anche mentre è nell’area di notifica. "
+"Tempo senza usare SuperWhatsapp, contato anche mentre è nell’area di notifica. "
 "Ctrl+Maiusc+L lo blocca subito."
 
 #: src/ui/settings.rs:994
@@ -2485,19 +2485,19 @@ msgstr "Chiamata in arrivo"
 #: src/app/calls.rs:620
 #, rust-format
 msgid ""
-"{caller} is calling {group}. ZapFast can't join group calls yet: answer on "
+"{caller} is calling {group}. SuperWhatsapp can't join group calls yet: answer on "
 "your phone."
 msgstr ""
-"{caller} sta chiamando {group}. ZapFast non può ancora partecipare alle "
+"{caller} sta chiamando {group}. SuperWhatsapp non può ancora partecipare alle "
 "chiamate di gruppo: rispondi dal telefono."
 
 #: src/app/calls.rs:628
 #, rust-format
 msgid ""
-"{caller} is calling you and others. ZapFast can't join group calls yet: "
+"{caller} is calling you and others. SuperWhatsapp can't join group calls yet: "
 "answer on your phone."
 msgstr ""
-"{caller} sta chiamando te e altre persone. ZapFast non può ancora "
+"{caller} sta chiamando te e altre persone. SuperWhatsapp non può ancora "
 "partecipare alle chiamate di gruppo: rispondi dal telefono."
 
 #. Translators: {name} is replaced by the author's name, shown as a link.
@@ -2643,9 +2643,9 @@ msgstr ""
 "account. Chiedi a qualcuno del gruppo di chiamare e rispondi qui."
 
 #: src/app.rs:4907 src/app.rs:8029
-msgid "ZapFast can't join group calls yet: open the link on your phone."
+msgid "SuperWhatsapp can't join group calls yet: open the link on your phone."
 msgstr ""
-"ZapFast non può ancora partecipare alle chiamate di gruppo: apri il link dal "
+"SuperWhatsapp non può ancora partecipare alle chiamate di gruppo: apri il link dal "
 "telefono."
 
 #: src/app.rs:4913
@@ -2689,7 +2689,7 @@ msgid "Could not confirm unarchiving on WhatsApp. Try again"
 msgstr "Impossibile creare il gruppo. Riprova."
 
 #: src/app.rs:4980
-msgid "WhatsApp updated this chat, but ZapFast could not save the change"
+msgid "WhatsApp updated this chat, but SuperWhatsapp could not save the change"
 msgstr ""
 
 #: src/app.rs:5068
@@ -2701,8 +2701,8 @@ msgid "Unblock this contact to send messages."
 msgstr ""
 
 #: src/app.rs:5740
-msgid "Not sent: ZapFast is not connected to WhatsApp."
-msgstr "Non inviato: ZapFast non è connesso a WhatsApp."
+msgid "Not sent: SuperWhatsapp is not connected to WhatsApp."
+msgstr "Non inviato: SuperWhatsapp non è connesso a WhatsApp."
 
 #: src/app.rs:5744
 msgid ""
@@ -2733,8 +2733,8 @@ msgstr "Invio del pacchetto di sticker…"
 
 #: src/app.rs:9279 src/ui/labels.rs:257
 #, rust-format
-msgid "You have {limit} labels, the most ZapFast keeps."
-msgstr "Hai {limit} etichette, il massimo che ZapFast conserva."
+msgid "You have {limit} labels, the most SuperWhatsapp keeps."
+msgstr "Hai {limit} etichette, il massimo che SuperWhatsapp conserva."
 
 #: src/app.rs:9446
 #, fuzzy
@@ -3225,8 +3225,8 @@ msgid "Play motion photo"
 msgstr "Riproduci foto in movimento"
 
 #: src/ui/image_preview.rs:738
-msgid "This image could not be displayed in ZapFast."
-msgstr "ZapFast non ha potuto mostrare questa immagine."
+msgid "This image could not be displayed in SuperWhatsapp."
+msgstr "SuperWhatsapp non ha potuto mostrare questa immagine."
 
 #: src/ui/image_preview.rs:741
 msgid "Open externally"
@@ -3237,8 +3237,8 @@ msgid "Play or pause the video"
 msgstr "Riproduci o metti in pausa il video"
 
 #: src/ui/lock.rs:17
-msgid "ZapFast is locked"
-msgstr "ZapFast è bloccato"
+msgid "SuperWhatsapp is locked"
+msgstr "SuperWhatsapp è bloccato"
 
 #: src/ui/lock.rs:23
 msgid "Unlinking this computer…"
@@ -3636,7 +3636,7 @@ msgstr "Caricamento della cronologia della chat"
 
 #: src/ui/mod.rs:579
 #, rust-format
-msgid "ZapFast {version} is available"
+msgid "SuperWhatsapp {version} is available"
 msgstr ""
 
 #: src/ui/mod.rs:596
@@ -3932,7 +3932,7 @@ msgid "Participant details are not available yet"
 msgstr ""
 
 #: src/ui/update.rs:25 src/ui/update.rs:38
-msgid "Update ZapFast"
+msgid "Update SuperWhatsapp"
 msgstr ""
 
 #: src/ui/update.rs:49
@@ -3964,7 +3964,7 @@ msgstr ""
 
 #: src/ui/update.rs:113
 msgid ""
-"Finish any unsent messages or recordings before restarting. ZapFast will "
+"Finish any unsent messages or recordings before restarting. SuperWhatsapp will "
 "briefly disconnect, then reconnect automatically."
 msgstr ""
 

@@ -15,7 +15,7 @@ export default function EmptyPane() {
           <circle cx="78" cy="68" r="14" fill="var(--accent)" opacity=".8" />
         </svg>
         <h2 class="mt-[28px]" style={{ "font-size": "32px", "font-weight": 300, color: "var(--text-primary)", margin: "28px 0 0" }}>
-          ZapFast
+          SuperWhatsapp
         </h2>
         <p class="mt-[18px]" style={{ "font-size": "14px", "line-height": "20px", color: "var(--text-secondary)" }}>
           Send and receive messages from your computer, linked to your phone.

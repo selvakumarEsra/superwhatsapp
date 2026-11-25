@@ -38,7 +38,7 @@ export default function LockScreen(p: { lock: LockView }) {
       style={{ background: "var(--panel-bg)", color: "var(--text-primary)" }}
     >
       <span style={{ color: "var(--text-secondary)" }}><LockIcon size={36} /></span>
-      <h1 style={{ margin: "14px 0 0", "font-size": "17px", "font-weight": 600 }}>{t("ZapFast is locked")}</h1>
+      <h1 style={{ margin: "14px 0 0", "font-size": "17px", "font-weight": 600 }}>{t("SuperWhatsapp is locked")}</h1>
       <Show
         when={p.lock.forgetting === "no"}
         fallback={

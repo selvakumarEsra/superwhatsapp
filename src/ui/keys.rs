@@ -1135,8 +1135,14 @@ pub const SHORTCUTS: &[(&str, &str)] = &[
     ("Ctrl+0", "Reset zoom"),
     ("← / →", "Previous / next item in the media viewer"),
     ("? / Ctrl+/", "Keyboard shortcuts (? when not typing)"),
-    ("Ctrl+Shift+L", "Lock ZapFast (with an app lock password)"),
-    ("Ctrl+W", "Close the window (ZapFast remains in the tray)"),
+    (
+        "Ctrl+Shift+L",
+        "Lock SuperWhatsapp (with an app lock password)",
+    ),
+    (
+        "Ctrl+W",
+        "Close the window (SuperWhatsapp remains in the tray)",
+    ),
     ("Ctrl+Q", "Quit"),
 ];
 
@@ -1734,7 +1740,7 @@ mod tests {
     }
 
     /// Under the cropper, Enter on a focused button the reader can reach
-    /// presses that button, here one above the cropper, as ZapFast's own
+    /// presses that button, here one above the cropper, as SuperWhatsapp's own
     /// window buttons are; with focus on a control under the cropper, such
     /// as the message field it was opened over, Enter keeps the crop.
     #[test]

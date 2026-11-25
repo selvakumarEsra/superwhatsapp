@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "ZapFast's own commands and events only (REQ-WEBUI-003).",
+  "description": "SuperWhatsapp's own commands and events only (REQ-WEBUI-003).",
   "windows": [
     "main"
   ],

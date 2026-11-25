@@ -1,8 +1,8 @@
-//! One running ZapFast per user, through fastframe-instance.
+//! One running SuperWhatsapp per user, through fastframe-instance.
 //!
 //! The crate holds the lock in the per-user runtime directory and serves the
 //! private channel a later launch hands its request over (a socket only the
-//! user can open, or a token-checked loopback port on Windows). ZapFast keeps
+//! user can open, or a token-checked loopback port on Windows). SuperWhatsapp keeps
 //! its verbs, its directory, and the `fastsapp:` prefix, so a new launch still
 //! reaches an older copy that is already running, and an older launch this
 //! one. Copies from before the lock (0.15 and earlier) only know a fixed
@@ -19,7 +19,7 @@ use std::time::{Duration, Instant};
 /// and reply starts with `fastsapp:`.
 const NAME: &str = "fastsapp";
 const PREFIX: &str = "fastsapp:";
-/// What ZapFast answers a request it takes: `fastsapp:ok` on the wire.
+/// What SuperWhatsapp answers a request it takes: `fastsapp:ok` on the wire.
 const OK: &str = "ok";
 
 /// Fixed port of copies that predate the lock. They never take it.
@@ -78,7 +78,7 @@ impl Guard {
     }
 }
 
-/// ZapFast's slot: its runtime directory, with the prefix older copies use.
+/// SuperWhatsapp's slot: its runtime directory, with the prefix older copies use.
 fn slot(dir: &Path) -> fastframe_instance::Slot {
     fastframe_instance::Slot::at(dir, NAME)
 }
@@ -101,7 +101,7 @@ pub fn acquire(dir: &Path, waker: &crate::backend::Waker, verb: &str) -> Outcome
         }
     };
     // A copy from before the lock only knows `show` and `ping`. Anything else
-    // asked of one surfaces its window rather than running a second ZapFast
+    // asked of one surfaces its window rather than running a second SuperWhatsapp
     // beside it.
     let legacy = legacy_verb(verb);
     if legacy_instance_answers(legacy) {
@@ -180,7 +180,7 @@ pub enum Sent {
 }
 
 /// Sends one request to the running copy, without becoming it when there is
-/// none: for a command-line action that only makes sense while ZapFast runs.
+/// none: for a command-line action that only makes sense while SuperWhatsapp runs.
 pub fn send(dir: &Path, verb: &str) -> Sent {
     sent(slot(dir).send(verb).map(drop), legacy_instance_answers_ping)
 }
@@ -199,7 +199,7 @@ fn sent(result: std::io::Result<()>, legacy: impl FnOnce() -> bool) -> Sent {
                     Sent::NotRunning
                 }
             }
-            // Only ZapFast listens in the slot, so a refusal or a silent
+            // Only SuperWhatsapp listens in the slot, so a refusal or a silent
             // close comes from a copy older than the request.
             ErrorKind::PermissionDenied | ErrorKind::InvalidData | ErrorKind::UnexpectedEof => {
                 Sent::Older
@@ -211,7 +211,7 @@ fn sent(result: std::io::Result<()>, legacy: impl FnOnce() -> bool) -> Sent {
 
 /// Whether a copy from before the lock answers `ping` on its fixed port.
 /// Unlike [`legacy_instance_answers`], a port held by something that does
-/// not answer as ZapFast counts as no copy.
+/// not answer as SuperWhatsapp counts as no copy.
 fn legacy_instance_answers_ping() -> bool {
     if TcpListener::bind((Ipv4Addr::LOCALHOST, LEGACY_PORT)).is_ok() {
         return false;
@@ -254,7 +254,7 @@ fn legacy_instance_answers(verb: &str) -> bool {
     let answered = TcpStream::connect_timeout(&address, REPLY_TIME)
         .and_then(|stream| legacy_request(stream, verb))
         .is_ok();
-    // A background start never runs beside a copy that may be ZapFast,
+    // A background start never runs beside a copy that may be SuperWhatsapp,
     // including older ones that do not answer `ping`.
     answered || verb == "ping"
 }
@@ -274,7 +274,7 @@ fn legacy_request(mut stream: TcpStream, verb: &str) -> std::io::Result<()> {
     } else {
         Err(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
-            "the port is held by something other than ZapFast",
+            "the port is held by something other than SuperWhatsapp",
         ))
     }
 }

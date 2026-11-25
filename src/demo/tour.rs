@@ -36,12 +36,12 @@ pub enum Script {
     /// The 41-second launch tour: search, replies, GIFs, stickers, themes.
     #[default]
     Launch,
-    /// What ZapFast 0.16 added, about 90 seconds.
+    /// What SuperWhatsapp 0.16 added, about 90 seconds.
     WhatsNew,
     /// A one-to-one video call, a voice call answered, and a group's video
     /// call, about 40 seconds.
     Calls,
-    /// What ZapFast 0.21 added, about 45 seconds.
+    /// What SuperWhatsapp 0.21 added, about 45 seconds.
     WhatsNew21,
 }
 

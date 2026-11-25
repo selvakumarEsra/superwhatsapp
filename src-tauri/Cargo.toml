@@ -4,7 +4,7 @@ version = "0.21.1-beta.8"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
-description = "ZapFast's Tauri shell (specs/tauri-ui.md)"
+description = "SuperWhatsapp's Tauri shell (specs/tauri-ui.md)"
 publish = false
 
 [lib]

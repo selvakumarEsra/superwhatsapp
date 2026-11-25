@@ -1,12 +1,13 @@
-title: ZapFast
-zapfast_version: "0.21.0"
-release_asset_prefix: zapfast
-release_app_name: ZapFast
-description: A fast, lightweight WhatsApp app for Linux, macOS, and Windows.
+title: SuperWhatsapp
+superwhatsapp_version: "0.21.1-beta.8"
+release_repository: selvakumarEsra/superwhatsapp
+release_asset_prefix: superwhatsapp
+release_app_name: SuperWhatsapp
+description: WhatsApp on your desktop, fast and private, with Znga, a proactive AI agent that tells you what needs you and drafts replies in your voice.
 lang: en-US
-timezone: Europe/Berlin
-url: https://zapfast.rocks
-baseurl: ""
+timezone: UTC
+url: https://selvakumaresra.github.io
+baseurl: "/superwhatsapp"
 logo: /assets/images/logo.svg
 image: /screenshot.png
 
@@ -32,12 +33,12 @@ defaults:
       layout: default
       image: /screenshot.png
       topics:
-        - WhatsApp client
-        - Rust
-        - egui
-        - fastframe
-        - whatsapp-rust
-        - Linux WhatsApp desktop
+        - WhatsApp desktop app
+        - AI agent for WhatsApp
+        - AI assistant
+        - Proactive AI
+        - Productivity
+        - Privacy
   - scope:
       type: guide
     values:
@@ -48,44 +49,42 @@ defaults:
       layout: default
 
 jekyll_vitepress:
-  versions:
-    next: true
   seo:
     page_type: TechArticle
     image:
       path: /screenshot.png
-      alt: ZapFast showing a chat with a photo, a voice message, a quoted reply, and a link preview
+      alt: SuperWhatsapp with Znga's Today panel beside a chat, listing a message that needs a reply and a briefing
     publisher:
-      type: Person
-      name: Carmine Paolino
-      url: https://paolino.me
+      type: Organization
+      name: SuperWhatsapp
+      url: https://selvakumaresra.github.io/superwhatsapp/
       same_as:
-        - https://github.com/crmne/zapfast
+        - https://github.com/selvakumarEsra/superwhatsapp
   llms:
-    title: ZapFast
+    title: SuperWhatsapp
     description: >-
-      Documentation for ZapFast, a native WhatsApp client for chats, voice
-      messages, attachments, and notifications on Linux, macOS, and Windows.
+      Documentation for SuperWhatsapp, a fast desktop WhatsApp app for
+      macOS, Windows and Linux with Znga, a proactive AI agent.
     full: true
     details: >-
-      Covers installation, phone linking, everyday use, settings, and the
-      WhatsApp connection. Source is on
-      [GitHub](https://github.com/crmne/zapfast).
+      Covers download, linking a phone, everyday use, the Znga AI agent,
+      privacy, settings and files. Source is on
+      [GitHub](https://github.com/selvakumarEsra/superwhatsapp).
   branding:
-    site_title: ZapFast
+    site_title: SuperWhatsapp
     logo:
       default: /assets/images/logo.svg
-      alt: ZapFast
+      alt: SuperWhatsapp
   syntax:
     light_theme: github
     dark_theme: github.dark
   footer:
     enabled: true
-    show_on_docs: false
+    show_on_docs: true
     message: >-
-      Brought to you by <a href="https://paolino.me" target="_blank" rel="noreferrer">Carmine Paolino</a>, maker of
+      SuperWhatsapp is built on <a href="https://github.com/crmne/zapfast" target="_blank" rel="noreferrer">ZapFast</a> by Carmine Paolino, under the MIT license.
     copyright: >-
-      <span class="footer-brand-links"><a href="https://chatwithwork.com" class="footer-chatwithwork-link" target="_blank" rel="noreferrer"><img class="footer-chatwithwork-logo theme-image light" src="https://chatwithwork.com/logotype.svg" alt="Chat with Work"><img class="footer-chatwithwork-logo theme-image dark" src="https://chatwithwork.com/logotype-dark.svg" alt="Chat with Work"></a><a href="https://rubyllm.com" class="footer-rubyllm-link" target="_blank" rel="noreferrer"><img class="footer-rubyllm-logo theme-image light" src="https://rubyllm.com/assets/images/logotype.svg" alt="RubyLLM"><img class="footer-rubyllm-logo theme-image dark" src="https://rubyllm.com/assets/images/logotype_dark.svg" alt="RubyLLM"></a><a href="https://paolino.me/projects" target="_blank" rel="noreferrer" aria-label="More projects by Carmine Paolino">and more</a></span><br><span class="footer-built-with">Docs built with <a href="https://jekyll-vitepress.dev" target="_blank" rel="noreferrer">Jekyll VitePress</a>. ZapFast is an independent project, not affiliated with or endorsed by WhatsApp LLC or Meta. WhatsApp is a trademark of WhatsApp LLC.</span>
+      SuperWhatsapp is an independent project, not affiliated with, endorsed by or sponsored by WhatsApp LLC or Meta Platforms, Inc. WhatsApp is a trademark of WhatsApp LLC.
   doc_footer:
     enabled: true
     previous_label: Previous page
@@ -93,20 +92,16 @@ jekyll_vitepress:
   last_updated:
     enabled: true
     text: Last updated
-    format: "%Y-%m-%d %H:%M"
+    format: "%Y-%m-%d"
   edit_link:
     enabled: true
-    pattern: "https://github.com/crmne/zapfast/edit/main/docs/:path"
+    pattern: "https://github.com/selvakumarEsra/superwhatsapp/edit/main/docs/:path"
     text: Edit this page on GitHub
   github_star:
     enabled: true
-    repository: crmne/zapfast
+    repository: selvakumarEsra/superwhatsapp
     text: Star
     show_count: true
-  github_sponsor:
-    enabled: true
-    user: crmne
-    text: Sponsor
 
 plugins:
   - jekyll-redirect-from

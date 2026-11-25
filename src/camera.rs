@@ -563,8 +563,10 @@ mod backend {
         pub fn open(id: &str, budget: (usize, usize), fps: u32) -> Result<Self, String> {
             let device = Device::open(id)
                 .map_err(|error| format!("the camera could not be opened: {error}"))?;
-            let chosen = super::choose_mode(&modes(&device, budget), budget, fps)
-                .ok_or_else(|| "the camera offers no picture format ZapFast reads".to_owned())?;
+            let chosen =
+                super::choose_mode(&modes(&device, budget), budget, fps).ok_or_else(|| {
+                    "the camera offers no picture format SuperWhatsapp reads".to_owned()
+                })?;
             let capture = device
                 .video_capture(PixFormat::new(
                     chosen.width,
@@ -579,8 +581,9 @@ mod backend {
                 width: granted.width(),
                 height: granted.height(),
                 fps: chosen.fps,
-                pixel: pixel(granted.pixel_format())
-                    .ok_or_else(|| "the camera chose a format ZapFast does not read".to_owned())?,
+                pixel: pixel(granted.pixel_format()).ok_or_else(|| {
+                    "the camera chose a format SuperWhatsapp does not read".to_owned()
+                })?,
             };
             let fps = match capture.set_frame_interval(Fract::new(1, fps.max(1))) {
                 Ok(interval) => rate(&interval),
@@ -721,7 +724,7 @@ mod backend {
         });
         match answered.recv_timeout(PERMISSION_WAIT) {
             Ok(true) => Ok(()),
-            Ok(false) => Err("macOS did not allow ZapFast to use the camera".to_owned()),
+            Ok(false) => Err("macOS did not allow SuperWhatsapp to use the camera".to_owned()),
             Err(_) => Err("macOS did not answer whether the camera may be used".to_owned()),
         }
     }

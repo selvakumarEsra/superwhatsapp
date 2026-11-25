@@ -1,8 +1,8 @@
-# Dutch translation of ZapFast.
-# Distributed under the same MIT license as ZapFast.
+# Dutch translation of SuperWhatsapp.
+# Distributed under the same MIT license as SuperWhatsapp.
 msgid ""
 msgstr ""
-"Project-Id-Version: ZapFast\n"
+"Project-Id-Version: SuperWhatsapp\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/zapfast/issues/new?template=translation.yml\n"
 "POT-Creation-Date: 2026-11-01 20:11+0100\n"
 "PO-Revision-Date: 2026-11-01 23:47+0100\n"
@@ -609,8 +609,8 @@ msgid "You left this channel"
 msgstr "Je hebt dit kanaal verlaten"
 
 #: src/ui/conversation.rs:1530
-msgid "Channels are read-only in ZapFast"
-msgstr "Kanalen zijn alleen-lezen in ZapFast"
+msgid "Channels are read-only in SuperWhatsapp"
+msgstr "Kanalen zijn alleen-lezen in SuperWhatsapp"
 
 #: src/ui/conversation.rs:1553
 msgid "You left this group"
@@ -1079,19 +1079,19 @@ msgstr "Vergrendelde chats instellen"
 #: src/ui/dialogs.rs:358
 msgid ""
 "Choose a local code to open the Locked tab. It is separate from your phone's"
-" code. This hides chats in ZapFast, it does not add another encryption "
+" code. This hides chats in SuperWhatsapp, it does not add another encryption "
 "layer."
 msgstr ""
 "Kies een lokale code om het tabblad Vergrendeld te openen. Deze staat los "
-"van de code op je telefoon. Dit verbergt chats in ZapFast, maar voegt geen "
+"van de code op je telefoon. Dit verbergt chats in SuperWhatsapp, maar voegt geen "
 "extra versleutelingslaag toe."
 
 #: src/ui/dialogs.rs:363
 msgid ""
-"Enter your local ZapFast code. Leaving the Locked tab or closing the window "
+"Enter your local SuperWhatsapp code. Leaving the Locked tab or closing the window "
 "locks it again."
 msgstr ""
-"Voer je lokale ZapFast-code in. Als je het tabblad Vergrendeld verlaat of "
+"Voer je lokale SuperWhatsapp-code in. Als je het tabblad Vergrendeld verlaat of "
 "het venster sluit, wordt het weer vergrendeld."
 
 #: src/ui/dialogs.rs:374
@@ -1131,12 +1131,12 @@ msgstr "Deze chat vergrendelen?"
 msgid ""
 "This moves the chat to the Locked tab, hiding it from the normal chat list, "
 "search, unread badges, and notifications. The lock status also syncs to your"
-" phone. Open Locked with a separate local ZapFast code to read it."
+" phone. Open Locked with a separate local SuperWhatsapp code to read it."
 msgstr ""
 "Dit verplaatst de chat naar het tabblad Vergrendeld en verbergt deze in de "
 "gewone chatlijst, zoekresultaten, badges voor ongelezen berichten en "
 "meldingen. De vergrendeling wordt ook met je telefoon gesynchroniseerd. Open "
-"Vergrendeld met een aparte lokale ZapFast-code om de chat te lezen."
+"Vergrendeld met een aparte lokale SuperWhatsapp-code om de chat te lezen."
 
 #: src/ui/dialogs.rs:489
 msgid "New chat"
@@ -1350,14 +1350,14 @@ msgstr "Opnieuw beginnen?"
 
 #: src/ui/dialogs.rs:1446
 msgid ""
-"ZapFast keeps your unreadable archive as a separate file, creates a new one,"
+"SuperWhatsapp keeps your unreadable archive as a separate file, creates a new one,"
 " and asks you to link again. Linking again brings back recent history from "
-"your phone. Afterwards, remove the old ZapFast entry under Linked devices on"
+"your phone. Afterwards, remove the old SuperWhatsapp entry under Linked devices on"
 " your phone."
 msgstr ""
-"ZapFast bewaart je onleesbare archief als een apart bestand, maakt een nieuw"
+"SuperWhatsapp bewaart je onleesbare archief als een apart bestand, maakt een nieuw"
 " archief en vraagt je opnieuw te koppelen. Opnieuw koppelen haalt de recente"
-" geschiedenis van je telefoon terug. Verwijder daarna de oude ZapFast-"
+" geschiedenis van je telefoon terug. Verwijder daarna de oude SuperWhatsapp-"
 "vermelding onder Gekoppelde apparaten op je telefoon."
 
 #: src/ui/dialogs.rs:1450
@@ -1690,9 +1690,9 @@ msgstr "Aangepaste titelbalk"
 
 #: src/ui/settings.rs:422
 msgid ""
-"Draw ZapFast's own title bar and window buttons instead of the desktop's."
+"Draw SuperWhatsapp's own title bar and window buttons instead of the desktop's."
 msgstr ""
-"Tekent de eigen titelbalk en vensterknoppen van ZapFast in plaats van die "
+"Tekent de eigen titelbalk en vensterknoppen van SuperWhatsapp in plaats van die "
 "van het bureaublad."
 
 #: src/ui/settings.rs:428 src/ui/rail.rs:293
@@ -1834,9 +1834,9 @@ msgstr "Beheren"
 
 #: src/ui/settings.rs:615
 msgid ""
-"Could not load your account privacy. Trying again when ZapFast reconnects."
+"Could not load your account privacy. Trying again when SuperWhatsapp reconnects."
 msgstr ""
-"Je accountprivacy kon niet worden geladen. ZapFast probeert het opnieuw "
+"Je accountprivacy kon niet worden geladen. SuperWhatsapp probeert het opnieuw "
 "zodra er weer verbinding is."
 
 #: src/ui/settings.rs:620
@@ -1876,9 +1876,9 @@ msgid "Check for updates"
 msgstr "Controleren op updates"
 
 #: src/ui/settings.rs:703
-msgid "Asks GitHub once a day, sending only the ZapFast version."
+msgid "Asks GitHub once a day, sending only the SuperWhatsapp version."
 msgstr ""
-"Controleert GitHub één keer per dag en verstuurt alleen de ZapFast-versie."
+"Controleert GitHub één keer per dag en verstuurt alleen de SuperWhatsapp-versie."
 
 #: src/ui/settings.rs:708
 msgid "Download updates automatically"
@@ -1887,10 +1887,10 @@ msgstr "Updates automatisch downloaden"
 #: src/ui/settings.rs:711
 msgid ""
 "You still choose when to restart. Package managers and Flatpak update "
-"ZapFast themselves."
+"SuperWhatsapp themselves."
 msgstr ""
 "Je kiest zelf wanneer je opnieuw opstart. Pakketbeheerders en Flatpak werken"
-" ZapFast zelf bij."
+" SuperWhatsapp zelf bij."
 
 #: src/ui/settings.rs:724
 #, rust-format
@@ -2043,10 +2043,10 @@ msgstr "Vergrendelen na"
 
 #: src/ui/settings.rs:952
 msgid ""
-"Time without using ZapFast, also counted while it is in the tray. "
+"Time without using SuperWhatsapp, also counted while it is in the tray. "
 "Ctrl+Shift+L locks it at once."
 msgstr ""
-"Tijd zonder ZapFast te gebruiken, ook terwijl de app in het systeemvak "
+"Tijd zonder SuperWhatsapp te gebruiken, ook terwijl de app in het systeemvak "
 "staat. Ctrl+Shift+L vergrendelt de app meteen."
 
 #: src/ui/settings.rs:994
@@ -2467,19 +2467,19 @@ msgstr "Inkomende oproep"
 #: src/app/calls.rs:620
 #, rust-format
 msgid ""
-"{caller} is calling {group}. ZapFast can't join group calls yet: answer on "
+"{caller} is calling {group}. SuperWhatsapp can't join group calls yet: answer on "
 "your phone."
 msgstr ""
-"{caller} belt {group}. ZapFast kan nog niet deelnemen aan groepsoproepen: "
+"{caller} belt {group}. SuperWhatsapp kan nog niet deelnemen aan groepsoproepen: "
 "neem op via je telefoon."
 
 #: src/app/calls.rs:628
 #, rust-format
 msgid ""
-"{caller} is calling you and others. ZapFast can't join group calls yet: "
+"{caller} is calling you and others. SuperWhatsapp can't join group calls yet: "
 "answer on your phone."
 msgstr ""
-"{caller} belt jou en anderen. ZapFast kan nog niet deelnemen aan "
+"{caller} belt jou en anderen. SuperWhatsapp kan nog niet deelnemen aan "
 "groepsoproepen: neem op via je telefoon."
 
 #. Translators: {name} is replaced by the author's name, shown as a link.
@@ -2628,9 +2628,9 @@ msgstr ""
 "je account. Vraag iemand in de groep om te bellen en neem hier op."
 
 #: src/app.rs:4907 src/app.rs:8029
-msgid "ZapFast can't join group calls yet: open the link on your phone."
+msgid "SuperWhatsapp can't join group calls yet: open the link on your phone."
 msgstr ""
-"ZapFast kan nog niet deelnemen aan groepsoproepen: open de link op je "
+"SuperWhatsapp kan nog niet deelnemen aan groepsoproepen: open de link op je "
 "telefoon."
 
 #: src/app.rs:4913
@@ -2667,9 +2667,9 @@ msgstr ""
 "Uit archief halen kon niet worden bevestigd op WhatsApp. Probeer het opnieuw"
 
 #: src/app.rs:4980
-msgid "WhatsApp updated this chat, but ZapFast could not save the change"
+msgid "WhatsApp updated this chat, but SuperWhatsapp could not save the change"
 msgstr ""
-"WhatsApp heeft deze chat bijgewerkt, maar ZapFast kon de wijziging niet "
+"WhatsApp heeft deze chat bijgewerkt, maar SuperWhatsapp kon de wijziging niet "
 "opslaan"
 
 #: src/app.rs:5068
@@ -2681,8 +2681,8 @@ msgid "Unblock this contact to send messages."
 msgstr "Deblokkeer dit contact om berichten te verzenden."
 
 #: src/app.rs:5740
-msgid "Not sent: ZapFast is not connected to WhatsApp."
-msgstr "Niet verzonden: ZapFast is niet verbonden met WhatsApp."
+msgid "Not sent: SuperWhatsapp is not connected to WhatsApp."
+msgstr "Niet verzonden: SuperWhatsapp is niet verbonden met WhatsApp."
 
 #: src/app.rs:5744
 msgid ""
@@ -2711,8 +2711,8 @@ msgstr "Stickerpakket wordt verzonden…"
 
 #: src/app.rs:9279 src/ui/labels.rs:257
 #, rust-format
-msgid "You have {limit} labels, the most ZapFast keeps."
-msgstr "Je hebt {limit} labels, het maximum dat ZapFast bewaart."
+msgid "You have {limit} labels, the most SuperWhatsapp keeps."
+msgstr "Je hebt {limit} labels, het maximum dat SuperWhatsapp bewaart."
 
 #: src/app.rs:9446
 msgid "No chat open"
@@ -3198,8 +3198,8 @@ msgid "Play motion photo"
 msgstr "Bewegende foto afspelen"
 
 #: src/ui/image_preview.rs:738
-msgid "This image could not be displayed in ZapFast."
-msgstr "Deze afbeelding kon niet worden weergegeven in ZapFast."
+msgid "This image could not be displayed in SuperWhatsapp."
+msgstr "Deze afbeelding kon niet worden weergegeven in SuperWhatsapp."
 
 #: src/ui/image_preview.rs:741
 msgid "Open externally"
@@ -3210,8 +3210,8 @@ msgid "Play or pause the video"
 msgstr "Video afspelen of pauzeren"
 
 #: src/ui/lock.rs:17
-msgid "ZapFast is locked"
-msgstr "ZapFast is vergrendeld"
+msgid "SuperWhatsapp is locked"
+msgstr "SuperWhatsapp is vergrendeld"
 
 #: src/ui/lock.rs:23
 msgid "Unlinking this computer…"
@@ -3601,8 +3601,8 @@ msgstr "Chatgeschiedenis laden…"
 
 #: src/ui/mod.rs:579
 #, rust-format
-msgid "ZapFast {version} is available"
-msgstr "ZapFast {version} is beschikbaar"
+msgid "SuperWhatsapp {version} is available"
+msgstr "SuperWhatsapp {version} is beschikbaar"
 
 #: src/ui/mod.rs:596
 #, rust-format
@@ -3891,8 +3891,8 @@ msgid "Participant details are not available yet"
 msgstr "Deelnemergegevens zijn nog niet beschikbaar"
 
 #: src/ui/update.rs:25 src/ui/update.rs:38
-msgid "Update ZapFast"
-msgstr "ZapFast bijwerken"
+msgid "Update SuperWhatsapp"
+msgstr "SuperWhatsapp bijwerken"
 
 #: src/ui/update.rs:49
 msgid "Close update"
@@ -3921,10 +3921,10 @@ msgstr "Klaar om te installeren"
 
 #: src/ui/update.rs:113
 msgid ""
-"Finish any unsent messages or recordings before restarting. ZapFast will "
+"Finish any unsent messages or recordings before restarting. SuperWhatsapp will "
 "briefly disconnect, then reconnect automatically."
 msgstr ""
-"Maak onverzonden berichten of opnamen af voordat je opnieuw opstart. ZapFast"
+"Maak onverzonden berichten of opnamen af voordat je opnieuw opstart. SuperWhatsapp"
 " verbreekt de verbinding kort en maakt daarna automatisch opnieuw "
 "verbinding."
 

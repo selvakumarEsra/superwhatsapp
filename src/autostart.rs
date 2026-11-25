@@ -1,4 +1,4 @@
-//! Starting ZapFast in the tray when the person logs in, through
+//! Starting SuperWhatsapp in the tray when the person logs in, through
 //! fastframe-autostart.
 //!
 //! The platform's own login-item record is the only state: Settings reads it
@@ -11,7 +11,7 @@ use std::sync::mpsc::{Receiver, TryRecvError};
 use fastframe_autostart::{Autostart, Start, State};
 
 fn autostart() -> Autostart {
-    Autostart::new("zapfast", "ZapFast")
+    Autostart::new("zapfast", "SuperWhatsapp")
 }
 
 /// What a finished read or change found.
@@ -46,7 +46,7 @@ impl LoginItem {
         );
     }
 
-    /// Starts ZapFast in the tray at login, or not at all.
+    /// Starts SuperWhatsapp in the tray at login, or not at all.
     pub fn set(&mut self, enabled: bool, wake: impl Fn() + Send + 'static) {
         self.spawn(
             move || Outcome {
@@ -103,7 +103,7 @@ pub fn switch(state: State) -> Option<bool> {
     }
 }
 
-/// ZapFast 0.19 and earlier wrote their own LaunchAgent. Registers the bundled
+/// SuperWhatsapp 0.19 and earlier wrote their own LaunchAgent. Registers the bundled
 /// agent in its place and deletes the old file, once; a copy that cannot
 /// register (one run outside its bundle) leaves the file as it is.
 #[cfg(target_os = "macos")]

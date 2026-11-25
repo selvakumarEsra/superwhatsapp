@@ -5,22 +5,27 @@
 use fastframe_update::{MacConfig, Prereleases, UpdateConfig};
 
 /// The fork's GitHub repository, which publishes Znga releases.
-pub const REPOSITORY: &str = "selvakumarEsra/zapfast";
+pub const REPOSITORY: &str = "selvakumarEsra/superwhatsapp";
 
 /// Upstream's names and history, with the fork's repository and key.
 /// Fork versions are pre-releases (`0.21.1-beta.1`), so they follow every
 /// published fork release above them.
 pub const CONFIG: UpdateConfig = UpdateConfig {
-    legacy_names: &["fastsapp"],
+    legacy_names: &["zapfast", "fastsapp"],
     macos: MacConfig {
         bundle_ids: &["me.paolino.fastsapp"],
-        executable_names: &[],
-        legacy_bundle_names: &["FastsApp.app"],
+        executable_names: &["superwhatsapp", "zapfast"],
+        legacy_bundle_names: &["ZapFast.app", "FastsApp.app"],
     },
     publisher_key: Some(include_str!("update-public-key.hex")),
     additional_publisher_keys: &[],
     prereleases: Prereleases::WhenRunningPrerelease,
-    ..UpdateConfig::new(REPOSITORY, "ZapFast", "zapfast", env!("CARGO_PKG_VERSION"))
+    ..UpdateConfig::new(
+        REPOSITORY,
+        "SuperWhatsapp",
+        "superwhatsapp",
+        env!("CARGO_PKG_VERSION"),
+    )
 };
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
-# Znga — ZapFast's AI companion (fork feature)
+# Znga, SuperWhatsapp's AI agent
 
-Znga is an opt-in AI layer for this fork of ZapFast. Click the ✨ on the left
+Znga is the opt-in AI agent of SuperWhatsapp, which is built on ZapFast. Click the ✨ on the left
 rail (under Calls) to open it. The contract is [`specs/znga.md`](specs/znga.md).
 
 ## What it does
@@ -60,7 +60,7 @@ Three more fork features live in `src/extras/` (contract:
 
 | Engine | Credentials | Leaves your machine? |
 |---|---|---|
-| **Claude Code on this computer** (preselected when `claude` is installed) | Your existing Claude Code login, or `CLAUDE_CODE_OAUTH_TOKEN` in its environment. ZapFast runs `claude -p` with tools, MCP servers, settings and history all off, and never reads or stores the token. | Yes, to Anthropic |
+| **Claude Code on this computer** (preselected when `claude` is installed) | Your existing Claude Code login, or `CLAUDE_CODE_OAUTH_TOKEN` in its environment. SuperWhatsapp runs `claude -p` with tools, MCP servers, settings and history all off, and never reads or stores the token. | Yes, to Anthropic |
 | On this computer (Ollama) | None. Run `ollama pull llama3.2`. | No |
 | Claude API | `ANTHROPIC_API_KEY` or a key saved in the system keychain | Yes |
 | Gemini | `GEMINI_API_KEY` / `GOOGLE_API_KEY` or keychain | Yes |
@@ -105,8 +105,8 @@ git grep -n -e "znga hook" -e "extras hook"
 | `.github/workflows/release.yml` | signs with `src/znga/update-public-key.hex`; skips notarization checks without Apple credentials |
 | `Cargo.toml` `version` | `<upstream>-beta.<n>` |
 
-If a merge conflicts on one of those lines, keep upstream's change and put the
-hook back. The rail button lives in its own layer, so it does not touch
+If a merge from upstream ZapFast conflicts on one of those lines, keep
+upstream's change and put the hook back. The rail button lives in its own layer, so it does not touch
 `src/ui/rail.rs`.
 
 ## Releasing
@@ -133,12 +133,9 @@ publishing are upstream's and never run for fork tags.
 
 ## Docs site
 
-https://selvakumaresra.github.io/zapfast/ is built by
-`.github/workflows/znga-docs.yml` from upstream's `docs/` plus
-`docs/_guide/znga.md`, with `docs/_config.znga.yml` layered over
-`docs/_config.yml`. Upstream's Docs workflow is disabled on the fork (a
-repository setting, not a file change): it deploys zapfast.rocks with
-upstream's analytics and IndexNow.
+https://selvakumaresra.github.io/superwhatsapp/ is built from `docs/` by
+`.github/workflows/docs.yml` on every push to `main` that touches the docs,
+and on every published release.
 
 ## Tests
 

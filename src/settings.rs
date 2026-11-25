@@ -320,7 +320,7 @@ impl WallpaperColor {
     }
 }
 
-/// How long ZapFast may go without input before the app lock locks it:
+/// How long SuperWhatsapp may go without input before the app lock locks it:
 /// WhatsApp Web's three choices.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -400,7 +400,7 @@ pub enum NotificationSound {
     System,
     /// No sound.
     None,
-    /// An audio file ZapFast plays itself.
+    /// An audio file SuperWhatsapp plays itself.
     Custom(std::path::PathBuf),
 }
 
@@ -418,7 +418,7 @@ pub struct Settings {
     pub(crate) messages_theme: bool,
     /// The interface's typeface.
     pub font: FontChoice,
-    /// Windows and Linux: draw ZapFast's own title bar and window buttons
+    /// Windows and Linux: draw SuperWhatsapp's own title bar and window buttons
     /// instead of the desktop's. Off by default: on some Intel graphics
     /// drivers a frameless window shows a black band at the top and its
     /// clicks land below where they are drawn (Spotifast #348, #554).
@@ -462,7 +462,7 @@ pub struct Settings {
     pub wallpaper_color: WallpaperColor,
     /// Colour selected for the dark wallpaper picker.
     pub dark_wallpaper_color: WallpaperColor,
-    /// ZapFast's own copy of the chosen wallpaper image, drawn in place of the
+    /// SuperWhatsapp's own copy of the chosen wallpaper image, drawn in place of the
     /// colour and doodles in light and dark mode alike.
     pub wallpaper_image: Option<std::path::PathBuf>,
     /// Last open chat, restored at startup.
@@ -477,7 +477,7 @@ pub struct Settings {
     /// User GIPHY API key. Empty uses the optional built-in key.
     pub giphy_key: String,
     /// Keep the app linked in the tray when the window closes. On macOS,
-    /// where a closed ZapFast always stays in the Dock, whether it has a
+    /// where a closed SuperWhatsapp always stays in the Dock, whether it has a
     /// menu-bar item.
     pub keep_running_in_background: bool,
     /// Desktop notifications while away from the chat.
@@ -531,7 +531,7 @@ pub struct Settings {
     /// Salted, slow verifier of the app lock password
     /// ([`crate::app_lock::verifier`]); `None` leaves the app lock off.
     pub app_lock_hash: Option<String>,
-    /// How long ZapFast may go unused before the app lock locks it.
+    /// How long SuperWhatsapp may go unused before the app lock locks it.
     pub app_lock_after: AutoLock,
     /// Last window width in logical pixels (points at zoom 1), remembered
     /// across restarts; see [`fastframe_shell::window::Geometry`]. `None`

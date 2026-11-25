@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ZapFast",
+  "productName": "SuperWhatsapp",
   "identifier": "me.paolino.fastsapp",
   "build": {
     "beforeDevCommand": {
@@ -19,7 +19,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "ZapFast",
+        "title": "SuperWhatsapp",
         "width": 1440,
         "height": 900,
         "minWidth": 750,
@@ -50,7 +50,7 @@
     ],
     "category": "SocialNetworking",
     "shortDescription": "A fast WhatsApp client",
-    "publisher": "ZapFast",
+    "publisher": "SuperWhatsapp",
     "linux": {
       "deb": {
         "depends": [

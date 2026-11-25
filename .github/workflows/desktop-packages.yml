@@ -9,9 +9,13 @@ on:
   workflow_call:
     inputs:
       preview:
-        description: Build "ZapFast Preview" for a release, named zapfast-preview-*.
+        description: Build "SuperWhatsapp Preview" for a release, named superwhatsapp-preview-*.
         type: boolean
         default: false
+      tag:
+        description: The release tag the preview's files are named for.
+        type: string
+        default: ''
   push:
     branches: [main, feat/tauri-ui]
     paths: [src-tauri/**, web/**, src/**, Cargo.toml, Cargo.lock, .github/workflows/desktop-packages.yml]
@@ -108,15 +112,15 @@ jobs:
             version=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n 1)
             args+=(--config "{\"bundle\":{\"windows\":{\"wix\":{\"version\":\"${version%%-*}\"}}}}")
           fi
-          # A release's preview installs beside ZapFast under its own name
+          # A release's preview installs beside SuperWhatsapp under its own name
           # and identifier, so it never replaces the egui app; the Mac app
           # is signed ad hoc, as Apple silicon requires.
           if [ "${{ inputs.preview }}" = true ]; then
-            args+=(--config '{"productName":"ZapFast Preview","identifier":"me.paolino.fastsapp.preview","bundle":{"macOS":{"signingIdentity":"-"}}}')
+            args+=(--config '{"productName":"SuperWhatsapp Preview","identifier":"me.paolino.fastsapp.preview","bundle":{"macOS":{"signingIdentity":"-"}}}')
           fi
           web/node_modules/.bin/tauri build "${args[@]}"
-      # Release names: zapfast-preview-<tag>-<target>, never the
-      # zapfast-v* names the egui app's updater looks for.
+      # Release names: superwhatsapp-preview-<tag>-<target>, never the
+      # superwhatsapp-v* names the egui app's updater looks for.
       - name: Preview names
         if: inputs.preview
         shell: bash
@@ -125,7 +129,7 @@ jobs:
           bundle="target/${{ matrix.target }}/release/bundle"
           target="${{ matrix.target }}"
           [ "$target" = universal-apple-darwin ] && target=macos-universal
-          name="zapfast-preview-${GITHUB_REF_NAME}-$target"
+          name="superwhatsapp-preview-${{ inputs.tag || github.ref_name }}-$target"
           for file in "$bundle"/deb/*.deb "$bundle"/rpm/*.rpm "$bundle"/appimage/*.AppImage \
             "$bundle"/msi/*.msi "$bundle"/dmg/*.dmg; do
             [ -f "$file" ] && cp "$file" "preview/$name.${file##*.}"

@@ -1,118 +1,130 @@
 ---
 layout: home
-title: ZapFast
-description: A fast, lightweight WhatsApp app for Linux, macOS, and Windows.
+title: SuperWhatsapp
+description: WhatsApp on your desktop with Znga, a proactive AI agent that tells you what needs you, briefs you on what you missed and drafts replies in your voice. Fast, private, for macOS, Windows and Linux.
 permalink: /
 hero:
-  name: ZapFast
-  text: WhatsApp, native and fast
-  tagline: A lightweight WhatsApp app for Linux, macOS, and Windows. Chat, send voice messages, and share files.
+  name: SuperWhatsapp
+  text: Your WhatsApp, with an AI agent that works ahead of you
+  tagline: SuperWhatsapp is a fast desktop app for WhatsApp with Znga built in. Znga spots the messages that need you, briefs you on what you missed and drafts replies in your voice. Nothing is sent without your click.
   actions:
     - theme: brand
-      text: Download
+      text: Download free
       link: /download/
     - theme: alt
-      text: What is ZapFast?
-      link: /what-is-zapfast/
+      text: Meet Znga, the AI agent
+      link: /znga/
     - theme: alt
-      text: GitHub
-      link: https://github.com/crmne/zapfast
+      text: See how it works
+      link: /what-is-superwhatsapp/
   image:
     dark: /screenshot.png
     light: /screenshot-light.png
-    alt: "ZapFast showing a conversation with an attachment, voice messages, reactions, a quoted reply, and a link preview"
+    alt: "SuperWhatsapp with Znga's Today panel beside a chat: a message that needs a reply, with buttons to open the chat or draft a reply, and a briefing of what happened while you were away"
     width: 1800
-    height: 1360
+    height: 1157
 
 features:
+  - icon: ✨
+    title: An agent that acts first
+    details: Znga reads new messages as they arrive and raises the ones that need you (a question, a deadline, a friend writing again and again) before they get buried.
+    link: /znga/#needs-you
+    link_text: How Znga decides
+  - icon: 📰
+    title: Briefings, not backlogs
+    details: Back from a meeting or a flight? One click gives you what happened and what needs you, across every chat, in a few lines.
+    link: /znga/#briefings
+    link_text: See a briefing
+  - icon: ✍️
+    title: Replies in your voice
+    details: Znga learns how you write and drafts replies you can send, edit or throw away. "Tell Mom and Alex I'm 20 minutes late" becomes one personal message each.
+    link: /znga/#drafts
+    link_text: Drafts and tone tools
+  - icon: 🧠
+    title: Memory that keeps promises
+    details: Znga remembers what you promised and reminds you before it is due, plus the facts people tell you, encrypted on your computer.
+    link: /znga/#memory
+    link_text: What Znga remembers
+  - icon: 🔒
+    title: Private by design
+    details: Your archive is encrypted on your computer. Znga is off until you turn it on, never reads locked chats, and can run fully offline with a local model.
+    link: /privacy/
+    link_text: Privacy and security
   - icon: ⚡
-    title: Lightweight
-    details: Opens in under a second and uses about 200MB of RAM. No browser engine.
-  - icon: 🦀
-    title: Native, in Rust
-    details: "Built with [egui](https://www.egui.rs) and [fastframe](https://fastframe.dev), the framework behind a family of native desktop apps. No browser engine inside."
-  - icon: 🎤
-    title: Voice messages
-    details: Play, seek, and record voice messages in the chat. OGG/Opus support is built in.
-  - icon: 🖼️
-    title: Attachments
-    details: Photos, GIFs, stickers, documents, polls, locations, and link previews appear in the chat. Add captions before sending files.
-  - icon: 🔔
-    title: Background mode
-    details: Closing the window keeps ZapFast linked in the tray. Notifications show the chat picture, and muted chats stay quiet.
-  - icon: 👥
-    title: Several numbers
-    details: Link more than one WhatsApp number and switch between them from your picture at the foot of the rail beside the chat list.
-  - icon: 🎨
-    title: Themes
-    details: Light, dark, or the system's appearance, custom colour themes, and on Omarchy your desktop theme.
-    link: /themes/
-    link_text: Make a theme
-  - icon: ⌨️
-    title: Keyboard shortcuts
-    details: Search, switch chats, reply, and record with shortcuts. Select and copy text, including across messages.
-  - icon: 🔓
-    title: Open source
-    details: MIT-licensed Rust that links through whatsapp-rust. The linking process is documented.
-    link: https://github.com/crmne/zapfast
-    link_text: Read the source
+    title: Native and fast
+    details: Written in Rust, with no browser inside. Opens in under a second, scrolls smoothly through years of history and stays light on memory and battery.
+    link: /benchmarks/
+    link_text: The numbers
+  - icon: 📊
+    title: Insights about your chats
+    details: Your busiest hours, reply times, streaks and the people you have drifted from, worked out on your computer. Nothing leaves it.
+    link: /using-superwhatsapp/
+    link_text: Explore Insights
+  - icon: 💬
+    title: Everything you expect
+    details: Voice messages, photos, stickers, polls, calls (beta), several numbers, favourites, archive, starred messages, themes, an app lock and keyboard shortcuts.
+    link: /using-superwhatsapp/
+    link_text: The full tour
+  - icon: 🖥️
+    title: Mac, Windows and Linux
+    details: One app on every desktop, with the tray, notifications and badges each one expects. Free during the beta, open source under the MIT license.
+    link: /download/
+    link_text: Download
 ---
 
-<p class="sibling"><strong>Want Spotify just as fast and native?</strong> <a href="https://spotifast.rocks">Spotifast</a> is ZapFast's sibling: the same native interface, for Spotify. Both are built on <a href="https://fastframe.dev">fastframe</a>, the shared foundation for native Rust apps built with <a href="https://www.egui.rs">egui</a>.</p>
+<div class="sw-section">
+  <h2>Stop scrolling to find what matters</h2>
+  <p>Most messaging time goes on working out which messages need you. Znga does that part. It scores every new message on your computer, without sending it anywhere, and keeps a short list of what needs you today. When you have been away it writes a briefing. When you want to reply it drafts one in your voice. You stay in charge of every word that leaves your account.</p>
+</div>
 
-<video class="hero-film image-src" controls muted loop playsinline preload="metadata" poster="{{ '/assets/images/launch-film-poster.jpg' | relative_url }}" aria-label="ZapFast in under a minute: a film of the app, made with its built-in demo content" hidden>
-  <source src="{{ '/assets/videos/launch-film.mp4' | relative_url }}" type="video/mp4">
-</video>
+<div class="sw-shots">
+  <figure>
+    <img src="{{ '/assets/images/product/znga-drafts.png' | relative_url }}" alt="Znga's Drafts tab: reply suggestions, tone tools, and two personal 'running late' updates waiting for Send" loading="lazy">
+    <figcaption><strong>Drafts.</strong> Suggest a reply, rewrite it friendlier, shorter or more formal, translate it, or send one personal update to several people. Each draft waits for your click.</figcaption>
+  </figure>
+  <figure>
+    <img src="{{ '/assets/images/product/insights.png' | relative_url }}" alt="Insights overview: messages sent and received, active chats, streak and highlights such as reply times" loading="lazy">
+    <figcaption><strong>Insights.</strong> How you use WhatsApp, at a glance: trends, rhythm, reply times and the friends you have not talked to in a while.</figcaption>
+  </figure>
+</div>
 
-<script>
-  // The theme's hero takes a picture; the film takes its place where
-  // scripts run, and the screenshot stays where they do not.
-  (function () {
-    var film = document.querySelector(".hero-film");
-    var slot = document.querySelector(".VPHero .image-container");
-    if (!film || !slot) return;
-    slot.replaceChildren(film);
-    film.hidden = false;
-    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      film.play().catch(function () {});
-    }
-  })();
-</script>
+<div class="sw-section">
+  <h2>Built for people who live in WhatsApp</h2>
+  <div class="sw-grid">
+    <div><h3>Founders and freelancers</h3><p>Clients, suppliers and team chats in one place. Znga flags the client who asked a question this morning and drafts the follow-up.</p></div>
+    <div><h3>Busy parents</h3><p>School groups, family plans and the friend who needs an answer. Get the two things that matter out of three hundred messages.</p></div>
+    <div><h3>Teams and support</h3><p>Several numbers linked side by side, keyboard-first, with an app lock and an encrypted archive on your own machine.</p></div>
+  </div>
+</div>
+
+<div class="sw-section">
+  <h2>Your AI, your choice</h2>
+  <p>Znga works with the AI you already trust: Claude (through Claude Code or an API key), Gemini, any OpenAI-compatible service, or a model running entirely on your computer with Ollama or LM Studio. Pick a local model and nothing you read or write ever leaves your machine.</p>
+  <p><a class="sw-button" href="{{ '/download/' | relative_url }}">Download SuperWhatsapp</a> <a class="sw-link" href="{{ '/faq/' | relative_url }}">Questions? Read the FAQ</a></p>
+</div>
+
+<p class="sw-note">SuperWhatsapp is an independent app that links to your WhatsApp account as a companion device, the way WhatsApp's own desktop app does. It is not made by, affiliated with or endorsed by WhatsApp or Meta. Using an unofficial client may be against WhatsApp's terms of service.</p>
 
 <style>
-  .hero-film {
-    display: block;
-    background: #0b141a;
-  }
-  .sibling {
-    max-width: 1152px;
-    margin: 48px auto 0;
-    padding: 0 24px;
-    text-align: center;
-    color: var(--vp-c-text-2);
-  }
-  /* Override the square hero slot to fit the screenshot. */
-  .VPHero .image-container {
-    width: 100% !important;
-    height: auto !important;
-    transform: none !important;
-  }
+  .sw-section { max-width: 1152px; margin: 64px auto 0; padding: 0 24px; }
+  .sw-section h2 { font-size: 28px; line-height: 1.25; font-weight: 700; margin-bottom: 12px; border: 0; padding: 0; }
+  .sw-section h3 { font-size: 17px; font-weight: 600; margin: 0 0 6px; }
+  .sw-section p { color: var(--vp-c-text-2); line-height: 1.7; max-width: 760px; }
+  .sw-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 16px; }
+  .sw-grid > div { background: var(--vp-c-bg-soft); border-radius: 12px; padding: 20px; }
+  .sw-grid p { margin: 0; }
+  .sw-shots { max-width: 1152px; margin: 40px auto 0; padding: 0 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+  .sw-shots figure { margin: 0; }
+  .sw-shots img { width: 100%; height: auto; border-radius: 12px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35); }
+  .sw-shots figcaption { margin-top: 12px; color: var(--vp-c-text-2); line-height: 1.6; font-size: 14px; }
+  .sw-button { display: inline-block; padding: 10px 20px; border-radius: 20px; background: var(--vp-c-brand-1); color: var(--vp-c-white) !important; font-weight: 600; text-decoration: none !important; margin-right: 16px; }
+  .sw-link { font-weight: 500; }
+  .sw-note { max-width: 1152px; margin: 56px auto 0; padding: 0 24px; text-align: center; color: var(--vp-c-text-3); font-size: 13px; line-height: 1.6; }
+  .VPHero .image-container { width: 100% !important; height: auto !important; transform: none !important; }
   .VPHero .image-src {
-    position: relative !important;
-    top: auto !important;
-    left: auto !important;
-    transform: none !important;
-    width: 100% !important;
-    height: auto !important;
-    max-width: 100% !important;
-    max-height: none !important;
-    padding: 0 !important;
-    border-radius: 12px;
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45);
+    position: relative !important; top: auto !important; left: auto !important; transform: none !important;
+    width: 100% !important; height: auto !important; max-width: 100% !important; max-height: none !important;
+    padding: 0 !important; border-radius: 12px; box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45);
   }
-  @media (max-width: 959px) {
-    .VPHero .image {
-      margin: 0 0 24px !important;
-    }
-  }
+  @media (max-width: 959px) { .VPHero .image { margin: 0 0 24px !important; } }
 </style>

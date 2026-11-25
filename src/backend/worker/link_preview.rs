@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use crate::model::{ComposedPreview, LinkPreview};
 
-const USER_AGENT: &str = concat!("ZapFast/", env!("CARGO_PKG_VERSION"));
+const USER_AGENT: &str = concat!("SuperWhatsapp/", env!("CARGO_PKG_VERSION"));
 /// Page and picture together.
 const TOTAL_TIME: Duration = Duration::from_secs(5);
 const MAX_PAGE: usize = 512 * 1024;

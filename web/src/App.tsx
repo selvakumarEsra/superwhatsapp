@@ -21,7 +21,7 @@ function Pending(p: { name: string }) {
       style={{ width: "var(--list-w)", background: "var(--panel-bg)", "border-right": "var(--hairline) solid var(--panel-border)" }}
     >
       <p style={{ "font-size": "var(--fs-row-text)", "line-height": "16px", color: "var(--text-secondary)" }}>
-        {p.name} is not in the new interface yet. It still works in the current ZapFast app.
+        {p.name} is not in the new interface yet. It still works in the current SuperWhatsapp app.
       </p>
     </section>
   );

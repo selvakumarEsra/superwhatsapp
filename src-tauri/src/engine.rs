@@ -56,7 +56,7 @@ impl Engine {
         let _ = self.tx.send(input);
     }
 
-    /// Whether closing the window keeps ZapFast running in the tray.
+    /// Whether closing the window keeps SuperWhatsapp running in the tray.
     pub fn keeps_running(&self) -> bool {
         self.shared.keep_running.load(Ordering::Relaxed)
     }
@@ -85,14 +85,14 @@ pub struct Start {
     pub instance: Option<Instance>,
 }
 
-/// The slot that keeps one ZapFast, this interface or the egui one, on an
+/// The slot that keeps one SuperWhatsapp, this interface or the egui one, on an
 /// account's archive and linked device at a time.
 pub struct Instance {
     waker: zapfast::backend::Waker,
     guard: zapfast::single_instance::Guard,
 }
 
-/// Becomes the running ZapFast, or asks the copy already running to show
+/// Becomes the running SuperWhatsapp, or asks the copy already running to show
 /// its window and returns `None`, as the egui build's launch does.
 pub fn claim() -> Option<Instance> {
     use zapfast::single_instance::{Outcome, acquire};
@@ -101,7 +101,7 @@ pub fn claim() -> Option<Instance> {
     match acquire(&dirs.runtime, &waker, "show") {
         Outcome::Only(guard) => Some(Instance { waker, guard }),
         _ => {
-            eprintln!("ZapFast is already running; asked it to show its window");
+            eprintln!("SuperWhatsapp is already running; asked it to show its window");
             None
         }
     }

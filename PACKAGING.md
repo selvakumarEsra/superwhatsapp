@@ -1,3 +1,10 @@
+> **SuperWhatsapp note.** This guide describes upstream ZapFast's packaging
+> and its store accounts (AUR, Homebrew, COPR, winget, Windows signing),
+> kept for reference and for merges. SuperWhatsapp builds with the same
+> tools under its own names (`superwhatsapp-*` files, the `superwhatsapp`
+> program) from `.github/workflows/release.yml`, and does not publish to
+> those stores; see `specs/superwhatsapp.md` (REQ-SUPERWA-003).
+
 # Packaging
 
 [`native-packages.yaml`](native-packages.yaml) is the packaging configuration:

@@ -1,4 +1,4 @@
-//! Where ZapFast keeps its files.
+//! Where SuperWhatsapp keeps its files.
 //!
 //! Configuration, session state, and caches use separate standard platform
 //! directories. Clearing a cache does not remove device keys.
@@ -162,7 +162,7 @@ impl AppDirs {
         if !pending.is_empty() && dest.session_db().exists() {
             log::warn!(
                 "single-account files beside a linked account folder are left alone: an older \
-                 ZapFast may still be installed"
+                 SuperWhatsapp may still be installed"
             );
             return Ok(());
         }
@@ -204,7 +204,7 @@ impl AppDirs {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::AlreadyExists,
                 format!(
-                    "{} holds a single-account setup, but {} already exists. Nothing was moved; move one of them away and start ZapFast again",
+                    "{} holds a single-account setup, but {} already exists. Nothing was moved; move one of them away and start SuperWhatsapp again",
                     self.state.display(),
                     blocked[0].display()
                 ),
@@ -270,7 +270,7 @@ impl AppDirs {
         self.state.join("stickers")
     }
 
-    /// ZapFast's copy of the chosen chat wallpaper image. User data, so it
+    /// SuperWhatsapp's copy of the chosen chat wallpaper image. User data, so it
     /// sits beside saved stickers rather than in the cache.
     pub fn wallpaper_file(&self, extension: &str) -> PathBuf {
         self.state.join(format!("wallpaper.{extension}"))
@@ -356,7 +356,7 @@ impl AccountDirs {
         self.state.join("stickers")
     }
 
-    /// ZapFast's copy of the chosen chat wallpaper image for this account.
+    /// SuperWhatsapp's copy of the chosen chat wallpaper image for this account.
     pub fn wallpaper_file(&self, extension: &str) -> PathBuf {
         self.state.join(format!("wallpaper.{extension}"))
     }

@@ -5599,7 +5599,7 @@ pub(crate) mod tests {
         assert_eq!(archive.chat(chat).expect("chat").expect("exists").unread, 0);
     }
 
-    /// The local rows ZapFast invents (call entries, disappearing-timer
+    /// The local rows SuperWhatsapp invents (call entries, disappearing-timer
     /// notices) have no counterpart on the phone: a receipt for their id would
     /// name a message the phone never sent, and a history anchor for one would
     /// ask for something it does not hold.

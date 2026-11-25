@@ -20,19 +20,19 @@ let
     if [[ -r ${lib.escapeShellArg path} ]]; then
       zapfastSecrets+=(--rawfile ${lib.escapeShellArg key} ${lib.escapeShellArg path})
     else
-      warnEcho ${lib.escapeShellArg "ZapFast: cannot read ${path}, keeping the current ${key}"}
+      warnEcho ${lib.escapeShellArg "SuperWhatsapp: cannot read ${path}, keeping the current ${key}"}
     fi
   '';
 in
 {
   options.programs.zapfast = {
-    enable = lib.mkEnableOption "ZapFast, a native WhatsApp client";
+    enable = lib.mkEnableOption "SuperWhatsapp, a native WhatsApp client";
 
     package = lib.mkOption {
       type = lib.types.package;
       default = self.packages.${pkgs.stdenv.hostPlatform.system}.default;
       defaultText = lib.literalExpression "zapfast.packages.\${pkgs.stdenv.hostPlatform.system}.default";
-      description = "The ZapFast package to install.";
+      description = "The SuperWhatsapp package to install.";
     };
 
     settings = lib.mkOption {
@@ -46,12 +46,12 @@ in
         }
       '';
       description = ''
-        Keys merged into ZapFast's `settings.json` on every activation. Keys
+        Keys merged into SuperWhatsapp's `settings.json` on every activation. Keys
         left out keep whatever the app last saved, so window geometry, recent
         emoji and the lock verifiers survive. A key declared here is reset on
         the next activation if it is changed in the app. Per-account preferences
         such as read receipts live in each account's own file and cannot be
-        declared here. Restart ZapFast after
+        declared here. Restart SuperWhatsapp after
         activation: it reads the file at start, and its next save writes back
         the values it holds in memory.
 
@@ -105,7 +105,7 @@ in
         elif zapfastBase=$(${jq} -ce objects "$zapfastFile" 2>/dev/null); then
           :
         else
-          warnEcho "ZapFast: $zapfastFile is not a JSON object, leaving it unchanged"
+          warnEcho "SuperWhatsapp: $zapfastFile is not a JSON object, leaving it unchanged"
           zapfastBase=
         fi
         if [[ -z "$zapfastBase" ]]; then

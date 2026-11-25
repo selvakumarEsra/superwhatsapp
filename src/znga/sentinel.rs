@@ -10,7 +10,7 @@ use std::collections::VecDeque;
 /// Why an action is being taken.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Origin {
-    /// A click or a question typed in ZapFast.
+    /// A click or a question typed in SuperWhatsapp.
     Person,
     /// A message the person sent to their own chat.
     OwnChat,

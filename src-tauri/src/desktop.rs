@@ -1,6 +1,6 @@
 //! Desktop integration (REQ-WEBUI-012): the tray icon and its menu, the
-//! window hiding to the tray when ZapFast keeps running, the hidden start at
-//! login, and bringing the first copy forward when ZapFast starts again.
+//! window hiding to the tray when SuperWhatsapp keeps running, the hidden start at
+//! login, and bringing the first copy forward when SuperWhatsapp starts again.
 
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -8,7 +8,7 @@ use tauri::{AppHandle, Manager, Runtime, WebviewWindow, WindowEvent};
 
 use crate::engine::{Engine, Input};
 
-/// The flag the login item starts ZapFast with (src/autostart.rs).
+/// The flag the login item starts SuperWhatsapp with (src/autostart.rs).
 pub const START_HIDDEN: &str = "--start-hidden";
 
 fn main_window<R: Runtime>(app: &AppHandle<R>) -> Option<WebviewWindow<R>> {
@@ -34,11 +34,11 @@ pub fn quit<R: Runtime>(app: &AppHandle<R>) {
 
 /// The tray icon: a click shows the window; its menu shows it or quits.
 pub fn setup(app: &tauri::App, start_hidden: bool) -> tauri::Result<()> {
-    let show_item = MenuItem::with_id(app, "show", "Show ZapFast", true, None::<&str>)?;
-    let quit_item = MenuItem::with_id(app, "quit", "Quit ZapFast", true, None::<&str>)?;
+    let show_item = MenuItem::with_id(app, "show", "Show SuperWhatsapp", true, None::<&str>)?;
+    let quit_item = MenuItem::with_id(app, "quit", "Quit SuperWhatsapp", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
     let mut tray = TrayIconBuilder::with_id("main")
-        .tooltip("ZapFast")
+        .tooltip("SuperWhatsapp")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
@@ -68,7 +68,7 @@ pub fn setup(app: &tauri::App, start_hidden: bool) -> tauri::Result<()> {
     Ok(())
 }
 
-/// Closing the window hides it to the tray while ZapFast keeps running in
+/// Closing the window hides it to the tray while SuperWhatsapp keeps running in
 /// the background, and quits otherwise.
 pub fn on_window_event<R: Runtime>(window: &tauri::Window<R>, event: &WindowEvent) {
     match event {

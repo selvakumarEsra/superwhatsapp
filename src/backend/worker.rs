@@ -778,9 +778,9 @@ impl Downloadable for PhoneSticker {
 fn device_name() -> String {
     let host = crate::util::hostname();
     if host.is_empty() {
-        "ZapFast".to_owned()
+        "SuperWhatsapp".to_owned()
     } else {
-        format!("ZapFast ({host})")
+        format!("SuperWhatsapp ({host})")
     }
 }
 
@@ -913,7 +913,7 @@ pub async fn run(
     let privacy_snapshot =
         !privacy_confirmed && archive.chats().is_ok_and(|chats| !chats.is_empty());
     // A new link receives the phone's favorites and its "Keep chats archived"
-    // with its first sync; only an archive filled before ZapFast followed
+    // with its first sync; only an archive filled before SuperWhatsapp followed
     // them needs them replayed.
     let replayed = [
         stickers::FAVORITES_RECOVERED,
@@ -955,7 +955,7 @@ pub async fn run(
             && archive
                 .set_meta(contact_names::FIRST_NAMES_RECOVERED, "complete")
                 .is_ok());
-    // Only stars synced before ZapFast followed them were consumed unseen.
+    // Only stars synced before SuperWhatsapp followed them were consumed unseen.
     let stars_recovered = archive
         .meta(star_recovery::STARS_RECOVERED)
         .ok()
@@ -1320,13 +1320,13 @@ fn invite_error(error: &str) -> String {
 /// unconfirmed. A healthy sync answers well within this.
 const PRIVACY_GRACE: Duration = Duration::from_secs(10);
 
-/// How long ZapFast stays "available" after the window loses focus.
+/// How long SuperWhatsapp stays "available" after the window loses focus.
 const PRESENCE_LINGER: Duration = Duration::from_secs(10);
 
 /// The window owns every presence transition (#461). Left at the default
 /// `Automatic` policy, the client announces "available" whenever it connects
 /// or the push name syncs, so an account whose window sits in the tray still
-/// shows online and the phone holds back its own notifications. ZapFast
+/// shows online and the phone holds back its own notifications. SuperWhatsapp
 /// announces through `Command::SetOnline` instead.
 ///
 /// Public so the integration test in `tests/presence.rs` drives the same
@@ -1640,7 +1640,7 @@ struct Worker {
     favorites_pushing: bool,
     /// More favorite changes arrived while a push was running.
     favorites_again: bool,
-    /// The phone's favorites from before ZapFast followed them were replayed.
+    /// The phone's favorites from before SuperWhatsapp followed them were replayed.
     favorites_recovered: bool,
     /// That replay is running.
     favorites_recovering: bool,
@@ -1648,7 +1648,7 @@ struct Worker {
     first_names_recovered: bool,
     /// That replay is running.
     first_names_recovering: bool,
-    /// The phone's stars from before ZapFast followed them were replayed.
+    /// The phone's stars from before SuperWhatsapp followed them were replayed.
     stars_recovered: bool,
     /// That replay is running.
     stars_recovering: bool,
@@ -1906,7 +1906,7 @@ const PHONE_RANGE_LOOKBACK: usize = 20;
 
 /// The range WhatsApp checks before it archives or unarchives a chat on the
 /// phone: the chat's newest message. A phone left the chat in place when
-/// the change came without one. A row ZapFast invented (a local call entry,
+/// the change came without one. A row SuperWhatsapp invented (a local call entry,
 /// a disappearing-timer notice) was never sent under that id, so it gives its
 /// time but names no message, and a message without a time is treated as
 /// none.
@@ -4229,7 +4229,7 @@ impl Worker {
             }
             E::ClientOutdated(_) => {
                 self.set_status(LinkStatus::Failed(
-                    "WhatsApp rejected this version of ZapFast. Update the app".to_owned(),
+                    "WhatsApp rejected this version of SuperWhatsapp. Update the app".to_owned(),
                 ));
             }
             E::Messages(batch) => {
@@ -7185,7 +7185,7 @@ impl Worker {
                 self.refuse_blocked(command);
                 return;
             }
-            let error = "This conversation is read-only in ZapFast".to_owned();
+            let error = "This conversation is read-only in SuperWhatsapp".to_owned();
             if matches!(&command, Command::CreatePoll { .. }) {
                 self.emit(Event::PollCreated {
                     chat: chat.clone(),
@@ -8315,7 +8315,7 @@ impl Worker {
                 let Some(client) = self.client.clone() else {
                     self.emit(Event::InvitePreview {
                         code,
-                        result: Err("ZapFast is not connected to WhatsApp".to_owned()),
+                        result: Err("SuperWhatsapp is not connected to WhatsApp".to_owned()),
                     });
                     return;
                 };
@@ -8344,7 +8344,7 @@ impl Worker {
                 let Some(client) = self.client.clone() else {
                     self.emit(Event::InviteJoined {
                         code,
-                        result: Err("ZapFast is not connected to WhatsApp".to_owned()),
+                        result: Err("SuperWhatsapp is not connected to WhatsApp".to_owned()),
                     });
                     return;
                 };
@@ -8636,7 +8636,7 @@ impl Worker {
                         // The phone has cleared it; say so rather than leave
                         // the messages here looking as if nothing happened.
                         self.emit(Event::Error(
-                            "The phone cleared this chat, but ZapFast could not clear it here"
+                            "The phone cleared this chat, but SuperWhatsapp could not clear it here"
                                 .to_owned(),
                         ));
                     }
@@ -9847,7 +9847,7 @@ impl Worker {
             self.emit_chat(&job.0);
             if !reported_read_only {
                 self.emit(Event::Error(
-                    "This conversation is read-only in ZapFast".to_owned(),
+                    "This conversation is read-only in SuperWhatsapp".to_owned(),
                 ));
                 reported_read_only = true;
             }
@@ -11329,7 +11329,7 @@ impl Worker {
             }
             Err(_) => {
                 self.emit(Event::Error(
-                    "WhatsApp accepted the deletion, but ZapFast could not remove its copy. Local cleanup is saved for restart or reconnect".to_owned(),
+                    "WhatsApp accepted the deletion, but SuperWhatsapp could not remove its copy. Local cleanup is saved for restart or reconnect".to_owned(),
                 ));
                 RemovalHere::Failed
             }
@@ -13466,7 +13466,7 @@ fn whatsapp_audio_mime(mime: &str) -> Option<&'static str> {
 /// inline, and WhatsApp drops a video message in another container (a
 /// QuickTime `.mov`, WebM, MKV, AVI) without telling either side, so the
 /// recipient gets nothing (#553). Those go as documents and arrive as the
-/// original file; ZapFast does not transcode.
+/// original file; SuperWhatsapp does not transcode.
 fn whatsapp_video_mime(mime: &str) -> bool {
     mime == "video/mp4"
 }
@@ -14637,7 +14637,7 @@ fn ensure_message_secret(raw: Vec<u8>, secret: Option<&[u8]>) -> Vec<u8> {
 /// The newest row the archive holds for a chat: the point the phone is asked to
 /// clear or delete through. Its range carries that time and no message id, so a
 /// timer notice's own time is as good as a message's, and running to it keeps
-/// nothing ZapFast filed for itself behind. An archive that cannot be read
+/// nothing SuperWhatsapp filed for itself behind. An archive that cannot be read
 /// yields no boundary at all, because a guessed one would clear the phone past
 /// messages this device never saw, and the dialog would say both sides matched.
 fn clear_boundary(read: crate::archive::Result<Vec<Message>>) -> Option<i64> {
@@ -17249,7 +17249,7 @@ mod tests {
         client
             .persistence_manager()
             .process_command(whatsapp_rust::store::commands::DeviceCommand::SetPushName(
-                "ZapFast".to_owned(),
+                "SuperWhatsapp".to_owned(),
             ))
             .await;
         worker.client = Some(client);
@@ -19860,7 +19860,7 @@ mod receipt_tests {
         assert_eq!(id, "allowed");
         assert_eq!(job.0, PEER);
         let errors = std::iter::from_fn(|| events.try_recv().ok())
-            .filter(|event| matches!(event, Event::Error(reason) if reason == "This conversation is read-only in ZapFast"))
+            .filter(|event| matches!(event, Event::Error(reason) if reason == "This conversation is read-only in SuperWhatsapp"))
             .count();
         assert_eq!(errors, 1, "skipped jobs report one error per advance");
         assert_eq!(
@@ -22927,7 +22927,7 @@ mod receipt_tests {
         assert_eq!(newest.id, "theirs");
     }
 
-    /// The archive range names no id ZapFast invented: a timer notice gives
+    /// The archive range names no id SuperWhatsapp invented: a timer notice gives
     /// its time, like a local call entry, but no message key.
     #[test]
     fn archive_range_leaves_timer_notices_out() {
@@ -23084,7 +23084,7 @@ mod receipt_tests {
         let archived = |worker: &Worker| worker.archive.chat(PEER).unwrap().unwrap().archived;
         worker.store_message(incoming("before", 100), None, None);
         worker.archive.set_archived_at(PEER, true, 200_000).unwrap();
-        // Kept archived, the default, as ZapFast always behaved.
+        // Kept archived, the default, as SuperWhatsapp always behaved.
         worker.store_message(incoming("kept", 300), None, None);
         assert!(archived(&worker));
 

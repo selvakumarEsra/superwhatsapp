@@ -1,4 +1,4 @@
-//! ZapFast's Tauri shell (specs/tauri-ui.md): the window, the commands the
+//! SuperWhatsapp's Tauri shell (specs/tauri-ui.md): the window, the commands the
 //! page calls, and the media protocol. The core runs in [`engine`].
 
 mod desktop;
@@ -412,7 +412,7 @@ pub fn run() {
         return;
     }
     let mut start = start();
-    // One ZapFast per account: a copy already running, this interface or
+    // One SuperWhatsapp per account: a copy already running, this interface or
     // the egui one, comes forward instead (REQ-WEBUI-012.A2).
     if !start.demo {
         match engine::claim() {
@@ -472,7 +472,7 @@ pub fn run() {
             set_language
         ])
         .build(tauri::generate_context!())
-        .expect("ZapFast could not start")
+        .expect("SuperWhatsapp could not start")
         .run(|app, event| match event {
             // ⌘Q and the app menu's Quit save through the core first; the
             // core's own exit carries a code and goes through.

@@ -31,5 +31,5 @@ jobs:
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           manifest-path: packaging/flatpak/rocks.zapfast.ZapFast.yml
-          bundle: zapfast-test-x86_64.flatpak
+          bundle: superwhatsapp-test-x86_64.flatpak
           cache: false
