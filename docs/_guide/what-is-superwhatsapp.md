@@ -56,6 +56,8 @@ a second and stays light on memory: [see the measurements](/benchmarks/).
 
 ## What it does
 
+<img class="VPImage" src="{{ '/assets/images/product/chat.png' | relative_url }}" alt="A SuperWhatsapp chat with a photo, voice messages, a reaction and a link preview, beside the chat list" width="1800" height="1157">
+
 - **Stores your chats.** SuperWhatsapp links as a companion device and stores
   messages in an encrypted SQLite file per account. History remains after
   restart, and older messages are fetched from your phone as you scroll.

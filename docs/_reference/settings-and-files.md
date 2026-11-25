@@ -117,6 +117,8 @@ Changes on the Settings page are saved to `settings.json` immediately. The
 search field at the top (`Ctrl+F`, Command+F on macOS) finds a setting by its
 name or description, in the interface language or in English.
 
+<img class="VPImage" src="{{ '/assets/images/product/settings.png' | relative_url }}" alt="The SuperWhatsapp Settings page with its search field and sections" width="1800" height="1157">
+
 **Appearance**
 
 - **Theme**: dark, light, follow the system, Messages, or a local JSON

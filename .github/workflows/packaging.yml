@@ -38,7 +38,12 @@ permissions:
   contents: read
 
 jobs:
+  # Builds Linux packages from a published release's files. Without a
+  # version it would test upstream ZapFast's v0.13.1 release, which this
+  # repository does not have, so pushes and pull requests skip it
+  # (specs/superwhatsapp.md, REQ-SUPERWA-003); run it by hand with a version.
   packaging:
+    if: inputs.version != ''
     permissions:
       contents: write
     uses: crmne/native-packages/.github/workflows/package.yml@25a4214d2f203357c84b069f39de7c17c0be6253 # v0.11.0
