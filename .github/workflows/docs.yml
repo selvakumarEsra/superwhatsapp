@@ -1,19 +1,16 @@
 name: Docs
 
-# The stable site at / is built from the newest release tag and /next/
-# from main (jekyll_vitepress.versions in docs/_config.yml), so a release
-# tag deploys too. Path filters do not apply to tag pushes.
+# The SuperWhatsapp website on GitHub Pages (specs/superwhatsapp.md,
+# REQ-SUPERWA-004), built from main. Published releases redeploy it so the
+# download links follow the newest release.
 on:
   push:
     branches: [main]
-    tags: ['v*']
     paths:
       - docs/**
       - .github/workflows/docs.yml
-      - .github/scripts/indexnow.rb
   release:
     types: [published]
-  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -26,8 +23,53 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Builds with JEKYLL_ENV=production, which turns on analytics
-  # (docs/_includes/jekyll_vitepress/head_end.html), so a local
-  # `jekyll serve` does not report visits.
-  docs:
-    uses: crmne/jekyll-vitepress-theme/.github/workflows/publish-docs.yml@v1
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0'
+          bundler-cache: true
+          working-directory: docs
+      - name: Set up Pages
+        id: pages
+        uses: actions/configure-pages@v6
+      - name: Build docs
+        working-directory: docs
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+        run: bundle exec jekyll-vitepress build --baseurl "$BASE_PATH" --destination _site
+      # Pages link to /download/ and /assets/... from the site root; on a
+      # project site that root is the base path.
+      - name: Prefix root-relative links with the base path
+        working-directory: docs
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+        run: |
+          ruby -e '
+            base = ENV.fetch("BASE_PATH").chomp("/")
+            exit if base.empty?
+            pattern = %r{\b(href|src)="/(?!/)(?!#{Regexp.escape(base[1..])}(?:/|"))}
+            Dir.glob("_site/**/*.html").each do |path|
+              html = File.read(path)
+              fixed = html.gsub(pattern) { "#{$1}=\"#{base}/" }
+              File.write(path, fixed) unless fixed == html
+            end
+          '
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs/_site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
