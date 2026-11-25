@@ -324,6 +324,51 @@ fn set_wallpaper_color(engine: State<'_, Engine>, color: String, dark: bool) {
     })));
 }
 
+/// Settings › Appearance: a theme file from the themes folder, opening
+/// that folder, reading it again, and the chat background image.
+#[tauri::command]
+fn set_custom_theme(engine: State<'_, Engine>, file: String) {
+    engine.send(Input::Action(Action::SetCustomTheme(file)));
+}
+
+#[tauri::command]
+fn themes_folder(engine: State<'_, Engine>, reload: bool) {
+    engine.send(Input::Action(if reload {
+        Action::ReloadThemes
+    } else {
+        Action::OpenThemesFolder
+    }));
+}
+
+#[tauri::command]
+fn wallpaper_image(engine: State<'_, Engine>, pick: bool) {
+    engine.send(Input::Action(if pick {
+        Action::PickWallpaperImage
+    } else {
+        Action::RemoveWallpaperImage
+    }));
+}
+
+/// The page's English text in the interface language (REQ-WEBUI-015).
+#[tauri::command]
+fn translate(engine: State<'_, Engine>, texts: Vec<String>) -> Vec<String> {
+    engine.translate(&texts)
+}
+
+/// Settings › Appearance › Language: a locale code, or none to follow the
+/// system.
+#[tauri::command]
+fn set_language(engine: State<'_, Engine>, code: Option<String>) {
+    let choice = match code {
+        None => None,
+        Some(code) => match serde_json::from_value(serde_json::Value::String(code)) {
+            Ok(locale) => Some(locale),
+            Err(_) => return,
+        },
+    };
+    engine.send(Input::Action(Action::SetInterfaceLanguage(choice)));
+}
+
 /// The person used the page: keyboard or pointer. Restarts the app
 /// lock's idle timer, which egui's input used to restart.
 #[tauri::command]
@@ -410,7 +455,12 @@ pub fn run() {
             set_chat_lock_code,
             fetch_blocklist,
             set_blocked,
-            set_wallpaper_color
+            set_wallpaper_color,
+            set_custom_theme,
+            themes_folder,
+            wallpaper_image,
+            translate,
+            set_language
         ])
         .build(tauri::generate_context!())
         .expect("ZapFast could not start")

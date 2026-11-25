@@ -36,7 +36,14 @@ fn allowed(path: &Path) -> bool {
     .flatten()
     .filter_map(|root| root.canonicalize().ok())
     .collect();
-    roots.iter().any(|root| path.starts_with(root))
+    // The chat background image Settings imported (wallpaper.<ext>).
+    let wallpaper = path.parent().is_some_and(|parent| {
+        zapfast::paths::AppDirs::discover()
+            .state
+            .canonicalize()
+            .is_ok_and(|state| parent == state)
+    }) && path.file_stem().is_some_and(|stem| stem == "wallpaper");
+    wallpaper || roots.iter().any(|root| path.starts_with(root))
 }
 
 fn kind(path: &Path) -> &'static str {

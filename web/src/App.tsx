@@ -41,6 +41,17 @@ export default function App() {
     else root.setAttribute("data-theme", state.settings.theme);
     root.style.setProperty("zoom", String(state.settings.zoom));
   });
+  // A custom theme's colours override the tokens while it is in use.
+  let applied: string[] = [];
+  createEffect(() => {
+    const root = document.documentElement;
+    for (const name of applied) root.style.removeProperty(name);
+    applied = [];
+    for (const [name, value] of state.settings.palette ?? []) {
+      root.style.setProperty(name, value);
+      applied.push(name);
+    }
+  });
   // Keyboard and pointer use restarts the app lock's idle timer; at most
   // one report every few seconds.
   onMount(() => {
@@ -65,12 +76,11 @@ export default function App() {
     void commands.showSection(next);
   };
   const linked = () => state.chats.length > 0 || ["connected", "connecting", "disconnected"].includes(state.link.state);
-  const unread = () => state.chats.reduce((n, c) => n + c.unread, 0);
   return (
     <Show when={!state.lock} fallback={<LockScreen lock={state.lock!} />}>
     <Show when={linked()} fallback={<Link link={state.link} />}>
       <div class="flex h-full w-full">
-        <Sidebar section={section()} onSection={choose} unread={unread()} />
+        <Sidebar section={section()} onSection={choose} unread={state.unreadChats} />
         <Show
           when={panel() === "settings"}
           fallback={

@@ -4,6 +4,7 @@
 //! whenever what it shows changes.
 
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::time::{Duration, Instant};
@@ -37,8 +38,17 @@ pub enum Input {
 #[derive(Clone)]
 pub struct Engine {
     tx: Sender<Input>,
-    /// Settings › Keep running when the window closes, as last stepped.
-    keep_running: Arc<AtomicBool>,
+    shared: Arc<Shared>,
+}
+
+/// What the main thread reads from the core without waiting on it, as of
+/// the last step.
+#[derive(Default)]
+pub struct Shared {
+    /// Settings › Keep running when the window closes.
+    keep_running: AtomicBool,
+    /// The interface language, for translating the page's text.
+    locale: Mutex<zapfast::i18n::Locale>,
 }
 
 impl Engine {
@@ -48,7 +58,21 @@ impl Engine {
 
     /// Whether closing the window keeps ZapFast running in the tray.
     pub fn keeps_running(&self) -> bool {
-        self.keep_running.load(Ordering::Relaxed)
+        self.shared.keep_running.load(Ordering::Relaxed)
+    }
+
+    /// Translates the page's English text into the interface language, from
+    /// the catalogues the egui build uses; untranslated text stays English.
+    pub fn translate(&self, texts: &[String]) -> Vec<String> {
+        use fastframe_i18n::Locale as _;
+        let locale = self.shared.locale.lock().map(|l| *l).unwrap_or_default();
+        let catalog = locale.catalog();
+        texts
+            .iter()
+            .map(|text| {
+                catalog.map_or_else(|| text.clone(), |c| c.translate(text, None).into_owned())
+            })
+            .collect()
     }
 }
 
@@ -61,13 +85,13 @@ pub struct Start {
 pub fn spawn(handle: AppHandle, start: Start) -> Engine {
     let (tx, rx) = channel();
     let wake = tx.clone();
-    let keep_running = Arc::new(AtomicBool::new(false));
-    let shared = keep_running.clone();
+    let shared = Arc::new(Shared::default());
+    let core = shared.clone();
     std::thread::Builder::new()
         .name("zapfast-core".into())
-        .spawn(move || run(handle, start, rx, wake, shared))
+        .spawn(move || run(handle, start, rx, wake, core))
         .expect("core thread");
-    Engine { tx, keep_running }
+    Engine { tx, shared }
 }
 
 fn make_app(start: &Start) -> App {
@@ -102,7 +126,7 @@ fn run(
     start: Start,
     rx: Receiver<Input>,
     wake: Sender<Input>,
-    keep_running: Arc<AtomicBool>,
+    shared: Arc<Shared>,
 ) {
     let mut app = make_app(&start);
     let ctx = egui::Context::default();
@@ -112,6 +136,9 @@ fn run(
     app.attach(&ctx);
     let mut focused = true;
     let mut last: Option<view::State> = None;
+    // The unread count last put on the Dock or taskbar. Demo runs show it
+    // too: their tile is the development build's, not the installed app's.
+    let mut badge: Option<u32> = None;
     let mut last_step = Instant::now() - MIN_STEP;
     loop {
         let first = match rx.recv_timeout(IDLE_STEP) {
@@ -156,7 +183,21 @@ fn run(
         });
         // Nothing is drawn, so texture uploads are discarded.
         output.textures_delta.clear();
-        keep_running.store(app.settings.keep_running_in_background, Ordering::Relaxed);
+        shared
+            .keep_running
+            .store(app.settings.keep_running_in_background, Ordering::Relaxed);
+        if let Ok(mut locale) = shared.locale.lock() {
+            *locale = app.locale;
+        }
+        let count = if app.app_lock.is_locked() {
+            0
+        } else {
+            app.unread_chat_count_everywhere()
+        };
+        if badge != Some(count) {
+            badge = Some(count);
+            crate::desktop::set_badge(&handle, count, app.locale);
+        }
         let state = view::build(&mut app);
         if force || last.as_ref() != Some(&state) {
             if let Err(error) = handle.emit("zapfast://state", &state) {
@@ -183,4 +224,25 @@ pub fn dump(page: Option<String>) -> view::State {
         output.textures_delta.clear();
     }
     view::build(&mut app)
+}
+
+#[cfg(test)]
+mod translation_tests {
+    use super::*;
+
+    #[test]
+    fn page_text_follows_the_interface_language() {
+        let (tx, _rx) = channel();
+        let engine = Engine {
+            tx,
+            shared: Arc::new(Shared::default()),
+        };
+        let texts = ["Search".to_owned(), "Not in any catalogue".to_owned()];
+        assert_eq!(engine.translate(&texts), texts);
+        *engine.shared.locale.lock().unwrap() = zapfast::i18n::Locale::Dutch;
+        assert_eq!(
+            engine.translate(&texts),
+            ["Zoeken".to_owned(), "Not in any catalogue".to_owned()]
+        );
+    }
 }

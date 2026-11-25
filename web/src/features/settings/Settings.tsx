@@ -7,6 +7,7 @@ import { commands, state, type LockForm, type SettingsView } from "../../lib/bri
 import { ask } from "../../lib/ui";
 import Avatar from "../../components/Avatar";
 import { ChevronRightIcon } from "../../components/Icons";
+import { t } from "../../lib/i18n";
 
 type Key = keyof SettingsView;
 type Page = "account" | "appearance" | "chats" | "notifications" | "privacy" | "system" | "about";
@@ -27,9 +28,9 @@ function Row(p: { title: string; description?: string; children?: JSX.Element })
   return (
     <div class="flex items-center justify-between" style={{ "min-height": "46px", padding: "8px 0", gap: "16px", "border-bottom": "var(--hairline) solid var(--divider)" }}>
       <div class="min-w-0">
-        <div style={{ "font-size": "var(--fs-row-text)", color: "var(--text-primary)" }}>{p.title}</div>
+        <div style={{ "font-size": "var(--fs-row-text)", color: "var(--text-primary)" }}>{t(p.title)}</div>
         <Show when={p.description}>
-          <div style={{ "margin-top": "2px", "font-size": "var(--fs-meta)", "line-height": "14px", color: "var(--text-secondary)" }}>{p.description}</div>
+          <div style={{ "margin-top": "2px", "font-size": "var(--fs-meta)", "line-height": "14px", color: "var(--text-secondary)" }}>{t(p.description!)}</div>
         </Show>
       </div>
       <div class="shrink-0">{p.children}</div>
@@ -37,7 +38,7 @@ function Row(p: { title: string; description?: string; children?: JSX.Element })
   );
 }
 
-function Switch(p: { title: string; description?: string; key: Key }) {
+function Toggle(p: { title: string; description?: string; key: Key }) {
   const on = () => state.settings[p.key] === true;
   return (
     <Row title={p.title} description={p.description}>
@@ -73,7 +74,7 @@ function Choice(p: { title: string; description?: string; key: Key; options: [st
           border: "none",
         }}
       >
-        <For each={p.options}>{([value, label]) => <option value={value}>{label}</option>}</For>
+        <For each={p.options}>{([value, label]) => <option value={value}>{t(label)}</option>}</For>
       </select>
     </Row>
   );
@@ -113,7 +114,7 @@ function Button(p: { label: string; danger?: boolean; onClick: () => void }) {
         color: p.danger ? "var(--danger)" : "var(--text-primary)",
       }}
     >
-      {p.label}
+      {t(p.label)}
     </button>
   );
 }
@@ -220,8 +221,8 @@ function AppLockForm(p: { mode: LockForm["mode"]; onDone: () => void }) {
   const input = (label: string, value: () => string, set: (v: string) => void) => (
     <input
       type="password"
-      aria-label={label}
-      placeholder={label}
+      aria-label={t(label)}
+      placeholder={t(label)}
       value={value()}
       onInput={(e) => set(e.currentTarget.value)}
       class="selectable outline-none"
@@ -374,7 +375,38 @@ function Body(p: { page: Page }) {
         </Row>
       </Show>
       <Show when={p.page === "appearance"}>
-        <Choice title="Theme" key="theme" options={[["system", "Follow system"], ["light", "Light"], ["dark", "Dark"]]} />
+        <Row title="Language">
+          <select
+            aria-label={t("Language")}
+            value={state.settings.language ?? ""}
+            onChange={(e) => commands.setLanguage(e.currentTarget.value || null)}
+            style={{ height: "26px", padding: "0 8px", "border-radius": "7px", background: "var(--search-bg)", color: "var(--text-primary)", "font-size": "var(--fs-row-text)", border: "none" }}
+          >
+            <option value="">{t("Follow system")}</option>
+            <For each={state.settings.languages}>{([code, name]) => <option value={code}>{name}</option>}</For>
+          </select>
+        </Row>
+        <Row title="Theme" description="Theme files in the themes folder appear here too.">
+          <div class="flex items-center" style={{ gap: "6px" }}>
+            <select
+              aria-label="Theme"
+              value={state.settings.customTheme ? `file:${state.settings.customTheme}` : state.settings.theme}
+              onChange={(e) => {
+                const value = e.currentTarget.value;
+                if (value.startsWith("file:")) void commands.setCustomTheme(value.slice(5));
+                else set("theme", value);
+              }}
+              style={{ height: "26px", padding: "0 8px", "border-radius": "7px", background: "var(--search-bg)", color: "var(--text-primary)", "font-size": "var(--fs-row-text)", border: "none" }}
+            >
+              <option value="system">Follow system</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <For each={state.settings.themes}>{([file, name]) => <option value={`file:${file}`}>{name}</option>}</For>
+            </select>
+            <Button label="Open themes folder" onClick={() => commands.themesFolder(false)} />
+            <Button label="Reload" onClick={() => commands.themesFolder(true)} />
+          </div>
+        </Row>
         <Row title="Zoom">
           <div class="flex items-center" style={{ gap: "8px" }}>
             <Button label="−" onClick={() => set("zoom", -0.1)} />
@@ -385,35 +417,43 @@ function Body(p: { page: Page }) {
           </div>
         </Row>
         <Swatches />
-        <Switch title="Chat wallpaper doodles" description="The pattern behind messages." key="showWallpaper" />
+        <Row title="Wallpaper image" description="Shown behind messages instead of the colour and doodles.">
+          <div class="flex" style={{ gap: "6px" }}>
+            <Button label={state.settings.wallpaperImage ? "Change…" : "Choose image…"} onClick={() => commands.wallpaperImage(true)} />
+            <Show when={state.settings.wallpaperImage}>
+              <Button label="Remove image" danger onClick={() => commands.wallpaperImage(false)} />
+            </Show>
+          </div>
+        </Row>
+        <Toggle title="Chat wallpaper doodles" description="The pattern behind messages." key="showWallpaper" />
       </Show>
       <Show when={p.page === "chats"}>
-        <Switch title="Enter sends" description="When off, Enter starts a new line and ⌘+Enter sends." key="enterSends" />
-        <Switch title="Download files automatically" description="Files up to 64 MiB download as they come into view." key="autoDownload" />
-        <Switch title="Fetch older history" description="Asks your phone in the background for older messages in the open, pinned and ten most recent chats." key="historyPrefetch" />
-        <Switch title="Keep chats archived" description="When off, a new message brings an archived chat back to the list." key="keepChatsArchived" />
-        <Switch title="Pause other media while recording or playing" description="Music and videos in other apps resume afterwards." key="pauseOtherMedia" />
+        <Toggle title="Enter sends" description="When off, Enter starts a new line and ⌘+Enter sends." key="enterSends" />
+        <Toggle title="Download files automatically" description="Files up to 64 MiB download as they come into view." key="autoDownload" />
+        <Toggle title="Fetch older history" description="Asks your phone in the background for older messages in the open, pinned and ten most recent chats." key="historyPrefetch" />
+        <Toggle title="Keep chats archived" description="When off, a new message brings an archived chat back to the list." key="keepChatsArchived" />
+        <Toggle title="Pause other media while recording or playing" description="Music and videos in other apps resume afterwards." key="pauseOtherMedia" />
         <ChatLockCode />
       </Show>
       <Show when={p.page === "notifications"}>
-        <Switch title="Desktop notifications" key="notifications" />
+        <Toggle title="Desktop notifications" key="notifications" />
         <Show when={state.settings.notifications}>
-          <Switch title="Show message content in notifications" description="When off, they say only “New message”." key="notificationContent" />
+          <Toggle title="Show message content in notifications" description="When off, they say only “New message”." key="notificationContent" />
           <Choice title="Message sound" key="messageSound" options={SOUNDS} />
           <Choice title="Mention sound" description="When a group mentions you or replies to you." key="mentionSound" options={SOUNDS} />
-          <Switch title="Play sounds for group messages" key="groupSounds" />
+          <Toggle title="Play sounds for group messages" key="groupSounds" />
         </Show>
       </Show>
       <Show when={p.page === "privacy"}>
-        <Switch title="Send read receipts" description="Let people see when you read their messages." key="sendReadReceipts" />
-        <Switch title="Show when you are typing" key="sendTyping" />
+        <Toggle title="Send read receipts" description="Let people see when you read their messages." key="sendReadReceipts" />
+        <Toggle title="Show when you are typing" key="sendTyping" />
         <AppLock />
         <BlockedContacts />
       </Show>
       <Show when={p.page === "system"}>
-        <Switch title="Keep running when the window closes" description="Closing the window leaves ZapFast in the menu bar or tray; quit from there or with ⌘Q." key="keepRunning" />
+        <Toggle title="Keep running when the window closes" description="Closing the window leaves ZapFast in the menu bar or tray; quit from there or with ⌘Q." key="keepRunning" />
         <Show when={state.settings.startWithSystem !== null}>
-          <Switch title="Start at login" description="Starts in the tray, without a window." key="startWithSystem" />
+          <Toggle title="Start at login" description="Starts in the tray, without a window." key="startWithSystem" />
         </Show>
         {/* Updates arrive with the Tauri updater (REQ-WEBUI-012.A3); until
             then the egui build keeps those switches. */}
@@ -442,7 +482,7 @@ export default function Settings() {
       >
         <header data-tauri-drag-region class="flex shrink-0 items-center justify-center" style={{ height: "var(--list-header-h)" }}>
           <h1 data-tauri-drag-region style={{ margin: 0, "font-size": "var(--fs-title)", "font-weight": "var(--fw-title)", color: "var(--text-primary)" }}>
-            Settings
+            {t("Settings")}
           </h1>
         </header>
         <div class="scroll min-h-0 flex-1" style={{ padding: "4px var(--row-inset)" }}>
@@ -478,7 +518,7 @@ export default function Settings() {
                   color: "var(--text-primary)",
                 }}
               >
-                {label}
+                {t(label)}
                 <span style={{ color: "var(--text-secondary)" }}><ChevronRightIcon size={14} /></span>
               </button>
             )}
@@ -491,7 +531,7 @@ export default function Settings() {
           class="flex shrink-0 items-center"
           style={{ height: "var(--conv-header-h)", padding: "0 24px", "border-bottom": "var(--hairline) solid var(--conversation-header-border)" }}
         >
-          <h2 data-tauri-drag-region style={{ margin: 0, "font-size": "var(--fs-header-title)", "font-weight": 600, color: "var(--text-primary)" }}>{title()}</h2>
+          <h2 data-tauri-drag-region style={{ margin: 0, "font-size": "var(--fs-header-title)", "font-weight": 600, color: "var(--text-primary)" }}>{t(title())}</h2>
         </header>
         <div class="scroll min-h-0 flex-1" style={{ padding: "8px 24px 24px" }}>
           <div style={{ "max-width": "640px" }}>

@@ -17,6 +17,9 @@ pub struct State {
     pub filter: &'static str,
     pub search: String,
     pub chats: Vec<ChatRow>,
+    /// Unread chats, muted and archived ones left out: the sidebar's count,
+    /// like the Dock badge.
+    pub unread_chats: u32,
     pub open: Option<Open>,
     /// What the sidebar shows as chosen: chats, favourites, archived,
     /// starred or calls.
@@ -120,6 +123,76 @@ pub struct SettingsView {
     pub blocked: Option<Vec<Blocked>>,
     pub blocked_loading: bool,
     pub blocked_failed: bool,
+    /// The chat background image, when one was chosen.
+    pub wallpaper_image: Option<String>,
+    /// The theme file in use, and every theme file found: (file, name).
+    pub custom_theme: Option<String>,
+    pub themes: Vec<(String, String)>,
+    /// The interface language in use, the stored choice (none follows the
+    /// system), and every language offered: (code, own name).
+    pub locale: String,
+    pub language: Option<String>,
+    pub languages: Vec<(String, &'static str)>,
+    /// A custom theme's colours as CSS variables, while one is in use.
+    pub palette: Option<Vec<(&'static str, String)>>,
+}
+
+/// A locale's code, as settings store it (`en`, `pt-BR`, …).
+fn code(locale: zapfast::i18n::Locale) -> String {
+    serde_json::to_value(locale)
+        .ok()
+        .and_then(|v| v.as_str().map(str::to_owned))
+        .unwrap_or_else(|| "en".to_owned())
+}
+
+fn css(color: egui::Color32) -> String {
+    let [r, g, b, a] = color.to_srgba_unmultiplied();
+    if a == 255 {
+        format!("#{r:02x}{g:02x}{b:02x}")
+    } else {
+        format!("rgba({r}, {g}, {b}, {:.3})", f32::from(a) / 255.0)
+    }
+}
+
+/// A custom theme's palette on the page's colour tokens (tokens.css).
+fn palette(p: &zapfast::theme::Palette) -> Vec<(&'static str, String)> {
+    vec![
+        ("--sidebar-bg", css(p.window)),
+        ("--panel-bg", css(p.panel)),
+        ("--conversation-header-bg", css(p.panel)),
+        ("--empty-bg", css(p.panel)),
+        ("--conversation-bg", css(p.chat)),
+        ("--search-bg", css(p.surface)),
+        ("--input-bg", css(p.surface)),
+        ("--menu-bg", css(p.surface)),
+        ("--round-button-bg", css(p.surface)),
+        ("--header-pill-bg", css(p.surface)),
+        ("--composer-button-bg", css(p.surface)),
+        ("--menu-hover", css(p.surface_hover)),
+        ("--row-hover", css(p.surface_hover)),
+        ("--row-selected", css(p.surface_active)),
+        ("--sidebar-selected", css(p.surface_active)),
+        ("--divider", css(p.outline)),
+        ("--panel-border", css(p.outline)),
+        ("--conversation-header-border", css(p.outline)),
+        ("--text-primary", css(p.text)),
+        ("--text-secondary", css(p.secondary)),
+        ("--text-section", css(p.dim)),
+        ("--icon", css(p.secondary)),
+        ("--accent", css(p.accent)),
+        ("--unread", css(p.accent)),
+        ("--new-chat-bg", css(p.accent)),
+        ("--accent-text", css(p.accent)),
+        ("--unread-time", css(p.accent)),
+        ("--accent-fg", css(p.on_accent)),
+        ("--unread-fg", css(p.on_accent)),
+        ("--danger", css(p.danger)),
+        ("--overlay", css(p.overlay)),
+        ("--bubble-in", css(p.bubble_in)),
+        ("--bubble-out", css(p.bubble_out)),
+        ("--tick-read", css(p.read)),
+        ("--date-chip-bg", css(p.surface)),
+    ]
 }
 
 fn snake<T: Serialize>(value: &T) -> String {
@@ -169,6 +242,18 @@ fn settings(app: &mut App) -> SettingsView {
         }),
         busy: form.busy,
     });
+    let wallpaper_image = media(app.account().settings.wallpaper_image.clone());
+    let custom_theme = app.settings.custom_theme.clone();
+    let themes = app
+        .custom_themes
+        .picker_themes()
+        .map(|theme| {
+            (
+                theme.filename.clone(),
+                fastframe_theme::display_name(&theme.filename).to_owned(),
+            )
+        })
+        .collect();
     let list = &app.account().blocklist;
     let (ids, blocked_loading, blocked_failed) = (list.ids.clone(), list.loading, list.failed);
     let blocked = ids.map(|ids| {
@@ -188,10 +273,13 @@ fn settings(app: &mut App) -> SettingsView {
     let s = &app.settings;
     let account = &app.account().settings;
     SettingsView {
-        theme: match s.theme {
-            ThemeChoice::Dark => "dark",
-            ThemeChoice::Light => "light",
-            ThemeChoice::System | ThemeChoice::Messages => "system",
+        // A custom theme carries its own light or dark.
+        theme: match (&s.custom_theme, s.theme) {
+            (Some(_), _) if app.palette.dark => "dark",
+            (Some(_), _) => "light",
+            (None, ThemeChoice::Dark) => "dark",
+            (None, ThemeChoice::Light) => "light",
+            (None, ThemeChoice::System | ThemeChoice::Messages) => "system",
         },
         zoom: s.zoom,
         show_wallpaper: s.show_wallpaper,
@@ -235,6 +323,16 @@ fn settings(app: &mut App) -> SettingsView {
         blocked,
         blocked_loading,
         blocked_failed,
+        wallpaper_image,
+        custom_theme: custom_theme.clone(),
+        themes,
+        palette: custom_theme.is_some().then(|| palette(&app.palette)),
+        locale: code(app.locale),
+        language: app.settings.interface_language.map(code),
+        languages: zapfast::i18n::Locale::ALL
+            .iter()
+            .map(|l| (code(*l), l.label()))
+            .collect(),
     }
 }
 
@@ -542,6 +640,7 @@ pub fn build(app: &mut App) -> State {
             filter: filter(app.chat_filter),
             search: String::new(),
             chats: Vec::new(),
+            unread_chats: 0,
             open: None,
             section: "chats",
             starred: Vec::new(),
@@ -629,6 +728,7 @@ pub fn build(app: &mut App) -> State {
         chats,
         open,
         section,
+        unread_chats: app.unread_chat_count(),
         starred,
         calls,
         info,

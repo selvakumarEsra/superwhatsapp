@@ -11292,6 +11292,9 @@ name = "zapfast-desktop"
 version = "0.21.1-beta.6"
 dependencies = [
  "egui",
+ "fastframe-dock",
+ "fastframe-i18n",
+ "fastframe-theme",
  "log",
  "serde",
  "serde_json",

@@ -1,6 +1,7 @@
 // A pop-up menu at a point, and a confirmation dialog, drawn as WhatsApp
 // Desktop for macOS draws them (REQ-WEBUI-011).
 import { For, type JSX, Show } from "solid-js";
+import { t } from "../lib/i18n";
 
 export interface Entry {
   label: string;
@@ -58,7 +59,7 @@ export function Menu(p: { x: number; y: number; entries: (Entry | "-")[]; onClos
                   color: entry.danger ? "var(--danger)" : "var(--text-primary)",
                 }}
               >
-                {entry.label}
+                {t(entry.label)}
               </button>
             )
           }
@@ -91,7 +92,7 @@ export function Confirm(p: {
         color: primary ? (p.danger ? "#fff" : "var(--accent-fg)") : "var(--text-primary)",
       }}
     >
-      {label}
+      {t(label)}
     </button>
   );
   return (
@@ -103,7 +104,7 @@ export function Confirm(p: {
     >
       <div
         role="alertdialog"
-        aria-label={p.title}
+        aria-label={t(p.title)}
         style={{
           width: "340px",
           padding: "20px",
@@ -112,9 +113,9 @@ export function Confirm(p: {
           "box-shadow": "var(--shadow-menu)",
         }}
       >
-        <h2 style={{ margin: 0, "font-size": "var(--fs-row-title)", "font-weight": 600, color: "var(--text-primary)" }}>{p.title}</h2>
+        <h2 style={{ margin: 0, "font-size": "var(--fs-row-title)", "font-weight": 600, color: "var(--text-primary)" }}>{t(p.title)}</h2>
         <Show when={p.body}>
-          <p style={{ margin: "8px 0 0", "font-size": "var(--fs-row-text)", "line-height": "16px", color: "var(--text-secondary)" }}>{p.body}</p>
+          <p style={{ margin: "8px 0 0", "font-size": "var(--fs-row-text)", "line-height": "16px", color: "var(--text-secondary)" }}>{typeof p.body === "string" ? t(p.body) : p.body}</p>
         </Show>
         <div class="flex justify-end" style={{ gap: "8px", "margin-top": "18px" }}>
           {button("Cancel", false, p.onClose)}

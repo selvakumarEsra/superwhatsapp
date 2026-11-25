@@ -22,7 +22,7 @@ function Section(p: { title?: string; children: JSX.Element }) {
   );
 }
 
-function Switch(p: { icon: JSX.Element; label: string; on: boolean; onToggle: () => void }) {
+function Toggle(p: { icon: JSX.Element; label: string; on: boolean; onToggle: () => void }) {
   return (
     <button
       type="button"
@@ -83,10 +83,10 @@ function Body(p: { info: Info }) {
         </Section>
       </Show>
       <Section>
-        <Switch icon={<MuteIcon size={16} />} label="Mute notifications" on={i().muted} onToggle={() => commands.setMuted(i().id, i().muted ? null : 0)} />
-        <Switch icon={<PinIcon size={16} />} label="Pin chat" on={i().pinned} onToggle={() => commands.setPinned(i().id, !i().pinned)} />
-        <Switch icon={<HeartIcon size={16} />} label="Favourite" on={i().favorite} onToggle={() => commands.setFavorite(i().id, !i().favorite)} />
-        <Switch icon={<ArchiveIcon size={16} />} label="Archived" on={i().archived} onToggle={() => commands.setArchived(i().id, !i().archived)} />
+        <Toggle icon={<MuteIcon size={16} />} label="Mute notifications" on={i().muted} onToggle={() => commands.setMuted(i().id, i().muted ? null : 0)} />
+        <Toggle icon={<PinIcon size={16} />} label="Pin chat" on={i().pinned} onToggle={() => commands.setPinned(i().id, !i().pinned)} />
+        <Toggle icon={<HeartIcon size={16} />} label="Favourite" on={i().favorite} onToggle={() => commands.setFavorite(i().id, !i().favorite)} />
+        <Toggle icon={<ArchiveIcon size={16} />} label="Archived" on={i().archived} onToggle={() => commands.setArchived(i().id, !i().archived)} />
         <div class="flex items-center justify-between" style={{ height: "34px", padding: "0 6px", "font-size": "var(--fs-row-text)", color: "var(--text-primary)" }}>
           Disappearing messages
           <span style={{ color: "var(--text-secondary)" }}>{timerLabel(i().timer)}</span>

@@ -3,6 +3,7 @@
 import { createSignal, For, type JSX, Show } from "solid-js";
 import { ArchiveIcon, CallsIcon, ChartIcon, ChatsIcon, ChevronDownIcon, ChevronRightIcon, DotsIcon, HeartIcon, SparkleIcon, StarIcon } from "./Icons";
 import Avatar from "./Avatar";
+import { t } from "../lib/i18n";
 
 /** The core's destinations plus the panels still to come (Znga, Insights). */
 export type Section = "chats" | "calls" | "znga" | "favourites" | "insights" | "archived" | "starred";
@@ -28,7 +29,7 @@ function Item(p: { label: string; icon: JSX.Element; count?: number; active: boo
       <span class="flex shrink-0 items-center justify-center" style={{ width: "var(--sidebar-icon)" }}>
         {p.icon}
       </span>
-      <span class="flex-1 truncate" style={{ "font-size": "var(--fs-sidebar)" }}>{p.label}</span>
+      <span class="flex-1 truncate" style={{ "font-size": "var(--fs-sidebar)" }}>{t(p.label)}</span>
       <Show when={p.count}>
         <span style={{ "font-size": "var(--fs-sidebar-count)", color: "var(--text-secondary)" }}>{p.count}</span>
       </Show>
@@ -53,7 +54,7 @@ function Heading(p: { label: string; open: boolean; onToggle: () => void }) {
         color: "var(--text-section)",
       }}
     >
-      {p.label}
+      {t(p.label)}
       <Show when={p.open} fallback={<ChevronRightIcon size={13} />}>
         <ChevronDownIcon size={13} />
       </Show>
@@ -116,7 +117,7 @@ export default function Sidebar(p: { section: Section | "settings"; onSection: (
           }}
         >
           <Avatar src={null} size={24} />
-          <span class="flex-1 truncate" style={{ "font-size": "var(--fs-sidebar)", "font-weight": 600 }}>You</span>
+          <span class="flex-1 truncate" style={{ "font-size": "var(--fs-sidebar)", "font-weight": 600 }}>{t("You")}</span>
           <span style={{ color: "var(--icon)", display: "inline-flex" }}><DotsIcon size={18} /></span>
         </button>
       </div>

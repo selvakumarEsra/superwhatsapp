@@ -92,7 +92,15 @@ export default function Conversation(p: { chat: Open }) {
         <Menu x={menu()!.x} y={menu()!.y} entries={chatMenu(row()!, ask, state.section === "archived")} onClose={() => setMenu(null)} />
       </Show>
       <div class="relative flex min-h-0 flex-1 flex-col" style={{ background: wallpaper() ?? "var(--conversation-bg)" }}>
-        <Show when={state.settings.showWallpaper}>
+        <Show when={state.settings.wallpaperImage}>
+          {(image) => (
+            <div
+              class="pointer-events-none absolute inset-0"
+              style={{ "background-image": `url("${image()}")`, "background-size": "cover", "background-position": "center" }}
+            />
+          )}
+        </Show>
+        <Show when={state.settings.showWallpaper && !state.settings.wallpaperImage}>
           <div
             class="pointer-events-none absolute inset-0"
             style={{ "background-image": "url(/wallpaper.svg)", opacity: "var(--wallpaper-opacity)", filter: "var(--wallpaper-filter)" }}

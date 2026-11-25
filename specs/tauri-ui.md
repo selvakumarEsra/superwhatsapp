@@ -441,6 +441,9 @@ implementations:
   - web/src/features/settings/Settings.tsx:Settings
   - src-tauri/src/lib.rs:set_setting
   - src-tauri/src/desktop.rs:setup
+  - src-tauri/src/desktop.rs:set_badge
+  - src-tauri/src/lib.rs:set_custom_theme
+  - src-tauri/src/lib.rs:wallpaper_image
 
 ## Acceptance
 <!-- id: REQ-WEBUI-012.A1 -->
@@ -507,6 +510,11 @@ interface; plural forms and right-to-left languages work as today.
 
 implementations:
   - web/src/lib/i18n.ts:t
+  - src-tauri/src/engine.rs:Engine.translate
+  - src-tauri/src/lib.rs:set_language
+
+verifies:
+  - src-tauri/src/engine.rs:page_text_follows_the_interface_language
 
 ## Acceptance
 <!-- id: REQ-WEBUI-015.A1 -->

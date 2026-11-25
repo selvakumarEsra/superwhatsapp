@@ -28,3 +28,9 @@ serde_json = "1"
 # leaves src/app.rs (REQ-WEBUI-001); nothing is drawn with it.
 egui = "0.36.2"
 log = "0.4"
+fastframe-i18n = { git = "https://github.com/crmne/fastframe", tag = "v0.15.4" }
+fastframe-theme = { git = "https://github.com/crmne/fastframe", tag = "v0.15.4" }
+
+# The taskbar's unread overlay, drawn as the egui build draws it.
+[target.'cfg(windows)'.dependencies]
+fastframe-dock = { git = "https://github.com/crmne/fastframe", tag = "v0.15.4" }

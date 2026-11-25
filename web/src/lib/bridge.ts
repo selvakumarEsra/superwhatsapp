@@ -55,15 +55,18 @@ export interface SettingsView {
   wallpaperLight: string; wallpaperDark: string; swatchesLight: Swatch[]; swatchesDark: Swatch[];
   chatLockCode: boolean; appLock: boolean; autoLock: "oneMinute" | "fifteenMinutes" | "oneHour";
   lockForm: LockForm | null; blocked: Blocked[] | null; blockedLoading: boolean; blockedFailed: boolean;
+  wallpaperImage: string | null; customTheme: string | null; themes: [string, string][];
+  palette: [string, string][] | null;
+  locale: string; language: string | null; languages: [string, string][];
 }
 export interface State {
-  link: Link; me: string | null; filter: string; search: string; chats: ChatRow[]; open: Open | null;
+  link: Link; me: string | null; filter: string; search: string; chats: ChatRow[]; unreadChats: number; open: Open | null;
   section: Section; starred: StarredRow[]; calls: CallRow[]; info: Info | null; settings: SettingsView;
   lock: LockView | null;
 }
 
 const empty: State = {
-  link: { state: "starting" }, me: null, filter: "all", search: "", chats: [], open: null,
+  link: { state: "starting" }, me: null, filter: "all", search: "", chats: [], unreadChats: 0, open: null,
   section: "chats", starred: [], calls: [], info: null,
   settings: {
     theme: "system", zoom: 1, showWallpaper: true, enterSends: true, autoDownload: true, historyPrefetch: true,
@@ -72,7 +75,8 @@ const empty: State = {
     startWithSystem: null, checkForUpdates: true, downloadUpdates: false, proxy: "", name: null, about: null,
     phone: null, version: "", wallpaperLight: "theme", wallpaperDark: "theme", swatchesLight: [], swatchesDark: [],
     chatLockCode: false, appLock: false, autoLock: "fifteenMinutes", lockForm: null, blocked: null,
-    blockedLoading: false, blockedFailed: false,
+    blockedLoading: false, blockedFailed: false, wallpaperImage: null, customTheme: null, themes: [], palette: null,
+    locale: "en", language: null, languages: [],
   },
   lock: null,
 };
@@ -122,4 +126,8 @@ export const commands = {
   fetchBlocklist: () => invoke("fetch_blocklist"),
   setBlocked: (chat: string, blocked: boolean) => invoke("set_blocked", { chat, blocked }),
   setWallpaperColor: (color: string, dark: boolean) => invoke("set_wallpaper_color", { color, dark }),
+  setCustomTheme: (file: string) => invoke("set_custom_theme", { file }),
+  themesFolder: (reload: boolean) => invoke("themes_folder", { reload }),
+  wallpaperImage: (pick: boolean) => invoke("wallpaper_image", { pick }),
+  setLanguage: (code: string | null) => invoke("set_language", { code }),
 };

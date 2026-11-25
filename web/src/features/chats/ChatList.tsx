@@ -8,6 +8,7 @@ import { ArchiveIcon, ChevronDownIcon, ChevronRightIcon, DotsIcon, PlusIcon, Sea
 import ChatRow from "./ChatRow";
 import StarredList from "../starred/StarredList";
 import CallsList from "../calls/CallsList";
+import { t } from "../../lib/i18n";
 
 const TITLES: Record<string, string> = {
   chats: "Chats",
@@ -67,7 +68,7 @@ function GroupHeading(p: { label: string; open: boolean; onToggle: () => void })
       <Show when={p.open} fallback={<ChevronRightIcon size={12} />}>
         <ChevronDownIcon size={12} />
       </Show>
-      {p.label}
+      {t(p.label)}
     </button>
   );
 }
@@ -109,7 +110,7 @@ function FilterMenu(p: { onClose: () => void }) {
                 color: "var(--text-primary)",
               }}
             >
-              {label}
+              {t(label)}
               <Show when={state.filter === id}>
                 <span style={{ color: "var(--accent-text)" }}>✓</span>
               </Show>
@@ -168,7 +169,7 @@ export default function ChatList() {
           data-tauri-drag-region
           style={{ margin: 0, "font-size": "var(--fs-title)", "font-weight": "var(--fw-title)", color: "var(--text-primary)" }}
         >
-          {TITLES[state.section] ?? "Chats"}
+          {t(TITLES[state.section] ?? "Chats")}
         </h1>
         <button
           type="button"
@@ -190,7 +191,7 @@ export default function ChatList() {
           <span style={{ color: "var(--text-secondary)" }}><SearchIcon size={16} /></span>
           <input
             type="text"
-            placeholder="Search"
+            placeholder={t("Search")}
             value={state.search}
             onInput={(e) => commands.search(e.currentTarget.value)}
             class="selectable h-full min-w-0 flex-1 bg-transparent outline-none"
