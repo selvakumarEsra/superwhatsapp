@@ -4,6 +4,7 @@ import { createSignal, For, type JSX, Show } from "solid-js";
 import { ArchiveIcon, CallsIcon, ChartIcon, ChatsIcon, ChevronDownIcon, ChevronRightIcon, DotsIcon, HeartIcon, SparkleIcon, StarIcon } from "./Icons";
 import Avatar from "./Avatar";
 
+/** The core's destinations plus the panels still to come (Znga, Insights). */
 export type Section = "chats" | "calls" | "znga" | "favourites" | "insights" | "archived" | "starred";
 
 function Item(p: { label: string; icon: JSX.Element; count?: number; active: boolean; onClick: () => void }) {

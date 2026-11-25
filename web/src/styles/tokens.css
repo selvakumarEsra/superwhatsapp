@@ -39,6 +39,9 @@
   --empty-bg: #f7f7f7;
   --menu-bg: #ffffff;
   --menu-hover: #f0f0f0;
+  --danger: #e5484d;
+  --overlay: rgba(0, 0, 0, 0.35);
+  --info-w: 340px;
   --shadow-bubble: 0 0.5px 0.5px rgba(0, 0, 0, 0.13);
   --shadow-menu: 0 6px 24px rgba(0, 0, 0, 0.18);
 
@@ -171,6 +174,8 @@
     --empty-bg: #161616;
     --menu-bg: #2c2c2c;
     --menu-hover: #3a3a3a;
+    --danger: #ff6369;
+    --overlay: rgba(0, 0, 0, 0.55);
     --shadow-bubble: none;
     --shadow-menu: 0 6px 24px rgba(0, 0, 0, 0.5);
     --text-primary: #ffffff;

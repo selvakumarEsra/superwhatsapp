@@ -6,7 +6,7 @@ mod media;
 mod view;
 
 use tauri::{Manager, State, WindowEvent};
-use zapfast::model::Action;
+use zapfast::model::{Action, ChatFilter, Page};
 
 use engine::{Engine, Input, Start};
 
@@ -59,6 +59,90 @@ fn set_favorite(engine: State<'_, Engine>, chat: String, favorite: bool) {
     engine.send(Input::Action(Action::SetFavorite(chat, favorite)));
 }
 
+/// The sidebar's destinations (REQ-WEBUI-006): chats, favourites,
+/// archived, starred and calls. Each lands from wherever the window is.
+#[tauri::command]
+fn show_section(engine: State<'_, Engine>, section: String) {
+    let mut actions = Vec::new();
+    let calls = section == "calls";
+    actions.push(Action::Open(if calls { Page::Calls } else { Page::Chats }));
+    if !calls {
+        actions.push(Action::ShowStarred(section == "starred"));
+        actions.push(Action::ShowArchived(section == "archived"));
+        match section.as_str() {
+            "favourites" => actions.push(Action::SetChatFilter(ChatFilter::Favorites)),
+            "chats" => actions.push(Action::SetChatFilter(ChatFilter::All)),
+            _ => {}
+        }
+    }
+    for action in actions {
+        engine.send(Input::Action(action));
+    }
+}
+
+/// Mutes until Unix time, for ever with 0, or unmutes with `None`.
+#[tauri::command]
+fn set_muted(engine: State<'_, Engine>, chat: String, until: Option<i64>) {
+    engine.send(Input::Action(Action::SetMuted(chat, until)));
+}
+
+#[tauri::command]
+fn set_archived(engine: State<'_, Engine>, chat: String, archived: bool) {
+    engine.send(Input::Action(Action::SetArchived(chat, archived)));
+}
+
+#[tauri::command]
+fn set_read(engine: State<'_, Engine>, chat: String, read: bool) {
+    engine.send(Input::Action(if read {
+        Action::MarkRead(chat)
+    } else {
+        Action::MarkUnread(chat)
+    }));
+}
+
+/// Deleting and clearing reach the phone first; the page asks before.
+#[tauri::command]
+fn delete_chat(engine: State<'_, Engine>, chat: String) {
+    engine.send(Input::Action(Action::DeleteChat(chat)));
+}
+
+#[tauri::command]
+fn clear_chat(engine: State<'_, Engine>, chat: String) {
+    engine.send(Input::Action(Action::ClearChat(chat)));
+}
+
+#[tauri::command]
+fn open_info(engine: State<'_, Engine>, chat: String) {
+    engine.send(Input::Action(Action::OpenInfo(chat)));
+}
+
+#[tauri::command]
+fn close_info(engine: State<'_, Engine>) {
+    engine.send(Input::Action(Action::CloseInfo));
+}
+
+#[tauri::command]
+fn leave_group(engine: State<'_, Engine>, chat: String) {
+    engine.send(Input::Action(Action::LeaveGroup {
+        chat,
+        archive: false,
+    }));
+}
+
+#[tauri::command]
+fn set_star(engine: State<'_, Engine>, chat: String, message: String, starred: bool) {
+    engine.send(Input::Action(Action::SetStar {
+        chat,
+        message,
+        starred,
+    }));
+}
+
+#[tauri::command]
+fn go_to_message(engine: State<'_, Engine>, chat: String, message: String) {
+    engine.send(Input::Action(Action::OpenMessage { chat, message }));
+}
+
 fn start() -> Start {
     let mut args = std::env::args().skip(1);
     let mut start = Start {
@@ -108,7 +192,18 @@ pub fn run() {
             set_filter,
             search,
             set_pinned,
-            set_favorite
+            set_favorite,
+            show_section,
+            set_muted,
+            set_archived,
+            set_read,
+            delete_chat,
+            clear_chat,
+            open_info,
+            close_info,
+            leave_group,
+            set_star,
+            go_to_message
         ])
         .run(tauri::generate_context!())
         .expect("ZapFast could not start");

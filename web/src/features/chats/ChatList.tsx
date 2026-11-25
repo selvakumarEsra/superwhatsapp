@@ -6,6 +6,16 @@ import { createMemo, createSignal, For, Show } from "solid-js";
 import { commands, state, type ChatRow as Row } from "../../lib/bridge";
 import { ArchiveIcon, ChevronDownIcon, ChevronRightIcon, DotsIcon, PlusIcon, SearchIcon } from "../../components/Icons";
 import ChatRow from "./ChatRow";
+import StarredList from "../starred/StarredList";
+import CallsList from "../calls/CallsList";
+
+const TITLES: Record<string, string> = {
+  chats: "Chats",
+  favourites: "Favourites",
+  archived: "Archived",
+  starred: "Starred",
+  calls: "Calls",
+};
 
 const FILTERS: [string, string][] = [
   ["all", "All chats"],
@@ -119,7 +129,7 @@ export default function ChatList() {
     setFolded(next);
     writeFolds(next);
   };
-  const grouped = () => state.filter === "all" && !state.search.trim();
+  const grouped = () => state.section === "chats" && state.filter === "all" && !state.search.trim();
   const favourites = createMemo(() =>
     state.chats.filter((c) => c.favorite).sort((a, b) => a.favoritePosition - b.favoritePosition),
   );
@@ -158,7 +168,7 @@ export default function ChatList() {
           data-tauri-drag-region
           style={{ margin: 0, "font-size": "var(--fs-title)", "font-weight": "var(--fw-title)", color: "var(--text-primary)" }}
         >
-          Chats
+          {TITLES[state.section] ?? "Chats"}
         </h1>
         <button
           type="button"
@@ -188,21 +198,32 @@ export default function ChatList() {
           />
         </label>
       </div>
-      <div class="scroll min-h-0 flex-1" style={{ "padding-top": "15px" }}>
-        <div
-          class="flex items-center"
-          style={{ height: "37px", margin: "0 var(--row-inset)", "padding-right": "var(--row-pad-r)" }}
-        >
-          <span class="flex items-center justify-center" style={{ width: "calc(var(--row-pad-l) + var(--avatar-row) + var(--row-gap))", color: "var(--text-secondary)" }}>
-            <ArchiveIcon size={19} />
-          </span>
-          <span
-            class="flex h-full flex-1 items-center"
-            style={{ "font-size": "var(--fs-archived)", color: "var(--text-secondary)", "border-bottom": "var(--hairline) solid var(--divider)" }}
+      <div class="scroll min-h-0 flex-1" style={{ "padding-top": state.section === "chats" ? "15px" : "8px" }}>
+        <Show when={state.section === "starred"}>
+          <StarredList />
+        </Show>
+        <Show when={state.section === "calls"}>
+          <CallsList />
+        </Show>
+        <Show when={state.section === "chats"}>
+          <button
+            type="button"
+            onClick={() => commands.showSection("archived")}
+            class="chat-row flex w-[calc(100%-2*var(--row-inset))] items-center text-left"
+            style={{ height: "37px", margin: "0 var(--row-inset)", "padding-right": "var(--row-pad-r)", "border-radius": "var(--row-radius)" }}
           >
-            Archived
-          </span>
-        </div>
+            <span class="flex items-center justify-center" style={{ width: "calc(var(--row-pad-l) + var(--avatar-row) + var(--row-gap))", color: "var(--text-secondary)" }}>
+              <ArchiveIcon size={19} />
+            </span>
+            <span
+              class="flex h-full flex-1 items-center"
+              style={{ "font-size": "var(--fs-archived)", color: "var(--text-secondary)", "border-bottom": "var(--hairline) solid var(--divider)" }}
+            >
+              Archived
+            </span>
+          </button>
+        </Show>
+        <Show when={state.section !== "starred" && state.section !== "calls"}>
         <Show when={grouped()} fallback={<div role="listbox" aria-label="Chat list">{rows(state.chats)}</div>}>
           <Show when={favourites().length > 0}>
             <GroupHeading label="Favourites" open={!folded().includes("favourites")} onToggle={() => toggle("favourites")} />
@@ -214,6 +235,7 @@ export default function ChatList() {
           <Show when={!folded().includes("chats")}>
             <div role="listbox" aria-label="Chats">{rows(rest())}</div>
           </Show>
+        </Show>
         </Show>
       </div>
     </section>

@@ -1,17 +1,20 @@
 // The open chat (REQ-WEBUI-007), as WhatsApp Desktop for macOS draws it:
 // a slim header with a button pill on the right, the wallpaper, and the
 // composer floating over it.
-import { createEffect, For, on, Show } from "solid-js";
-import type { Open } from "../../lib/bridge";
+import { createEffect, createSignal, For, on, Show } from "solid-js";
+import { commands, state, type Open } from "../../lib/bridge";
 import { dayKey, dayLabel } from "../../lib/time";
 import Avatar from "../../components/Avatar";
 import { CallsIcon, DotsIcon, VideoIcon } from "../../components/Icons";
 import Composer from "../composer/Composer";
 import Message from "./Message";
+import { Menu } from "../../components/Menu";
+import { chatMenu } from "../chats/chatMenu";
+import { ask } from "../../lib/ui";
 
-function HeaderButton(p: { label: string; children: import("solid-js").JSX.Element }) {
+function HeaderButton(p: { label: string; onClick?: (e: MouseEvent) => void; children: import("solid-js").JSX.Element }) {
   return (
-    <button type="button" aria-label={p.label} class="flex h-full items-center justify-center" style={{ width: "33px", color: "var(--icon)" }}>
+    <button type="button" aria-label={p.label} onClick={(e) => p.onClick?.(e)} class="flex h-full items-center justify-center" style={{ width: "33px", color: "var(--icon)" }}>
       {p.children}
     </button>
   );
@@ -19,6 +22,8 @@ function HeaderButton(p: { label: string; children: import("solid-js").JSX.Eleme
 
 export default function Conversation(p: { chat: Open }) {
   let list!: HTMLDivElement;
+  const [menu, setMenu] = createSignal<{ x: number; y: number } | null>(null);
+  const row = () => state.chats.find((c) => c.id === p.chat.id);
   // Opening a chat or a new message keeps the newest in view.
   createEffect(
     on(
@@ -41,24 +46,43 @@ export default function Conversation(p: { chat: Open }) {
           "border-bottom": "var(--hairline) solid var(--conversation-header-border)",
         }}
       >
-        <Avatar src={p.chat.avatar} size={30} group={p.chat.group} seed={p.chat.id} />
-        <div data-tauri-drag-region class="min-w-0 flex-1" style={{ "margin-left": "7.5px" }}>
-          <div
+        {/* The picture and name open the info panel, as on WhatsApp; the
+            rest of the bar moves the window. */}
+        <button
+          type="button"
+          aria-label={p.chat.group ? "Group info" : "Contact info"}
+          onClick={() => (state.info?.id === p.chat.id ? commands.closeInfo() : commands.openInfo(p.chat.id))}
+          class="flex min-w-0 shrink items-center text-left"
+        >
+          <Avatar src={p.chat.avatar} size={30} group={p.chat.group} seed={p.chat.id} />
+          <span
             class="truncate"
-            style={{ "font-size": "var(--fs-header-title)", "font-weight": 600, "line-height": "16px", color: "var(--text-primary)" }}
+            style={{ "margin-left": "7.5px", "font-size": "var(--fs-header-title)", "font-weight": 600, "line-height": "16px", color: "var(--text-primary)" }}
           >
             {p.chat.title}
-          </div>
-        </div>
+          </span>
+        </button>
+        <div data-tauri-drag-region class="h-full min-w-[12px] flex-1" />
         <div
           class="flex items-center"
           style={{ height: "var(--header-pill-h)", padding: "0 2px", "border-radius": "calc(var(--header-pill-h) / 2)", background: "var(--header-pill-bg)" }}
         >
           <HeaderButton label="Video call"><VideoIcon size={18} /></HeaderButton>
           <HeaderButton label="Voice call"><CallsIcon size={16} /></HeaderButton>
-          <HeaderButton label="Menu"><DotsIcon size={17} /></HeaderButton>
+          <HeaderButton
+            label="Menu"
+            onClick={(e) => {
+              const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              setMenu({ x: box.right - 210, y: box.bottom + 6 });
+            }}
+          >
+            <DotsIcon size={17} />
+          </HeaderButton>
         </div>
       </header>
+      <Show when={menu() && row()}>
+        <Menu x={menu()!.x} y={menu()!.y} entries={chatMenu(row()!, ask, state.section === "archived")} onClose={() => setMenu(null)} />
+      </Show>
       <div class="relative flex min-h-0 flex-1 flex-col" style={{ background: "var(--conversation-bg)" }}>
         <div
           class="pointer-events-none absolute inset-0"

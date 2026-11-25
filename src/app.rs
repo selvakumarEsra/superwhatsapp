@@ -9319,6 +9319,11 @@ impl App {
                 self.show_archived = show;
                 self.unread_kept.clear();
             }
+            Action::ShowStarred(show) => {
+                if self.show_starred != show {
+                    self.apply(Action::ToggleStarred, ctx);
+                }
+            }
             Action::ToggleStarred => {
                 // The rail, the list header's Back and Escape all land here. The
                 // sidebar has to be open for the list to be visible.

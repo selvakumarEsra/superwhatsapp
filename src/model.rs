@@ -3215,6 +3215,8 @@ pub enum Action {
     ShowArchived(bool),
     /// Shows or hides the starred messages in the left panel.
     ToggleStarred,
+    /// Shows or leaves the starred messages, whatever is shown now.
+    ShowStarred(bool),
     /// Mutes (`true`) or unmutes every followed channel.
     MuteAllChannels(bool),
     /// Joins the group of the invite being previewed.

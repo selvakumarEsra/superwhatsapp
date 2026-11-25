@@ -1,42 +1,14 @@
 // One chat in the list: an inset rounded row, as WhatsApp Desktop for
 // macOS draws it. Under the Favourites heading a row is one line, the name.
-// A right click opens the chat's menu.
+// A right click opens the chat's menu (chatMenu.ts).
 import { createSignal, Show } from "solid-js";
-import { commands, type ChatRow as Row } from "../../lib/bridge";
+import { state, type ChatRow as Row } from "../../lib/bridge";
+import { ask } from "../../lib/ui";
+import { Menu } from "../../components/Menu";
+import { chatMenu } from "./chatMenu";
 import { listTime } from "../../lib/time";
 import Avatar from "../../components/Avatar";
 import { MuteIcon, PinIcon, Ticks } from "../../components/Icons";
-
-/** The chat's menu at the pointer: pin and favourite. */
-function RowMenu(p: { row: Row; x: number; y: number; onClose: () => void }) {
-  const entry = (label: string, run: () => void) => (
-    <button
-      type="button"
-      role="menuitem"
-      onClick={() => {
-        run();
-        p.onClose();
-      }}
-      class="menu-item flex w-full items-center text-left"
-      style={{ height: "26px", padding: "0 10px", "border-radius": "6px", "font-size": "var(--fs-row-text)", color: "var(--text-primary)" }}
-    >
-      {label}
-    </button>
-  );
-  return (
-    <>
-      <div class="fixed inset-0 z-10" onClick={p.onClose} onContextMenu={(e) => { e.preventDefault(); p.onClose(); }} />
-      <div
-        role="menu"
-        class="fixed z-20"
-        style={{ left: `${p.x}px`, top: `${p.y}px`, "min-width": "190px", padding: "5px", background: "var(--menu-bg)", "border-radius": "10px", "box-shadow": "var(--shadow-menu)" }}
-      >
-        {entry(p.row.pinned ? "Unpin chat" : "Pin chat", () => commands.setPinned(p.row.id, !p.row.pinned))}
-        {entry(p.row.favorite ? "Remove from Favourites" : "Add to Favourites", () => commands.setFavorite(p.row.id, !p.row.favorite))}
-      </div>
-    </>
-  );
-}
 
 export default function ChatRow(p: { row: Row; selected: boolean; compact?: boolean; onOpen: () => void }) {
   const unread = () => p.row.unread > 0 || p.row.markedUnread;
@@ -44,7 +16,7 @@ export default function ChatRow(p: { row: Row; selected: boolean; compact?: bool
   return (
     <>
     <Show when={menu()}>
-      {(at) => <RowMenu row={p.row} x={at().x} y={at().y} onClose={() => setMenu(null)} />}
+      {(at) => <Menu x={at().x} y={at().y} entries={chatMenu(p.row, ask, state.section === "archived")} onClose={() => setMenu(null)} />}
     </Show>
     <div
       role="option"

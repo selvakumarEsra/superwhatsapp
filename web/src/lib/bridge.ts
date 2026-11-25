@@ -28,11 +28,28 @@ export interface Msg {
   quoted: Quote | null; reactions: [string, number][];
 }
 export interface Open { id: string; title: string; avatar: string | null; group: boolean; complete: boolean; messages: Msg[] }
+export type Section = "chats" | "favourites" | "archived" | "starred" | "calls";
+export interface StarredRow { chat: string; chatTitle: string; msg: Msg }
+export interface CallRow {
+  id: string; chat: string; title: string; avatar: string | null; group: boolean; time: number;
+  outgoing: boolean; missed: boolean; video: boolean; duration: number;
+}
+export interface Member { id: string; name: string; avatar: string | null; admin: boolean }
+export interface Info {
+  id: string; title: string; avatar: string | null; group: boolean; channel: boolean;
+  phone: string | null; description: string | null; memberCount: number; members: Member[];
+  commonGroups: [string, string][]; muted: boolean; pinned: boolean; archived: boolean;
+  favorite: boolean; canLeave: boolean; left: boolean; timer: number;
+}
 export interface State {
   link: Link; me: string | null; filter: string; search: string; chats: ChatRow[]; open: Open | null;
+  section: Section; starred: StarredRow[]; calls: CallRow[]; info: Info | null;
 }
 
-const empty: State = { link: { state: "starting" }, me: null, filter: "all", search: "", chats: [], open: null };
+const empty: State = {
+  link: { state: "starting" }, me: null, filter: "all", search: "", chats: [], open: null,
+  section: "chats", starred: [], calls: [], info: null,
+};
 const [state, setState] = createStore<State>(empty);
 export { state };
 
@@ -56,4 +73,15 @@ export const commands = {
   search: (text: string) => invoke("search", { text }),
   setPinned: (chat: string, pinned: boolean) => invoke("set_pinned", { chat, pinned }),
   setFavorite: (chat: string, favorite: boolean) => invoke("set_favorite", { chat, favorite }),
+  showSection: (section: Section) => invoke("show_section", { section }),
+  setMuted: (chat: string, until: number | null) => invoke("set_muted", { chat, until }),
+  setArchived: (chat: string, archived: boolean) => invoke("set_archived", { chat, archived }),
+  setRead: (chat: string, read: boolean) => invoke("set_read", { chat, read }),
+  deleteChat: (chat: string) => invoke("delete_chat", { chat }),
+  clearChat: (chat: string) => invoke("clear_chat", { chat }),
+  openInfo: (chat: string) => invoke("open_info", { chat }),
+  closeInfo: () => invoke("close_info"),
+  leaveGroup: (chat: string) => invoke("leave_group", { chat }),
+  setStar: (chat: string, message: string, starred: boolean) => invoke("set_star", { chat, message, starred }),
+  goToMessage: (chat: string, message: string) => invoke("go_to_message", { chat, message }),
 };

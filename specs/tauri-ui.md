@@ -264,6 +264,9 @@ shows one ungrouped list.
 implementations:
   - web/src/features/chats/ChatList.tsx:ChatList
   - web/src/features/chats/ChatRow.tsx:ChatRow
+  - web/src/features/chats/chatMenu.ts:chatMenu
+  - web/src/features/starred/StarredList.tsx:StarredList
+  - src-tauri/src/lib.rs:show_section
 
 ## Acceptance
 <!-- id: REQ-WEBUI-006.A1 -->
@@ -387,7 +390,7 @@ more.
 
 implementations:
   - web/src/features/calls/CallScreen.tsx:CallScreen
-  - web/src/features/calls/CallHistory.tsx:CallHistory
+  - web/src/features/calls/CallsList.tsx:CallsList
 
 ## Acceptance
 <!-- id: REQ-WEBUI-010.A1 -->
@@ -408,6 +411,7 @@ list.
 
 implementations:
   - web/src/features/info/InfoPanel.tsx:InfoPanel
+  - web/src/components/Menu.tsx:Confirm
   - web/src/features/dialogs/Forward.tsx:Forward
 
 ## Acceptance
