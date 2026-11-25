@@ -98,13 +98,16 @@ pub fn set_badge<R: Runtime>(app: &AppHandle<R>, count: u32, locale: zapfast::i1
         };
         #[cfg(target_os = "windows")]
         {
-            use std::sync::Mutex;
-            static TASKBAR: Mutex<Option<fastframe_dock::Taskbar>> = Mutex::new(None);
+            // A COM object, so it stays on the main thread this runs on.
+            thread_local! {
+                static TASKBAR: std::cell::RefCell<Option<fastframe_dock::Taskbar>> =
+                    const { std::cell::RefCell::new(None) };
+            }
             let description = zapfast::notify::badge_description(count, locale);
-            if let Ok(mut taskbar) = TASKBAR.lock() {
+            TASKBAR.with_borrow_mut(|taskbar| {
                 let taskbar = taskbar.get_or_insert_with(fastframe_dock::Taskbar::default);
                 let _ = taskbar.show(&window, count, &description);
-            }
+            });
         }
         #[cfg(not(target_os = "windows"))]
         {
