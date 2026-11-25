@@ -24,6 +24,14 @@ export default function Conversation(p: { chat: Open }) {
   let list!: HTMLDivElement;
   const [menu, setMenu] = createSignal<{ x: number; y: number } | null>(null);
   const row = () => state.chats.find((c) => c.id === p.chat.id);
+  // Settings › Appearance › Wallpaper colour, for the theme on screen.
+  const wallpaper = () => {
+    const dark =
+      state.settings.theme === "dark" ||
+      (state.settings.theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    const id = dark ? state.settings.wallpaperDark : state.settings.wallpaperLight;
+    return (dark ? state.settings.swatchesDark : state.settings.swatchesLight).find((s) => s.id === id)?.color ?? null;
+  };
   // Opening a chat or a new message keeps the newest in view.
   createEffect(
     on(
@@ -83,11 +91,13 @@ export default function Conversation(p: { chat: Open }) {
       <Show when={menu() && row()}>
         <Menu x={menu()!.x} y={menu()!.y} entries={chatMenu(row()!, ask, state.section === "archived")} onClose={() => setMenu(null)} />
       </Show>
-      <div class="relative flex min-h-0 flex-1 flex-col" style={{ background: "var(--conversation-bg)" }}>
-        <div
-          class="pointer-events-none absolute inset-0"
-          style={{ "background-image": "url(/wallpaper.svg)", opacity: "var(--wallpaper-opacity)", filter: "var(--wallpaper-filter)" }}
-        />
+      <div class="relative flex min-h-0 flex-1 flex-col" style={{ background: wallpaper() ?? "var(--conversation-bg)" }}>
+        <Show when={state.settings.showWallpaper}>
+          <div
+            class="pointer-events-none absolute inset-0"
+            style={{ "background-image": "url(/wallpaper.svg)", opacity: "var(--wallpaper-opacity)", filter: "var(--wallpaper-filter)" }}
+          />
+        </Show>
         <div ref={list} class="scroll relative min-h-0 flex-1" style={{ "padding-bottom": "8px" }} role="log" aria-label="Messages">
           <For each={p.chat.messages}>
             {(msg, i) => {

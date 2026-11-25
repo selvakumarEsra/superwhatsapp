@@ -30,7 +30,8 @@
         "trafficLightPosition": {
           "x": 12,
           "y": 18
-        }
+        },
+        "visible": false
       }
     ],
     "security": {

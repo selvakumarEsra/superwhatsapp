@@ -61,7 +61,7 @@ function Heading(p: { label: string; open: boolean; onToggle: () => void }) {
   );
 }
 
-export default function Sidebar(p: { section: Section; onSection: (s: Section) => void; unread: number }) {
+export default function Sidebar(p: { section: Section | "settings"; onSection: (s: Section | "settings") => void; unread: number }) {
   const [moreOpen, setMoreOpen] = createSignal(true);
   const icon = (i: (q: { size?: number }) => JSX.Element) => i({ size: 18 });
   const main: [Section, string, JSX.Element][] = [
@@ -100,10 +100,24 @@ export default function Sidebar(p: { section: Section; onSection: (s: Section) =
         class="flex shrink-0 items-center"
         style={{ height: "46px", "padding-left": "16px", "padding-right": "18px", gap: "10px", color: "var(--text-primary)" }}
       >
-        <Avatar src={null} size={24} />
-        <span class="flex-1 truncate" style={{ "font-size": "var(--fs-sidebar)", "font-weight": 600 }}>You</span>
-        <button type="button" aria-label="Settings" class="flex items-center" style={{ color: "var(--icon)" }}>
-          <DotsIcon size={18} />
+        <button
+          type="button"
+          aria-label="Settings"
+          aria-current={p.section === "settings" ? "page" : undefined}
+          onClick={() => p.onSection("settings")}
+          class="sidebar-item flex min-w-0 flex-1 items-center text-left"
+          style={{
+            height: "32px",
+            gap: "10px",
+            padding: "0 6px",
+            "margin-left": "-6px",
+            "border-radius": "var(--sidebar-radius)",
+            background: p.section === "settings" ? "var(--sidebar-selected)" : undefined,
+          }}
+        >
+          <Avatar src={null} size={24} />
+          <span class="flex-1 truncate" style={{ "font-size": "var(--fs-sidebar)", "font-weight": 600 }}>You</span>
+          <span style={{ color: "var(--icon)", display: "inline-flex" }}><DotsIcon size={18} /></span>
         </button>
       </div>
     </nav>

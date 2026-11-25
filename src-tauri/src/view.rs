@@ -27,6 +27,215 @@ pub struct State {
     pub calls: Vec<CallRow>,
     /// The contact or group info panel, when open.
     pub info: Option<Info>,
+    pub settings: SettingsView,
+    /// The lock screen, while the app lock holds; nothing private is sent
+    /// then (REQ-WEBUI-005).
+    pub lock: Option<LockView>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LockView {
+    /// The last password was wrong.
+    pub wrong: bool,
+    /// Seconds before another try, after several wrong ones.
+    pub wait: Option<u64>,
+    pub checking: bool,
+    /// no, confirming or unlinking: where "Forgot password?" got to.
+    pub forgetting: &'static str,
+}
+
+/// The app lock's Settings form while one is open.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LockForm {
+    /// set, change or turnOff.
+    pub mode: &'static str,
+    /// tooShort, mismatch or wrongCurrent.
+    pub error: Option<&'static str>,
+    pub busy: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Blocked {
+    pub id: String,
+    pub title: String,
+    pub avatar: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Swatch {
+    pub id: String,
+    pub label: &'static str,
+    /// `#rrggbb`, or `None` for the theme's own colour.
+    pub color: Option<String>,
+}
+
+/// Every setting the Settings screen shows, with its stored value.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SettingsView {
+    /// dark, light or system.
+    pub theme: &'static str,
+    pub zoom: f32,
+    pub show_wallpaper: bool,
+    pub enter_sends: bool,
+    pub auto_download: bool,
+    pub history_prefetch: bool,
+    pub keep_chats_archived: bool,
+    pub pause_other_media: bool,
+    pub notifications: bool,
+    pub notification_content: bool,
+    pub group_sounds: bool,
+    /// receive, alert, system, none or custom.
+    pub message_sound: &'static str,
+    pub mention_sound: &'static str,
+    pub send_read_receipts: bool,
+    pub send_typing: bool,
+    pub keep_running: bool,
+    /// `None` where the platform cannot start apps at login.
+    pub start_with_system: Option<bool>,
+    pub check_for_updates: bool,
+    pub download_updates: bool,
+    pub proxy: String,
+    pub name: Option<String>,
+    pub about: Option<String>,
+    pub phone: Option<String>,
+    pub version: &'static str,
+    /// The wallpaper colour chosen for the light and the dark theme.
+    pub wallpaper_light: String,
+    pub wallpaper_dark: String,
+    pub swatches_light: Vec<Swatch>,
+    pub swatches_dark: Vec<Swatch>,
+    /// A secret code hides locked chats.
+    pub chat_lock_code: bool,
+    /// The app asks for a password.
+    pub app_lock: bool,
+    /// oneMinute, fifteenMinutes or oneHour.
+    pub auto_lock: &'static str,
+    pub lock_form: Option<LockForm>,
+    /// `None` until WhatsApp sent the list.
+    pub blocked: Option<Vec<Blocked>>,
+    pub blocked_loading: bool,
+    pub blocked_failed: bool,
+}
+
+fn snake<T: Serialize>(value: &T) -> String {
+    serde_json::to_value(value)
+        .ok()
+        .and_then(|value| value.as_str().map(str::to_owned))
+        .unwrap_or_default()
+}
+
+fn swatches(colors: &[zapfast::settings::WallpaperColor]) -> Vec<Swatch> {
+    colors
+        .iter()
+        .map(|color| Swatch {
+            id: snake(color),
+            label: color.label(),
+            color: color
+                .rgb()
+                .map(|[r, g, b]| format!("#{r:02x}{g:02x}{b:02x}")),
+        })
+        .collect()
+}
+
+fn sound(sound: &zapfast::settings::NotificationSound) -> &'static str {
+    use zapfast::settings::NotificationSound;
+    match sound {
+        NotificationSound::Receive => "receive",
+        NotificationSound::Alert => "alert",
+        NotificationSound::System => "system",
+        NotificationSound::None => "none",
+        NotificationSound::Custom(_) => "custom",
+    }
+}
+
+fn settings(app: &mut App) -> SettingsView {
+    use zapfast::app_lock::{FormError, FormMode};
+    use zapfast::settings::{AutoLock, ThemeChoice, WallpaperColor};
+    let lock_form = app.app_lock.form.as_ref().map(|form| LockForm {
+        mode: match form.mode {
+            FormMode::Set => "set",
+            FormMode::Change => "change",
+            FormMode::TurnOff => "turnOff",
+        },
+        error: form.error.map(|error| match error {
+            FormError::TooShort => "tooShort",
+            FormError::Mismatch => "mismatch",
+            FormError::WrongCurrent => "wrongCurrent",
+        }),
+        busy: form.busy,
+    });
+    let list = &app.account().blocklist;
+    let (ids, blocked_loading, blocked_failed) = (list.ids.clone(), list.loading, list.failed);
+    let blocked = ids.map(|ids| {
+        let mut ids: Vec<String> = ids.into_iter().collect();
+        ids.sort();
+        let mut rows: Vec<Blocked> = ids
+            .into_iter()
+            .map(|id| Blocked {
+                title: app.display_name(&id),
+                avatar: media(app.avatar(&id)),
+                id,
+            })
+            .collect();
+        rows.sort_by_key(|row| row.title.to_lowercase());
+        rows
+    });
+    let s = &app.settings;
+    let account = &app.account().settings;
+    SettingsView {
+        theme: match s.theme {
+            ThemeChoice::Dark => "dark",
+            ThemeChoice::Light => "light",
+            ThemeChoice::System | ThemeChoice::Messages => "system",
+        },
+        zoom: s.zoom,
+        show_wallpaper: s.show_wallpaper,
+        enter_sends: s.enter_sends,
+        auto_download: account.auto_download,
+        history_prefetch: account.history_prefetch,
+        keep_chats_archived: s.keep_chats_archived,
+        pause_other_media: s.pause_other_media,
+        notifications: account.notifications,
+        notification_content: s.notification_content,
+        group_sounds: s.group_sounds,
+        message_sound: sound(&s.message_sound),
+        mention_sound: sound(&s.mention_sound),
+        send_read_receipts: account.send_read_receipts,
+        send_typing: account.send_typing,
+        keep_running: s.keep_running_in_background,
+        start_with_system: app.start_with_system,
+        check_for_updates: s.check_for_updates,
+        download_updates: s.download_updates_automatically,
+        proxy: s.proxy.clone(),
+        name: app.me_name.clone(),
+        about: app.me_about.clone(),
+        phone: app
+            .me
+            .as_deref()
+            .and_then(zapfast::model::phone_of)
+            .map(|digits| format!("+{digits}")),
+        version: env!("CARGO_PKG_VERSION"),
+        wallpaper_light: snake(&app.settings.wallpaper_color),
+        wallpaper_dark: snake(&app.settings.dark_wallpaper_color),
+        swatches_light: swatches(&WallpaperColor::LIGHT),
+        swatches_dark: swatches(&WallpaperColor::DARK),
+        chat_lock_code: app.settings.chat_lock_code_hash.is_some(),
+        app_lock: app.settings.app_lock_hash.is_some(),
+        auto_lock: match app.settings.app_lock_after {
+            AutoLock::OneMinute => "oneMinute",
+            AutoLock::FifteenMinutes => "fifteenMinutes",
+            AutoLock::OneHour => "oneHour",
+        },
+        lock_form,
+        blocked,
+        blocked_loading,
+        blocked_failed,
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -309,6 +518,39 @@ pub fn build(app: &mut App) -> State {
             reason: reason.clone(),
         },
     };
+    if app.app_lock.is_locked() {
+        use zapfast::app_lock::Forgetting;
+        let lock = LockView {
+            wrong: app.app_lock.wrong,
+            wait: app.app_lock.wait_left().map(|left| left.as_secs() + 1),
+            checking: app.app_lock.checking(),
+            forgetting: match app.app_lock.forgetting {
+                Forgetting::No => "no",
+                Forgetting::Confirming => "confirming",
+                Forgetting::Unlinking => "unlinking",
+            },
+        };
+        let mut settings = settings(app);
+        // Nothing about the account crosses to the page while locked.
+        settings.name = None;
+        settings.about = None;
+        settings.phone = None;
+        settings.blocked = None;
+        return State {
+            link,
+            me: None,
+            filter: filter(app.chat_filter),
+            search: String::new(),
+            chats: Vec::new(),
+            open: None,
+            section: "chats",
+            starred: Vec::new(),
+            calls: Vec::new(),
+            info: None,
+            settings,
+            lock: Some(lock),
+        };
+    }
     let visible: Vec<Chat> = app.visible_chats().into_iter().cloned().collect();
     let chats = visible.iter().map(|chat| row(app, chat, now)).collect();
     let open = app.open_chat.clone().and_then(|id| {
@@ -390,6 +632,8 @@ pub fn build(app: &mut App) -> State {
         starred,
         calls,
         info,
+        settings: settings(app),
+        lock: None,
     }
 }
 

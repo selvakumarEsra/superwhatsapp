@@ -41,14 +41,40 @@ export interface Info {
   commonGroups: [string, string][]; muted: boolean; pinned: boolean; archived: boolean;
   favorite: boolean; canLeave: boolean; left: boolean; timer: number;
 }
+export interface Swatch { id: string; label: string; color: string | null }
+export interface Blocked { id: string; title: string; avatar: string | null }
+export interface LockForm { mode: "set" | "change" | "turnOff"; error: "tooShort" | "mismatch" | "wrongCurrent" | null; busy: boolean }
+export interface LockView { wrong: boolean; wait: number | null; checking: boolean; forgetting: "no" | "confirming" | "unlinking" }
+export interface SettingsView {
+  theme: "dark" | "light" | "system"; zoom: number; showWallpaper: boolean; enterSends: boolean;
+  autoDownload: boolean; historyPrefetch: boolean; keepChatsArchived: boolean; pauseOtherMedia: boolean;
+  notifications: boolean; notificationContent: boolean; groupSounds: boolean;
+  messageSound: string; mentionSound: string; sendReadReceipts: boolean; sendTyping: boolean;
+  keepRunning: boolean; startWithSystem: boolean | null; checkForUpdates: boolean; downloadUpdates: boolean;
+  proxy: string; name: string | null; about: string | null; phone: string | null; version: string;
+  wallpaperLight: string; wallpaperDark: string; swatchesLight: Swatch[]; swatchesDark: Swatch[];
+  chatLockCode: boolean; appLock: boolean; autoLock: "oneMinute" | "fifteenMinutes" | "oneHour";
+  lockForm: LockForm | null; blocked: Blocked[] | null; blockedLoading: boolean; blockedFailed: boolean;
+}
 export interface State {
   link: Link; me: string | null; filter: string; search: string; chats: ChatRow[]; open: Open | null;
-  section: Section; starred: StarredRow[]; calls: CallRow[]; info: Info | null;
+  section: Section; starred: StarredRow[]; calls: CallRow[]; info: Info | null; settings: SettingsView;
+  lock: LockView | null;
 }
 
 const empty: State = {
   link: { state: "starting" }, me: null, filter: "all", search: "", chats: [], open: null,
   section: "chats", starred: [], calls: [], info: null,
+  settings: {
+    theme: "system", zoom: 1, showWallpaper: true, enterSends: true, autoDownload: true, historyPrefetch: true,
+    keepChatsArchived: true, pauseOtherMedia: true, notifications: true, notificationContent: true, groupSounds: true,
+    messageSound: "receive", mentionSound: "alert", sendReadReceipts: true, sendTyping: true, keepRunning: false,
+    startWithSystem: null, checkForUpdates: true, downloadUpdates: false, proxy: "", name: null, about: null,
+    phone: null, version: "", wallpaperLight: "theme", wallpaperDark: "theme", swatchesLight: [], swatchesDark: [],
+    chatLockCode: false, appLock: false, autoLock: "fifteenMinutes", lockForm: null, blocked: null,
+    blockedLoading: false, blockedFailed: false,
+  },
+  lock: null,
 };
 const [state, setState] = createStore<State>(empty);
 export { state };
@@ -84,4 +110,16 @@ export const commands = {
   leaveGroup: (chat: string) => invoke("leave_group", { chat }),
   setStar: (chat: string, message: string, starred: boolean) => invoke("set_star", { chat, message, starred }),
   goToMessage: (chat: string, message: string) => invoke("go_to_message", { chat, message }),
+  setSetting: (key: string, value: unknown) => invoke("set_setting", { key, value }),
+  unlink: () => invoke("unlink"),
+  activity: () => invoke("activity"),
+  unlock: (password: string) => invoke("unlock", { password }),
+  lockNow: () => invoke("lock_now"),
+  forgotPassword: (open: boolean, unlink = false) => invoke("forgot_password", { open, unlink }),
+  appLockForm: (mode: LockForm["mode"] | null, current = "", next = "", confirm = "") =>
+    invoke("app_lock_form", { mode, current, new: next, confirm }),
+  setChatLockCode: (code: string | null) => invoke("set_chat_lock_code", { code }),
+  fetchBlocklist: () => invoke("fetch_blocklist"),
+  setBlocked: (chat: string, blocked: boolean) => invoke("set_blocked", { chat, blocked }),
+  setWallpaperColor: (color: string, dark: boolean) => invoke("set_wallpaper_color", { color, dark }),
 };

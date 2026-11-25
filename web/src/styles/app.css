@@ -17,10 +17,7 @@ body {
 .scroll {
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
-}
-@media (prefers-color-scheme: dark) {
-  .scroll { scrollbar-color: rgba(255, 255, 255, 0.16) transparent; }
+  scrollbar-color: var(--scrollbar) transparent;
 }
 .chat-row:not(.selected):hover { background: var(--row-hover); }
 /* No divider under the selected row or the row above it. */

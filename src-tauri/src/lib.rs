@@ -1,11 +1,12 @@
 //! ZapFast's Tauri shell (specs/tauri-ui.md): the window, the commands the
 //! page calls, and the media protocol. The core runs in [`engine`].
 
+mod desktop;
 mod engine;
 mod media;
 mod view;
 
-use tauri::{Manager, State, WindowEvent};
+use tauri::{Manager, State};
 use zapfast::model::{Action, ChatFilter, Page};
 
 use engine::{Engine, Input, Start};
@@ -143,6 +144,199 @@ fn go_to_message(engine: State<'_, Engine>, chat: String, message: String) {
     engine.send(Input::Action(Action::OpenMessage { chat, message }));
 }
 
+/// Changes one setting (REQ-WEBUI-012). Each key maps to the field or
+/// action the egui build changes, so the value is stored the same way.
+#[tauri::command]
+fn set_setting(engine: State<'_, Engine>, key: String, value: serde_json::Value) {
+    use zapfast::settings::{NotificationSound, ThemeChoice};
+    let flag = value.as_bool();
+    let text = value.as_str().map(str::to_owned);
+    let global: Option<fn(&mut zapfast::settings::Settings) -> &mut bool> = match key.as_str() {
+        "enterSends" => Some(|s| &mut s.enter_sends),
+        "notificationContent" => Some(|s| &mut s.notification_content),
+        "groupSounds" => Some(|s| &mut s.group_sounds),
+        "keepRunning" => Some(|s| &mut s.keep_running_in_background),
+        "checkForUpdates" => Some(|s| &mut s.check_for_updates),
+        "downloadUpdates" => Some(|s| &mut s.download_updates_automatically),
+        "showWallpaper" => Some(|s| &mut s.show_wallpaper),
+        "pauseOtherMedia" => Some(|s| &mut s.pause_other_media),
+        _ => None,
+    };
+    let account: Option<fn(&mut zapfast::settings::AccountSettings) -> &mut bool> =
+        match key.as_str() {
+            "notifications" => Some(|s| &mut s.notifications),
+            "autoDownload" => Some(|s| &mut s.auto_download),
+            "historyPrefetch" => Some(|s| &mut s.history_prefetch),
+            "sendReadReceipts" => Some(|s| &mut s.send_read_receipts),
+            "sendTyping" => Some(|s| &mut s.send_typing),
+            _ => None,
+        };
+    let input = match (key.as_str(), global, account, flag) {
+        (_, Some(field), _, Some(on)) => Input::Edit(Box::new(move |app| {
+            *field(&mut app.settings) = on;
+            app.actions.push(Action::SettingsChanged);
+        })),
+        (_, _, Some(field), Some(on)) => Input::Edit(Box::new(move |app| {
+            *field(&mut app.account_mut().settings) = on;
+            app.account_mut().mark_settings_dirty();
+        })),
+        ("keepChatsArchived", _, _, Some(on)) => Input::Action(Action::SetKeepChatsArchived(on)),
+        ("startWithSystem", _, _, Some(on)) => Input::Action(Action::SetStartWithSystem(on)),
+        ("theme", ..) => Input::Action(Action::SetTheme(match text.as_deref() {
+            Some("dark") => ThemeChoice::Dark,
+            Some("light") => ThemeChoice::Light,
+            _ => ThemeChoice::System,
+        })),
+        ("zoom", ..) => match value.as_f64() {
+            Some(delta) if delta != 0.0 => Input::Action(Action::ZoomBy(delta as f32)),
+            _ => Input::Action(Action::ResetZoom),
+        },
+        ("autoLock", ..) => Input::Action(Action::SetAutoLock(match text.as_deref() {
+            Some("oneMinute") => zapfast::settings::AutoLock::OneMinute,
+            Some("oneHour") => zapfast::settings::AutoLock::OneHour,
+            _ => zapfast::settings::AutoLock::FifteenMinutes,
+        })),
+        ("proxy", ..) => Input::Action(Action::SetProxy(text.unwrap_or_default())),
+        ("messageSound" | "mentionSound", ..) => {
+            let sound = match text.as_deref() {
+                Some("alert") => NotificationSound::Alert,
+                Some("system") => NotificationSound::System,
+                Some("none") => NotificationSound::None,
+                _ => NotificationSound::Receive,
+            };
+            Input::Action(Action::SetNotificationSound {
+                mention: key == "mentionSound",
+                sound,
+            })
+        }
+        ("name", ..) => Input::Action(Action::SetProfile {
+            name: text,
+            about: None,
+        }),
+        ("about", ..) => Input::Action(Action::SetProfile {
+            name: None,
+            about: text,
+        }),
+        _ => {
+            log::warn!("unknown setting {key}");
+            return;
+        }
+    };
+    engine.send(input);
+}
+
+/// Tries a password on the lock screen. The password goes straight to the
+/// core's check and is never logged.
+#[tauri::command]
+fn unlock(engine: State<'_, Engine>, password: String) {
+    engine.send(Input::Edit(Box::new(move |app| {
+        app.app_lock.entry = password;
+        app.actions.push(Action::UnlockApp);
+    })));
+}
+
+#[tauri::command]
+fn lock_now(engine: State<'_, Engine>) {
+    engine.send(Input::Action(Action::LockApp));
+}
+
+/// "Forgot password?": `open` asks whether to unlink; `unlink` unlinks
+/// every account, which is the only way past a forgotten password.
+#[tauri::command]
+fn forgot_password(engine: State<'_, Engine>, open: bool, unlink: bool) {
+    engine.send(Input::Action(if unlink {
+        Action::UnlinkLockedApp
+    } else {
+        Action::ForgotAppPassword(open)
+    }));
+}
+
+/// Sets, changes or turns off the app lock's password (Settings ›
+/// Privacy). `mode` is set, change or turnOff; `None` closes the form.
+#[tauri::command]
+fn app_lock_form(
+    engine: State<'_, Engine>,
+    mode: Option<String>,
+    current: String,
+    new: String,
+    confirm: String,
+) {
+    use zapfast::app_lock::{Form, FormMode};
+    let mode = match mode.as_deref() {
+        Some("set") => FormMode::Set,
+        Some("change") => FormMode::Change,
+        Some("turnOff") => FormMode::TurnOff,
+        _ => {
+            engine.send(Input::Action(Action::AppLockForm(None)));
+            return;
+        }
+    };
+    engine.send(Input::Edit(Box::new(move |app| {
+        if app.app_lock.checking() {
+            return;
+        }
+        app.app_lock.form = Some(Form {
+            current,
+            new,
+            confirm,
+            ..Form::new(mode)
+        });
+        app.actions.push(Action::SubmitAppLockForm);
+    })));
+}
+
+/// The secret code that shows locked chats; `None` removes it.
+#[tauri::command]
+fn set_chat_lock_code(engine: State<'_, Engine>, code: Option<String>) {
+    let code = code
+        .map(|code| code.trim().to_owned())
+        .filter(|code| !code.is_empty());
+    engine.send(Input::Action(Action::SetChatLockCode(code)));
+}
+
+#[tauri::command]
+fn fetch_blocklist(engine: State<'_, Engine>) {
+    engine.send(Input::Action(Action::FetchBlocklist));
+}
+
+#[tauri::command]
+fn set_blocked(engine: State<'_, Engine>, chat: String, blocked: bool) {
+    engine.send(Input::Action(Action::SetBlocked { chat, blocked }));
+}
+
+/// The wallpaper colour for the light or the dark theme, by its stored
+/// name. Set directly: the core's action picks the theme from a palette the
+/// headless core does not keep in step with the page.
+#[tauri::command]
+fn set_wallpaper_color(engine: State<'_, Engine>, color: String, dark: bool) {
+    let Ok(color) = serde_json::from_value::<zapfast::settings::WallpaperColor>(
+        serde_json::Value::String(color),
+    ) else {
+        return;
+    };
+    engine.send(Input::Edit(Box::new(move |app| {
+        if dark {
+            app.settings.dark_wallpaper_color = color;
+        } else {
+            app.settings.wallpaper_color = color;
+        }
+        app.actions.push(Action::SettingsChanged);
+    })));
+}
+
+/// The person used the page: keyboard or pointer. Restarts the app
+/// lock's idle timer, which egui's input used to restart.
+#[tauri::command]
+fn activity(engine: State<'_, Engine>) {
+    engine.send(Input::Activity);
+}
+
+/// Unlinks this computer; the page asks first.
+#[tauri::command]
+fn unlink(engine: State<'_, Engine>) {
+    engine.send(Input::Action(Action::Unlink));
+}
+
 fn start() -> Start {
     let mut args = std::env::args().skip(1);
     let mut start = Start {
@@ -172,18 +366,20 @@ pub fn run() {
         return;
     }
     let start = start();
+    let start_hidden = std::env::args().any(|arg| arg == desktop::START_HIDDEN);
     tauri::Builder::default()
+        // A second start brings the first window forward (REQ-WEBUI-012.A2).
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            desktop::show(app);
+        }))
         .register_uri_scheme_protocol("zapmedia", media::serve)
         .setup(move |app| {
             let engine = engine::spawn(app.handle().clone(), start);
             app.manage(engine);
+            desktop::setup(app, start_hidden)?;
             Ok(())
         })
-        .on_window_event(|window, event| {
-            if let WindowEvent::Focused(focused) = event {
-                window.state::<Engine>().send(Input::Focused(*focused));
-            }
-        })
+        .on_window_event(desktop::on_window_event)
         .invoke_handler(tauri::generate_handler![
             refresh,
             open_chat,
@@ -203,8 +399,33 @@ pub fn run() {
             close_info,
             leave_group,
             set_star,
-            go_to_message
+            go_to_message,
+            set_setting,
+            unlink,
+            activity,
+            unlock,
+            lock_now,
+            forgot_password,
+            app_lock_form,
+            set_chat_lock_code,
+            fetch_blocklist,
+            set_blocked,
+            set_wallpaper_color
         ])
-        .run(tauri::generate_context!())
-        .expect("ZapFast could not start");
+        .build(tauri::generate_context!())
+        .expect("ZapFast could not start")
+        .run(|app, event| match event {
+            // ⌘Q and the app menu's Quit save through the core first; the
+            // core's own exit carries a code and goes through.
+            tauri::RunEvent::ExitRequested {
+                api, code: None, ..
+            } => {
+                api.prevent_exit();
+                desktop::quit(app);
+            }
+            // Clicking the Dock icon with the window hidden shows it.
+            #[cfg(target_os = "macos")]
+            tauri::RunEvent::Reopen { .. } => desktop::show(app),
+            _ => {}
+        });
 }

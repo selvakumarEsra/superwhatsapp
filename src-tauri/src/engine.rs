@@ -3,6 +3,8 @@
 //! an egui context that draws nothing; the page gets a new [`view::State`]
 //! whenever what it shows changes.
 
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::time::{Duration, Instant};
 
@@ -19,7 +21,14 @@ const IDLE_STEP: Duration = Duration::from_millis(500);
 
 pub enum Input {
     Action(Action),
+    /// Changes the core's state directly, for settings the egui build
+    /// changes in place rather than through an action.
+    Edit(Box<dyn FnOnce(&mut App) + Send>),
     Focused(bool),
+    /// The person used the page; the app lock's idle timer restarts.
+    Activity,
+    /// Saves what is unsaved and ends the app.
+    Quit,
     /// The page asks for the current state (on load).
     Refresh,
     Wake,
@@ -28,11 +37,18 @@ pub enum Input {
 #[derive(Clone)]
 pub struct Engine {
     tx: Sender<Input>,
+    /// Settings › Keep running when the window closes, as last stepped.
+    keep_running: Arc<AtomicBool>,
 }
 
 impl Engine {
     pub fn send(&self, input: Input) {
         let _ = self.tx.send(input);
+    }
+
+    /// Whether closing the window keeps ZapFast running in the tray.
+    pub fn keeps_running(&self) -> bool {
+        self.keep_running.load(Ordering::Relaxed)
     }
 }
 
@@ -45,11 +61,13 @@ pub struct Start {
 pub fn spawn(handle: AppHandle, start: Start) -> Engine {
     let (tx, rx) = channel();
     let wake = tx.clone();
+    let keep_running = Arc::new(AtomicBool::new(false));
+    let shared = keep_running.clone();
     std::thread::Builder::new()
         .name("zapfast-core".into())
-        .spawn(move || run(handle, start, rx, wake))
+        .spawn(move || run(handle, start, rx, wake, shared))
         .expect("core thread");
-    Engine { tx }
+    Engine { tx, keep_running }
 }
 
 fn make_app(start: &Start) -> App {
@@ -79,7 +97,13 @@ fn make_app(start: &Start) -> App {
     .expect("core")
 }
 
-fn run(handle: AppHandle, start: Start, rx: Receiver<Input>, wake: Sender<Input>) {
+fn run(
+    handle: AppHandle,
+    start: Start,
+    rx: Receiver<Input>,
+    wake: Sender<Input>,
+    keep_running: Arc<AtomicBool>,
+) {
     let mut app = make_app(&start);
     let ctx = egui::Context::default();
     ctx.set_request_repaint_callback(move |_| {
@@ -99,7 +123,14 @@ fn run(handle: AppHandle, start: Start, rx: Receiver<Input>, wake: Sender<Input>
         for input in first.into_iter().chain(rx.try_iter()) {
             match input {
                 Input::Action(action) => app.actions.push(action),
+                Input::Edit(edit) => edit(&mut app),
                 Input::Focused(now) => focused = now,
+                Input::Activity => app.app_lock.note_input(),
+                Input::Quit => {
+                    app.shutdown();
+                    handle.exit(0);
+                    return;
+                }
                 Input::Refresh => force = true,
                 Input::Wake => {}
             }
@@ -125,6 +156,7 @@ fn run(handle: AppHandle, start: Start, rx: Receiver<Input>, wake: Sender<Input>
         });
         // Nothing is drawn, so texture uploads are discarded.
         output.textures_delta.clear();
+        keep_running.store(app.settings.keep_running_in_background, Ordering::Relaxed);
         let state = view::build(&mut app);
         if force || last.as_ref() != Some(&state) {
             if let Err(error) = handle.emit("zapfast://state", &state) {

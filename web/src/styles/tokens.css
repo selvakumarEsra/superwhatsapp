@@ -40,6 +40,8 @@
   --menu-bg: #ffffff;
   --menu-hover: #f0f0f0;
   --danger: #e5484d;
+  --scrollbar: rgba(0, 0, 0, 0.2);
+  --switch-off: #d1d1d6;
   --overlay: rgba(0, 0, 0, 0.35);
   --info-w: 340px;
   --shadow-bubble: 0 0.5px 0.5px rgba(0, 0, 0, 0.13);
@@ -146,8 +148,9 @@
   --dur-fade: 150ms;
 }
 
+/* Dark: follows the system unless Settings chose a theme (data-theme). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
     --app-bg: #1e1e1e;
     --sidebar-bg: #272625;
@@ -175,6 +178,8 @@
     --menu-bg: #2c2c2c;
     --menu-hover: #3a3a3a;
     --danger: #ff6369;
+    --scrollbar: rgba(255, 255, 255, 0.16);
+    --switch-off: #48484a;
     --overlay: rgba(0, 0, 0, 0.55);
     --shadow-bubble: none;
     --shadow-menu: 0 6px 24px rgba(0, 0, 0, 0.5);
@@ -205,6 +210,66 @@
     --quote-bg: rgba(255, 255, 255, 0.06);
   }
 }
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --app-bg: #1e1e1e;
+    --sidebar-bg: #272625;
+    --sidebar-selected: #353434;
+    --panel-bg: #1e1e1e;
+    --panel-border: #3a3a3a;
+    --search-bg: #3b3b3b;
+    --row-hover: #2a2a2a;
+    --row-selected: #353535;
+    --divider: #3b3b3b;
+    --round-button-bg: #3c3c3c;
+    --conversation-bg: #0a0a0a;
+    --conversation-header-bg: #161616;
+    --conversation-header-border: #28282a;
+    --header-pill-bg: #2c2c2c;
+    --wallpaper-opacity: 0.07;
+    --wallpaper-filter: invert(1);
+    --bubble-in: #242626;
+    --bubble-out: #274d3a;
+    --composer-button-bg: #2b2b2b;
+    --input-bg: #2c2c2c;
+    --input-border: rgba(255, 255, 255, 0.22);
+    --date-chip-bg: #161717;
+    --empty-bg: #161616;
+    --menu-bg: #2c2c2c;
+    --menu-hover: #3a3a3a;
+    --danger: #ff6369;
+    --scrollbar: rgba(255, 255, 255, 0.16);
+    --switch-off: #48484a;
+    --overlay: rgba(0, 0, 0, 0.55);
+    --shadow-bubble: none;
+    --shadow-menu: 0 6px 24px rgba(0, 0, 0, 0.5);
+    --text-primary: #ffffff;
+    --text-secondary: #a8a6a6;
+    --text-section: #81807f;
+    --text-meta: rgba(255, 255, 255, 0.72);
+    --text-call-sub: #c4c4c4;
+    --icon: #d9d9d9;
+    --icon-active: #ffffff;
+    --accent: #5ab96b;
+    --accent-text: #66d27a;
+    --accent-fg: #060105;
+    --new-chat-bg: #1eac62;
+    --unread: #5ab96b;
+    --unread-time: #66d27a;
+    --unread-fg: #060105;
+    --avatar-0-bg: #242445; --avatar-0-fg: #9d9df2;
+    --avatar-1-bg: #321a29; --avatar-1-fg: #ee7aa0;
+    --avatar-2-bg: #1a3224; --avatar-2-fg: #6fd58e;
+    --avatar-3-bg: #1a2a36; --avatar-3-fg: #79b8e6;
+    --avatar-4-bg: #352a1a; --avatar-4-fg: #e6ae6f;
+    --avatar-5-bg: #3a3a3a; --avatar-5-fg: #b3b3b3;
+    --reaction-border: #0a0a0a;
+    --tick: #989696;
+    --tick-read: #64b5e0;
+    --link: #53bdeb;
+    --quote-bg: rgba(255, 255, 255, 0.06);
+  }
 
 @media (prefers-reduced-motion: reduce) {
   :root {

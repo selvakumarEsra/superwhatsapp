@@ -228,7 +228,8 @@ lock screen.
 implementations:
   - web/src/features/login/Login.tsx:Login
   - web/src/features/accounts/Switcher.tsx:Switcher
-  - web/src/features/lock/Lock.tsx:Lock
+  - web/src/features/LockScreen.tsx:LockScreen
+  - src-tauri/src/lib.rs:unlock
 
 ## Acceptance
 <!-- id: REQ-WEBUI-005.A1 -->
@@ -438,6 +439,7 @@ key.
 
 implementations:
   - web/src/features/settings/Settings.tsx:Settings
+  - src-tauri/src/lib.rs:set_setting
   - src-tauri/src/desktop.rs:setup
 
 ## Acceptance

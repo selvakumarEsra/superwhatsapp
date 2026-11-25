@@ -37,7 +37,7 @@ function Switch(p: { icon: JSX.Element; label: string; on: boolean; onToggle: ()
       <span
         aria-hidden="true"
         class="relative inline-block rounded-full"
-        style={{ width: "30px", height: "18px", background: p.on ? "var(--accent)" : "var(--round-button-bg)", transition: "background .15s" }}
+        style={{ width: "30px", height: "18px", background: p.on ? "var(--accent)" : "var(--switch-off)", transition: "background .15s" }}
       >
         <span
           class="absolute rounded-full"

@@ -2,7 +2,7 @@
 // WhatsApp Desktop for macOS: a round + button, a pill field with the
 // emoji button inside, and a green round mic or send button.
 import { createSignal, Show } from "solid-js";
-import { commands } from "../../lib/bridge";
+import { commands, state } from "../../lib/bridge";
 import { EmojiIcon, MicIcon, PlusIcon, SendIcon } from "../../components/Icons";
 
 const round = {
@@ -59,7 +59,9 @@ export default function Composer(p: { chat: string }) {
             grow();
           }}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
+            // Settings › Chats › Enter sends; otherwise ⌘/Ctrl+Enter sends.
+            const sends = state.settings.enterSends ? !e.shiftKey : e.metaKey || e.ctrlKey;
+            if (e.key === "Enter" && sends) {
               e.preventDefault();
               send();
             }

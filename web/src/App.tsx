@@ -1,6 +1,6 @@
 // The window: sidebar, chat list, conversation and info panel, as on
 // WhatsApp Desktop for macOS (REQ-WEBUI-004).
-import { createSignal, onMount, Show } from "solid-js";
+import { createEffect, createSignal, onMount, Show } from "solid-js";
 import { commands, connect, state } from "./lib/bridge";
 import { ask, asking } from "./lib/ui";
 import Sidebar, { type Section } from "./components/Sidebar";
@@ -9,7 +9,9 @@ import ChatList from "./features/chats/ChatList";
 import Conversation from "./features/conversation/Conversation";
 import InfoPanel from "./features/info/InfoPanel";
 import EmptyPane from "./features/EmptyPane";
+import Settings from "./features/settings/Settings";
 import Link from "./features/Link";
+import LockScreen from "./features/LockScreen";
 
 /** Znga and Insights, which the new interface does not draw yet. */
 function Pending(p: { name: string }) {
@@ -28,10 +30,34 @@ function Pending(p: { name: string }) {
 export default function App() {
   onMount(() => void connect());
   // Znga and Insights are chosen here; the other sections come from the core.
-  const [panel, setPanel] = createSignal<"znga" | "insights" | null>(null);
-  const section = (): Section => panel() ?? state.section;
-  const choose = (next: Section) => {
-    if (next === "znga" || next === "insights") {
+  const [panel, setPanel] = createSignal<"znga" | "insights" | "settings" | null>(null);
+  // Outside Tauri, `#settings` opens Settings, for screenshots.
+  if (!("__TAURI_INTERNALS__" in window) && location.hash.startsWith("#settings")) setPanel("settings");
+  const section = (): Section | "settings" => panel() ?? state.section;
+  // The chosen theme and zoom apply to the whole page (REQ-WEBUI-012).
+  createEffect(() => {
+    const root = document.documentElement;
+    if (state.settings.theme === "system") root.removeAttribute("data-theme");
+    else root.setAttribute("data-theme", state.settings.theme);
+    root.style.setProperty("zoom", String(state.settings.zoom));
+  });
+  // Keyboard and pointer use restarts the app lock's idle timer; at most
+  // one report every few seconds.
+  onMount(() => {
+    if (!("__TAURI_INTERNALS__" in window)) return;
+    let last = 0;
+    const used = () => {
+      const now = Date.now();
+      if (now - last < 5000) return;
+      last = now;
+      void commands.activity();
+    };
+    for (const kind of ["keydown", "pointerdown", "pointermove", "wheel"]) {
+      window.addEventListener(kind, used, { passive: true });
+    }
+  });
+  const choose = (next: Section | "settings") => {
+    if (next === "znga" || next === "insights" || next === "settings") {
       setPanel(next);
       return;
     }
@@ -41,20 +67,31 @@ export default function App() {
   const linked = () => state.chats.length > 0 || ["connected", "connecting", "disconnected"].includes(state.link.state);
   const unread = () => state.chats.reduce((n, c) => n + c.unread, 0);
   return (
+    <Show when={!state.lock} fallback={<LockScreen lock={state.lock!} />}>
     <Show when={linked()} fallback={<Link link={state.link} />}>
       <div class="flex h-full w-full">
         <Sidebar section={section()} onSection={choose} unread={unread()} />
-        <Show when={panel()} fallback={<ChatList />}>
-          {(name) => <Pending name={name() === "znga" ? "Znga" : "Insights"} />}
+        <Show
+          when={panel() === "settings"}
+          fallback={
+            <>
+              <Show when={panel()} fallback={<ChatList />}>
+                {(name) => <Pending name={name() === "znga" ? "Znga" : "Insights"} />}
+              </Show>
+              <Show when={state.open} fallback={<EmptyPane />}>
+                <Conversation chat={state.open!} />
+              </Show>
+              <InfoPanel />
+            </>
+          }
+        >
+          <Settings />
         </Show>
-        <Show when={state.open} fallback={<EmptyPane />}>
-          <Conversation chat={state.open!} />
-        </Show>
-        <InfoPanel />
       </div>
       <Show when={asking()}>
         {(q) => <Confirm title={q().title} body={q().body} action={q().action} danger onConfirm={q().run} onClose={() => ask(null)} />}
       </Show>
+    </Show>
     </Show>
   );
 }
