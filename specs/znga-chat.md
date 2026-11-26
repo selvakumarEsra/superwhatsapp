@@ -13,12 +13,15 @@ list**: a chat named "Znga" where everything between the person and the AI
 happens as a conversation, and where Znga speaks first when something needs
 the person. Its configuration moves into Settings.
 
-This is built in the Tauri interface only (specs/tauri-ui.md). The egui
-Znga panel (`src/znga/ui.rs`) is not changed; it is deleted with the rest
-of egui (REQ-WEBUI-001). The Znga logic that is not drawing (engines,
-runner, triage, briefings, drafts, memory, promises, Sentinel) stays in the
-core and is exposed to the web interface through typed commands and events
-(REQ-WEBUI-002).
+This is built in both interfaces. In the egui app (the one SuperWhatsapp
+ships today) the separate Znga window is gone: the rail's ✨ opens the Znga
+chat in place of the conversation (`src/znga/chat_ui.rs`), and Setup and
+Memory are the Znga section of Settings (`src/znga/ui.rs:settings`). The
+Tauri interface (specs/tauri-ui.md) draws the same thing on the web side.
+The Znga logic that is not drawing (engines, runner, triage, briefings,
+drafts, memory, promises, Sentinel, the chat itself in
+`src/znga/chat.rs` and `src/znga/thread.rs`) stays in the core and is shared
+by both.
 
 What moves where, from the old panel's tabs:
 
@@ -39,7 +42,7 @@ WhatsApp logos or artwork (Znga's avatar is SuperWhatsapp's own sparkle).
 Non-goals: Znga sending on its own; a Znga chat that syncs to WhatsApp's
 servers or to the phone (the existing opt-in copy to "Message yourself",
 REQ-ZNGA-006, stays as it is); answering in "Message yourself" changes
-nothing (REQ-ZNGA-012 to 014 stay); Znga in the egui interface.
+nothing (REQ-ZNGA-012 to 014 stay).
 
 <!-- id: REQ-ZCHAT-001 -->
 ## Znga MUST appear in the chat list as a local chat

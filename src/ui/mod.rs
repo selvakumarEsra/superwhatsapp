@@ -135,9 +135,20 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
 /// buttons, its rows and the rail beside it lead on to the rest.
 fn list_pane_only(app: &App) -> bool {
     match app.page {
-        Page::Chats => app.current_chat().is_none(),
+        Page::Chats => app.current_chat().is_none() && !znga_open(app),
         Page::Calls => app.current_chat().is_none() || !app.call_picked(),
         Page::Settings | Page::Wallpaper => false,
+    }
+}
+
+/// Whether the Znga chat fills the pane a chat would (znga hook).
+fn znga_open(app: &App) -> bool {
+    #[cfg(feature = "znga")]
+    return crate::znga::chat_ui::showing(app);
+    #[cfg(not(feature = "znga"))]
+    {
+        let _ = app;
+        false
     }
 }
 

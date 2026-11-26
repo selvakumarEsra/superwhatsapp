@@ -76,6 +76,87 @@ pub enum Card {
 }
 
 impl Card {
+    /// How the card reads: (kind, title, body, meta). Shared by both
+    /// interfaces so they say the same thing.
+    pub fn view(&self) -> (&'static str, String, String, String) {
+        match self {
+            Card::NeedsYou {
+                chat_title,
+                sender,
+                text,
+                reason,
+                ..
+            } => (
+                "needsYou",
+                format!("{chat_title} needs you"),
+                format!("{sender}: {text}"),
+                reason.clone(),
+            ),
+            Card::Briefing { text } => ("briefing", String::new(), text.clone(), String::new()),
+            Card::Draft {
+                chat_title,
+                text,
+                label,
+                ..
+            } => (
+                "draft",
+                format!("{label} to {chat_title}"),
+                text.clone(),
+                String::new(),
+            ),
+            Card::CatchUp { chat_title, .. } => {
+                ("catchUp", chat_title.clone(), String::new(), String::new())
+            }
+            Card::Plan {
+                chat_title,
+                title,
+                start,
+                place,
+                ..
+            } => (
+                "plan",
+                title.clone(),
+                if place.is_empty() {
+                    card_time(*start)
+                } else {
+                    format!("{}, {place}", card_time(*start))
+                },
+                format!("From {chat_title}"),
+            ),
+            Card::Voice {
+                chat_title,
+                sender,
+                seconds,
+                ..
+            } => (
+                "voice",
+                format!("Voice note from {sender}"),
+                format!("{seconds} s"),
+                chat_title.clone(),
+            ),
+            Card::Promise {
+                chat_title,
+                text,
+                owes_me,
+                ..
+            } => (
+                "promise",
+                if chat_title.is_empty() {
+                    "Reminder".into()
+                } else if *owes_me {
+                    format!("You promised {chat_title}")
+                } else {
+                    format!("{chat_title} is waiting on you")
+                },
+                text.clone(),
+                String::new(),
+            ),
+            Card::Drift {
+                chat_title, reason, ..
+            } => ("drift", chat_title.clone(), reason.clone(), String::new()),
+        }
+    }
+
     /// The buttons this card offers, as (action, label), in order
     /// (REQ-ZCHAT-003.A1).
     pub fn actions(&self) -> &'static [(&'static str, &'static str)] {
@@ -783,6 +864,17 @@ pub fn explain_error(error: &str, engine: super::config::Engine) -> String {
         ""
     };
     format!("⚠ {error}{hint}")
+}
+
+/// A plan's start as "Fri 28 Nov, 18:00", in local time.
+pub fn card_time(at: i64) -> String {
+    jiff::Timestamp::from_second(at)
+        .map(|t| {
+            t.to_zoned(jiff::tz::TimeZone::system())
+                .strftime("%a %-d %b, %H:%M")
+                .to_string()
+        })
+        .unwrap_or_default()
 }
 
 #[cfg(test)]

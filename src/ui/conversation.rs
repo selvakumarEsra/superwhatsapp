@@ -60,6 +60,11 @@ const NOT_SENT_HINT: &str =
     "This message could not be sent, and SuperWhatsapp will not retry it. Send it again yourself.";
 
 pub fn show(app: &mut App, ui: &mut egui::Ui) {
+    #[cfg(feature = "znga")]
+    if crate::znga::chat_ui::showing(app) {
+        crate::znga::chat_ui::show(app, ui); // znga hook
+        return;
+    }
     let Some(chat) = app.current_chat().cloned() else {
         super::banner(app, ui);
         super::voice_bar::show(app, ui);
@@ -1517,6 +1522,8 @@ fn composer(app: &mut App, ui: &mut egui::Ui, chat: &Chat, review_send: Option<b
                 selection_bar(app, ui, &chat.id, &selected);
                 return;
             }
+            #[cfg(feature = "znga")]
+            crate::znga::chat_ui::offer_bar(app, ui, &chat.id); // znga hook
             if app.blocklist.contains(&chat.id) {
                 if app.recording.is_some() {
                     widgets::raised(ui, &palette, composer_pill(&palette), |ui| recording_strip(app, ui));
@@ -2239,7 +2246,7 @@ fn last_line<R>(ui: &mut egui::Ui, line: f32, add: impl FnOnce(&mut egui::Ui) ->
 }
 
 /// The rounded field that holds the composer's controls, or the recorder.
-fn composer_pill(palette: &Palette) -> Frame {
+pub(crate) fn composer_pill(palette: &Palette) -> Frame {
     // Glass over a vibrant conversation, as the header's.
     let (fill, edge) = if palette.vibrant() {
         (palette.glass(), palette.glass_edge())
@@ -2301,6 +2308,8 @@ fn composer_tools_menu(app: &mut App, chat: &Chat, plus: &egui::Response) {
                     app.actions
                         .push(Action::ShowDialog(Dialog::CreatePoll(chat.id.clone())));
                 }
+                #[cfg(feature = "znga")]
+                crate::znga::chat_ui::composer_menu(app, ui, &chat.id); // znga hook
             });
     }
     if draw_open != app.composer_tools_open {

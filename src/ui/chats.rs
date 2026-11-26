@@ -929,6 +929,8 @@ fn list(app: &mut App, ui: &mut egui::Ui) {
         results(app, ui);
         return;
     }
+    #[cfg(feature = "znga")]
+    crate::znga::chat_ui::row(app, ui); // znga hook
     let chats: Vec<Chat> = app.visible_chats().into_iter().cloned().collect();
     if chats.is_empty() {
         // The favorites title is translated, so it is bound here: the tuple

@@ -7496,6 +7496,10 @@ impl App {
                 self.apply(Action::Open(page), ctx);
             }
             Action::OpenChat(id) => {
+                #[cfg(feature = "znga")]
+                {
+                    self.znga.chat_open = false; // znga hook
+                }
                 // A chat where someone mentioned us opens at the mention, as
                 // on WhatsApp, rather than at the first unread message.
                 let mention = self

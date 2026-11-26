@@ -25,6 +25,7 @@
 pub mod archive_ask;
 pub mod calendar;
 pub mod chat;
+pub mod chat_ui;
 pub mod coach;
 pub mod config;
 #[cfg(any(test, feature = "demo"))]
@@ -328,6 +329,11 @@ pub struct Znga {
     /// Chats whose next suggested reply goes to their composer.
     pub(crate) composer_asks: HashSet<String>,
     pub offer: Option<Offer>,
+    /// What the person is writing in the Znga chat (egui).
+    pub chat_draft: String,
+    /// The composer's text before Znga replaced it, while Undo is offered:
+    /// (chat, text) (egui).
+    pub composer_undo: Option<(String, String)>,
     pub(crate) next_offer: u64,
     /// Plans already reminded of, by title and start.
     pub(crate) plans_reminded: HashSet<(String, i64)>,
@@ -405,6 +411,8 @@ impl Znga {
             asked: HashSet::new(),
             composer_asks: HashSet::new(),
             offer: None,
+            chat_draft: String::new(),
+            composer_undo: None,
             next_offer: 0,
             plans_reminded: HashSet::new(),
             last_digest_check: None,

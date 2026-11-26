@@ -167,6 +167,20 @@ fn say_status_error(app: &mut App) {
 // What the person writes to Znga (REQ-ZCHAT-002, REQ-ZCHAT-006).
 
 /// A message the person wrote in the Znga chat.
+/// Opens the Znga chat in place of the open conversation (REQ-ZCHAT-001.A6).
+pub fn open_thread(app: &mut App) {
+    if app.open_chat.is_some() {
+        app.actions.push(crate::model::Action::CloseChat);
+    }
+    if app.page != crate::model::Page::Chats {
+        app.actions
+            .push(crate::model::Action::Open(crate::model::Page::Chats));
+    }
+    app.znga.chat_open = true;
+    let account = active(app);
+    app.znga.threads.entry(account).or_default().mark_read();
+}
+
 pub fn send_message(app: &mut App, text: &str) {
     let text = text.trim();
     if text.is_empty() || !enabled(app) {

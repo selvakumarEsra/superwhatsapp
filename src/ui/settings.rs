@@ -904,7 +904,22 @@ fn sections(app: &App) -> Vec<Section> {
         |ui, app| about(app, ui),
     );
 
-    vec![
+    #[cfg(feature = "znga")]
+    let znga = {
+        // znga hook: Znga's setup, memory and log (REQ-ZCHAT-007).
+        let mut znga = Section::new(Text::from("Znga"));
+        znga.block(
+            vec![
+                "AI".into(),
+                "engine".into(),
+                "assistant".into(),
+                "Znga".into(),
+            ],
+            |ui, app| crate::znga::ui::settings(app, ui),
+        );
+        znga
+    };
+    let mut all = vec![
         appearance,
         chats,
         notifications,
@@ -913,7 +928,10 @@ fn sections(app: &App) -> Vec<Section> {
         account_section,
         files,
         about_section,
-    ]
+    ];
+    #[cfg(feature = "znga")]
+    all.insert(4, znga);
+    all
 }
 
 /// The app lock: a password, how long SuperWhatsapp may go unused, and the form
