@@ -3,8 +3,8 @@
   <id>rocks.zapfast.ZapFast</id>
   <name>SuperWhatsapp</name>
   <summary>A native WhatsApp client</summary>
-  <developer id="me.paolino">
-    <name>Carmine Paolino</name>
+  <developer id="io.github.selvakumaresra">
+    <name>Selvakumar Esra</name>
   </developer>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT AND GPL-2.0-only</project_license>

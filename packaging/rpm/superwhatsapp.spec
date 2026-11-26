@@ -1,4 +1,4 @@
-# SuperWhatsapp built from its release source, for Fedora COPR (paolino/superwhatsapp) and
+# SuperWhatsapp built from its release source, for Fedora COPR and
 # openSUSE OBS. Cargo fetches the locked dependencies while building, so the
 # COPR project and the OBS package need network access during builds.
 
@@ -76,5 +76,5 @@ install -Dm755 contrib/omarchy/zapfast-theme %{buildroot}%{_datadir}/superwhatsa
 %{_datadir}/superwhatsapp/
 
 %changelog
-* @DATE@ Carmine Paolino <carmine@paolino.me> - @VERSION@-1
+* @DATE@ Selvakumar Esra <selvakumar.esra.ai@gmail.com> - @VERSION@-1
 - SuperWhatsapp @VERSION@: https://github.com/selvakumarEsra/superwhatsapp/releases/tag/v@VERSION@

@@ -15,7 +15,7 @@ libraries:
     rpm: pipewire-libs
 nfpm:
   name: superwhatsapp
-  maintainer: Carmine Paolino <carmine@paolino.me>
+  maintainer: Selvakumar Esra <selvakumar.esra.ai@gmail.com>
   homepage: https://selvakumaresra.github.io/superwhatsapp
   description: Fast native WhatsApp client
   license: MIT
