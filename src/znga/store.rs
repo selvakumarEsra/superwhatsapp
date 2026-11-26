@@ -18,6 +18,7 @@ use super::proactive::Seen;
 use super::promises::{Owes, Promise, State};
 use super::provider::Turn;
 use super::sentinel::{Entry, Origin};
+use super::thread;
 
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS ask_turns (
@@ -42,6 +43,14 @@ CREATE TABLE IF NOT EXISTS promises (
     state TEXT NOT NULL,
     reminded INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS thread (
+    position INTEGER PRIMARY KEY,
+    at INTEGER NOT NULL,
+    from_user INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    items TEXT NOT NULL,
+    unasked INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS audit (
     at INTEGER NOT NULL,
     action TEXT NOT NULL,
@@ -65,6 +74,8 @@ pub struct Loaded {
     pub facts: Vec<Fact>,
     pub promises: Vec<Promise>,
     pub audit: Vec<Entry>,
+    /// The Znga chat (REQ-ZCHAT-001).
+    pub thread: Vec<thread::Entry>,
 }
 
 impl Db {
@@ -143,11 +154,26 @@ impl Db {
             .into_iter()
             .rev()
             .collect();
+        let thread = c
+            .prepare("SELECT position, at, from_user, text, items, unasked FROM thread ORDER BY position")?
+            .query_map([], |row| {
+                let items: String = row.get(4)?;
+                Ok(thread::Entry {
+                    id: row.get::<_, i64>(0)? as u64 + 1,
+                    at: row.get(1)?,
+                    from_person: row.get(2)?,
+                    text: row.get(3)?,
+                    items: serde_json::from_str(&items).unwrap_or_default(),
+                    unasked: row.get(5)?,
+                })
+            })?
+            .collect::<rusqlite::Result<_>>()?;
         Ok(Loaded {
             ask,
             facts,
             promises,
             audit,
+            thread,
         })
     }
 
@@ -159,6 +185,28 @@ impl Db {
             tx.execute(
                 "INSERT INTO ask_turns (position, from_user, text) VALUES (?1, ?2, ?3)",
                 params![position as i64, turn.from_user, turn.text],
+            )?;
+        }
+        tx.commit()
+    }
+
+    pub fn save_thread(&mut self, entries: &[thread::Entry]) -> rusqlite::Result<()> {
+        let tx = self.connection.transaction()?;
+        tx.execute("DELETE FROM thread", [])?;
+        let skip = entries.len().saturating_sub(thread::KEEP);
+        for (position, entry) in entries.iter().skip(skip).enumerate() {
+            let items = serde_json::to_string(&entry.items).unwrap_or_else(|_| "[]".into());
+            tx.execute(
+                "INSERT INTO thread (position, at, from_user, text, items, unasked)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![
+                    position as i64,
+                    entry.at,
+                    entry.from_person,
+                    entry.text,
+                    items,
+                    entry.unasked
+                ],
             )?;
         }
         tx.commit()
@@ -228,6 +276,10 @@ pub enum Job {
     SaveFacts {
         archive: PathBuf,
         facts: Vec<Fact>,
+    },
+    SaveThread {
+        archive: PathBuf,
+        entries: Vec<thread::Entry>,
     },
     SavePromises {
         archive: PathBuf,
@@ -396,6 +448,11 @@ fn run(dbs: &mut HashMap<PathBuf, Db>, job: Job) -> Option<Reply> {
                 db(dbs, &archive).and_then(|db| db.save_ask(&turns).map_err(|e| e.to_string()));
             result.err().and_then(failed)
         }
+        Job::SaveThread { archive, entries } => {
+            let result = db(dbs, &archive)
+                .and_then(|db| db.save_thread(&entries).map_err(|e| e.to_string()));
+            result.err().and_then(failed)
+        }
         Job::SaveFacts { archive, facts } => {
             let result =
                 db(dbs, &archive).and_then(|db| db.save_facts(&facts).map_err(|e| e.to_string()));
@@ -532,6 +589,49 @@ mod tests {
         let turns = vec![Turn::user("when does Ravi land?"), Turn::assistant("At 9.")];
         db.save_ask(&turns).unwrap();
         assert_eq!(db.load("1").unwrap().ask, turns);
+    }
+
+    #[test]
+    fn the_znga_chat_survives_a_reload() {
+        let mut db = db();
+        let mut chat = thread::Thread::default();
+        chat.post_person("Do I owe anyone a reply?", 1);
+        chat.post(
+            "Ada asked about Sunday.",
+            vec![thread::Item::new(thread::Card::CatchUp {
+                chat: "ada".into(),
+                chat_title: "Ada".into(),
+            })],
+            2,
+            false,
+        );
+        db.save_thread(chat.entries()).unwrap();
+        assert_eq!(db.load("1").unwrap().thread, chat.entries());
+    }
+
+    #[test]
+    fn the_znga_chat_file_holds_no_readable_text() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("znga.db");
+        let key = [7u8; 32];
+        let open = || {
+            Db::new(crate::archive::Archive::znga_connection_with_key(&path, &key).unwrap())
+                .unwrap()
+        };
+        let mut chat = thread::Thread::default();
+        chat.post_person("Where is the Zanzibar ticket?", 1);
+        chat.post("In the Zanzibar group, on Monday.", Vec::new(), 2, false);
+        let mut db = open();
+        db.save_thread(chat.entries()).unwrap();
+        drop(db);
+        let mut bytes = std::fs::read(&path).unwrap();
+        for extra in ["znga.db-wal", "znga.db-journal"] {
+            if let Ok(more) = std::fs::read(dir.path().join(extra)) {
+                bytes.extend(more);
+            }
+        }
+        assert!(!bytes.windows(8).any(|w| w == b"Zanzibar"));
+        assert_eq!(open().load("1").unwrap().thread, chat.entries());
     }
 
     #[test]

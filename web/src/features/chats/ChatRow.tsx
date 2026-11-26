@@ -2,7 +2,8 @@
 // macOS draws it. Under the Favourites heading a row is one line, the name.
 // A right click opens the chat's menu (chatMenu.ts).
 import { createSignal, Show } from "solid-js";
-import { state, type ChatRow as Row } from "../../lib/bridge";
+import { state, ZNGA_CHAT, type ChatRow as Row } from "../../lib/bridge";
+import ZngaAvatar from "../../components/ZngaAvatar";
 import { ask } from "../../lib/ui";
 import { Menu } from "../../components/Menu";
 import { chatMenu } from "./chatMenu";
@@ -26,7 +27,8 @@ export default function ChatRow(p: { row: Row; selected: boolean; compact?: bool
       onKeyDown={(e) => e.key === "Enter" && p.onOpen()}
       onContextMenu={(e) => {
         e.preventDefault();
-        setMenu({ x: e.clientX, y: e.clientY });
+        // The Znga chat is local: no WhatsApp chat menu.
+        if (p.row.id !== ZNGA_CHAT) setMenu({ x: e.clientX, y: e.clientY });
       }}
       class="chat-row flex cursor-default items-center"
       classList={{ selected: p.selected }}
@@ -38,7 +40,9 @@ export default function ChatRow(p: { row: Row; selected: boolean; compact?: bool
         background: p.selected ? "var(--row-selected)" : undefined,
       }}
     >
-      <Avatar src={p.row.avatar} size={40} group={p.row.group} seed={p.row.id} />
+      <Show when={p.row.id === ZNGA_CHAT} fallback={<Avatar src={p.row.avatar} size={40} group={p.row.group} seed={p.row.id} />}>
+        <ZngaAvatar size={40} />
+      </Show>
       <div
         class="row-text flex h-full min-w-0 flex-1 flex-col justify-center"
         style={{

@@ -17,6 +17,13 @@ pub struct State {
     pub filter: &'static str,
     pub search: String,
     pub chats: Vec<ChatRow>,
+    /// The Znga chat's row, kept above every other chat while Znga is on
+    /// (REQ-ZCHAT-001).
+    pub znga_row: Option<ChatRow>,
+    /// The Znga chat, while it is the open conversation.
+    pub znga: Option<crate::znga::ZngaChat>,
+    /// Text Znga offers to a chat's composer (REQ-ZCHAT-004).
+    pub offer: Option<crate::znga::OfferView>,
     /// Unread chats, muted and archived ones left out: the sidebar's count,
     /// like the Dock badge.
     pub unread_chats: u32,
@@ -135,6 +142,8 @@ pub struct SettingsView {
     pub languages: Vec<(String, &'static str)>,
     /// A custom theme's colours as CSS variables, while one is in use.
     pub palette: Option<Vec<(&'static str, String)>>,
+    /// Settings › Znga (REQ-ZCHAT-007).
+    pub znga: crate::znga::ZngaSettings,
 }
 
 /// A locale's code, as settings store it (`en`, `pt-BR`, …).
@@ -333,6 +342,7 @@ fn settings(app: &mut App) -> SettingsView {
             .iter()
             .map(|l| (code(*l), l.label()))
             .collect(),
+        znga: crate::znga::settings(app),
     }
 }
 
@@ -448,6 +458,8 @@ pub struct Open {
     pub group: bool,
     pub complete: bool,
     pub messages: Vec<Msg>,
+    /// The composer offers Znga's tools here (REQ-ZCHAT-004.A1).
+    pub znga_tools: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -634,12 +646,20 @@ pub fn build(app: &mut App) -> State {
         settings.about = None;
         settings.phone = None;
         settings.blocked = None;
+        settings.znga.twin.clear();
+        settings.znga.excluded.clear();
+        settings.znga.facts.clear();
+        settings.znga.open_promises.clear();
+        settings.znga.audit.clear();
         return State {
             link,
             me: None,
             filter: filter(app.chat_filter),
             search: String::new(),
             chats: Vec::new(),
+            znga_row: None,
+            znga: None,
+            offer: None,
             unread_chats: 0,
             open: None,
             section: "chats",
@@ -670,6 +690,7 @@ pub fn build(app: &mut App) -> State {
                 )
             })
             .unwrap_or_default();
+        let znga_tools = zapfast::znga::chat::tools_for(app, &id);
         Some(Open {
             id,
             title,
@@ -677,6 +698,7 @@ pub fn build(app: &mut App) -> State {
             group,
             complete,
             messages,
+            znga_tools,
         })
     });
     let section = if app.page == Page::Calls {
@@ -726,6 +748,9 @@ pub fn build(app: &mut App) -> State {
         filter: filter(app.chat_filter),
         search: app.search.clone(),
         chats,
+        znga_row: crate::znga::row(app),
+        znga: crate::znga::chat_view(app),
+        offer: crate::znga::offer(app),
         open,
         section,
         unread_chats: app.unread_chat_count(),

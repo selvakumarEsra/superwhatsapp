@@ -11295,6 +11295,7 @@ dependencies = [
  "fastframe-dock",
  "fastframe-i18n",
  "fastframe-theme",
+ "jiff 0.2.38",
  "log",
  "serde",
  "serde_json",

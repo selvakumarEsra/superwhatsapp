@@ -8,9 +8,10 @@ import { ask } from "../../lib/ui";
 import Avatar from "../../components/Avatar";
 import { ChevronRightIcon } from "../../components/Icons";
 import { t } from "../../lib/i18n";
+import ZngaSettings from "./ZngaSettings";
 
 type Key = keyof SettingsView;
-type Page = "account" | "appearance" | "chats" | "notifications" | "privacy" | "system" | "about";
+type Page = "account" | "appearance" | "chats" | "notifications" | "privacy" | "znga" | "system" | "about";
 
 const PAGES: [Page, string][] = [
   ["account", "Account"],
@@ -18,11 +19,26 @@ const PAGES: [Page, string][] = [
   ["chats", "Chats"],
   ["notifications", "Notifications"],
   ["privacy", "Privacy"],
+  ["znga", "Znga"],
   ["system", "System"],
   ["about", "About"],
 ];
 
 const set = (key: Key, value: unknown) => void commands.setSetting(key, value);
+
+/** Words that find a section in the settings search (REQ-ZCHAT-007.A4). */
+const KEYWORDS: Record<Page, string> = {
+  account: "account profile name about phone unlink",
+  appearance: "appearance theme dark light zoom wallpaper language",
+  chats: "chats enter download history archived media lock code",
+  notifications: "notifications sound mention alert",
+  privacy: "privacy read receipts typing app lock password blocked",
+  znga: "znga ai assistant companion engine model ollama claude gemini openai key twin memory promises digest quiet sentinel",
+  system: "system background login start proxy",
+  about: "about version",
+};
+const matches = (page: Page, label: string, query: string) =>
+  query.split(/\s+/).every((word) => `${label} ${KEYWORDS[page]}`.toLowerCase().includes(word));
 
 function Row(p: { title: string; description?: string; children?: JSX.Element }) {
   return (
@@ -459,6 +475,9 @@ function Body(p: { page: Page }) {
             then the egui build keeps those switches. */}
         <Text title="Proxy" description="For WhatsApp, media, and updates. Empty uses ALL_PROXY or HTTPS_PROXY." key="proxy" placeholder="None" />
       </Show>
+      <Show when={p.page === "znga"}>
+        <ZngaSettings />
+      </Show>
       <Show when={p.page === "about"}>
         <Row title="SuperWhatsapp" description="A fast WhatsApp client, with Znga.">
           <span class="selectable" style={{ "font-size": "var(--fs-row-text)", color: "var(--text-secondary)" }}>{state.settings.version}</span>
@@ -473,6 +492,11 @@ export default function Settings() {
   const linked = location.hash.split("/")[1] as Page | undefined;
   const [page, setPage] = createSignal<Page>(PAGES.some(([id]) => id === linked) ? linked! : "account");
   const title = () => PAGES.find(([id]) => id === page())![1];
+  const [query, setQuery] = createSignal("");
+  const shown = () => {
+    const q = query().trim().toLowerCase();
+    return PAGES.slice(1).filter(([id, label]) => !q || matches(id, label, q));
+  };
   return (
     <>
       <section
@@ -500,8 +524,25 @@ export default function Settings() {
               <div class="truncate" style={{ "font-size": "var(--fs-row-text)", color: "var(--text-secondary)" }}>{state.settings.about ?? state.settings.phone ?? ""}</div>
             </div>
           </button>
-          <div style={{ height: "8px" }} />
-          <For each={PAGES.slice(1)}>
+          <label
+            class="flex items-center"
+            style={{ height: "var(--search-h)", margin: "8px 0", "border-radius": "calc(var(--search-h) / 2)", background: "var(--search-bg)", "padding-left": "11px" }}
+          >
+            <input
+              type="search"
+              aria-label="Search settings"
+              placeholder={t("Search settings")}
+              value={query()}
+              onInput={(e) => {
+                setQuery(e.currentTarget.value);
+                const first = shown()[0];
+                if (first) setPage(first[0]);
+              }}
+              class="selectable h-full min-w-0 flex-1 bg-transparent outline-none"
+              style={{ "padding-right": "12px", "font-size": "var(--fs-search)", color: "var(--text-primary)" }}
+            />
+          </label>
+          <For each={shown()}>
             {([id, label]) => (
               <button
                 type="button"

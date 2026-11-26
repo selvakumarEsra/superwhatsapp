@@ -7,6 +7,7 @@ export interface Entry {
   label: string;
   run: () => void;
   danger?: boolean;
+  disabled?: boolean;
 }
 
 /** A menu at (x, y); it stays inside the window. */
@@ -46,7 +47,10 @@ export function Menu(p: { x: number; y: number; entries: (Entry | "-")[]; onClos
               <button
                 type="button"
                 role="menuitem"
+                disabled={entry.disabled}
+                aria-disabled={entry.disabled}
                 onClick={() => {
+                  if (entry.disabled) return;
                   p.onClose();
                   entry.run();
                 }}
@@ -57,6 +61,7 @@ export function Menu(p: { x: number; y: number; entries: (Entry | "-")[]; onClos
                   "border-radius": "6px",
                   "font-size": "var(--fs-row-text)",
                   color: entry.danger ? "var(--danger)" : "var(--text-primary)",
+                  opacity: entry.disabled ? 0.4 : 1,
                 }}
               >
                 {t(entry.label)}

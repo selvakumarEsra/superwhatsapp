@@ -135,6 +135,13 @@ export default function ChatList() {
     state.chats.filter((c) => c.favorite).sort((a, b) => a.favoritePosition - b.favoritePosition),
   );
   const rest = createMemo(() => state.chats.filter((c) => !c.favorite));
+  // The Znga chat stays first while Znga is on (REQ-ZCHAT-001.A1); a
+  // search shows it only when it matches.
+  const zngaRow = () => {
+    const row = state.zngaRow;
+    const query = state.search.trim().toLowerCase();
+    return row && (!query || "znga".includes(query) || query.includes("znga")) ? row : null;
+  };
   const rows = (list: Row[], compact = false) => (
     <For each={list}>
       {(row) => <ChatRow row={row} compact={compact} selected={state.open?.id === row.id} onOpen={() => commands.openChat(row.id)} />}
@@ -205,6 +212,13 @@ export default function ChatList() {
         </Show>
         <Show when={state.section === "calls"}>
           <CallsList />
+        </Show>
+        <Show when={state.section === "chats" && zngaRow()}>
+          {(row) => (
+            <div role="listbox" aria-label="Znga" style={{ "margin-bottom": "2px" }}>
+              <ChatRow row={row()} selected={!!state.znga} onOpen={() => commands.openChat(row().id)} />
+            </div>
+          )}
         </Show>
         <Show when={state.section === "chats"}>
           <button

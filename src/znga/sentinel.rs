@@ -71,6 +71,13 @@ pub enum Action<'a> {
     },
     /// Upload audio for transcription.
     Transcribe,
+    /// Read a chat the person named in the Znga chat (REQ-ZCHAT-006.A3).
+    /// `hidden` is a locked or excluded chat.
+    Read {
+        hidden: bool,
+    },
+    /// Keep a reminder for the person (REQ-ZCHAT-006).
+    Remind,
 }
 
 impl Action<'_> {
@@ -85,6 +92,9 @@ impl Action<'_> {
             Action::SearchArchive => "search the archive".into(),
             Action::WriteFile { name } => format!("write {name}"),
             Action::Transcribe => "transcribe a voice note".into(),
+            Action::Read { hidden: true } => "read a locked or excluded chat".into(),
+            Action::Read { .. } => "read a chat".into(),
+            Action::Remind => "reminder".into(),
         }
     }
 }
@@ -125,7 +135,14 @@ pub fn check(action: &Action, origin: Origin) -> Verdict {
                 Verdict::allow("your own chat")
             }
         }
-        Action::SearchArchive | Action::WriteFile { .. } | Action::Transcribe => match origin {
+        Action::Read { hidden: true } => {
+            Verdict::refuse("Znga never reads locked or excluded chats")
+        }
+        Action::Remind => Verdict::allow("reminders only reach you"),
+        Action::Read { hidden: false }
+        | Action::SearchArchive
+        | Action::WriteFile { .. }
+        | Action::Transcribe => match origin {
             Origin::Person | Origin::OwnChat => Verdict::allow("you asked for it"),
             Origin::Schedule => Verdict::refuse("tools run only when you ask"),
             Origin::OthersText => Verdict::refuse("others' messages cannot use tools"),

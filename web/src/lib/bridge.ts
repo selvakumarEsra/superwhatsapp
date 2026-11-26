@@ -27,7 +27,36 @@ export interface Msg {
   kind: string; text: string; status: Status; edited: boolean; forwarded: boolean;
   quoted: Quote | null; reactions: [string, number][];
 }
-export interface Open { id: string; title: string; avatar: string | null; group: boolean; complete: boolean; messages: Msg[] }
+export interface Open {
+  id: string; title: string; avatar: string | null; group: boolean; complete: boolean; messages: Msg[];
+  /** The composer offers Znga's tools here (REQ-ZCHAT-004). */
+  zngaTools: boolean;
+}
+/** The Znga chat's id; it never names a WhatsApp chat (REQ-ZCHAT-001). */
+export const ZNGA_CHAT = "znga@superwhatsapp.local";
+export interface ZAction { id: string; label: string }
+export interface ZCard {
+  kind: "needsYou" | "briefing" | "draft" | "catchUp" | "plan" | "voice" | "promise" | "drift";
+  title: string; body: string; meta: string; actions: ZAction[]; outcome: string | null;
+}
+export interface ZEntry { id: number; at: number; fromMe: boolean; text: string; unasked: boolean; cards: ZCard[] }
+export interface ZngaChat { entries: ZEntry[]; writing: string | null; asking: boolean }
+export interface OfferView { id: number; chat: string; text: string; rewrite: boolean }
+export interface ZFact { chat: string; chatTitle: string; text: string }
+export interface ZPromise { chat: string; chatTitle: string; text: string; due: number | null; owesMe: boolean }
+export interface ZAudit { at: number; action: string; origin: string; allowed: boolean; reason: string }
+export interface ZngaSettings {
+  enabled: boolean; engine: string; engines: [string, string][]; model: string; endpoint: string;
+  defaultModel: string; defaultEndpoint: string; needsKey: boolean; keySource: string | null;
+  cloud: boolean; cloudConsent: boolean; alerts: boolean; briefings: boolean;
+  briefingMinMessages: number; briefingIntervalMinutes: number; digests: boolean;
+  digestMorning: string; digestEvening: string; reminders: boolean; quietHours: boolean;
+  quietFrom: string; quietTo: string; selfNotes: boolean; selfChat: boolean; includeGroups: boolean;
+  promises: boolean; memory: boolean; checkinDays: number; yourName: string; voiceNotes: string;
+  tone: string; voiceEndpoint: string; voiceModel: string; twin: [string, string][];
+  excluded: [string, string][]; facts: ZFact[]; openPromises: ZPromise[]; audit: ZAudit[];
+  status: [string, boolean] | null;
+}
 export type Section = "chats" | "favourites" | "archived" | "starred" | "calls";
 export interface StarredRow { chat: string; chatTitle: string; msg: Msg }
 export interface CallRow {
@@ -58,15 +87,18 @@ export interface SettingsView {
   wallpaperImage: string | null; customTheme: string | null; themes: [string, string][];
   palette: [string, string][] | null;
   locale: string; language: string | null; languages: [string, string][];
+  znga: ZngaSettings;
 }
 export interface State {
   link: Link; me: string | null; filter: string; search: string; chats: ChatRow[]; unreadChats: number; open: Open | null;
+  zngaRow: ChatRow | null; znga: ZngaChat | null; offer: OfferView | null;
   section: Section; starred: StarredRow[]; calls: CallRow[]; info: Info | null; settings: SettingsView;
   lock: LockView | null;
 }
 
 const empty: State = {
   link: { state: "starting" }, me: null, filter: "all", search: "", chats: [], unreadChats: 0, open: null,
+  zngaRow: null, znga: null, offer: null,
   section: "chats", starred: [], calls: [], info: null,
   settings: {
     theme: "system", zoom: 1, showWallpaper: true, enterSends: true, autoDownload: true, historyPrefetch: true,
@@ -77,6 +109,15 @@ const empty: State = {
     chatLockCode: false, appLock: false, autoLock: "fifteenMinutes", lockForm: null, blocked: null,
     blockedLoading: false, blockedFailed: false, wallpaperImage: null, customTheme: null, themes: [], palette: null,
     locale: "en", language: null, languages: [],
+    znga: {
+      enabled: false, engine: "local", engines: [], model: "", endpoint: "", defaultModel: "", defaultEndpoint: "",
+      needsKey: false, keySource: null, cloud: false, cloudConsent: false, alerts: true, briefings: true,
+      briefingMinMessages: 5, briefingIntervalMinutes: 30, digests: false, digestMorning: "08:00",
+      digestEvening: "20:00", reminders: true, quietHours: false, quietFrom: "22:00", quietTo: "07:00",
+      selfNotes: false, selfChat: false, includeGroups: true, promises: true, memory: true, checkinDays: 7,
+      yourName: "", voiceNotes: "", tone: "", voiceEndpoint: "", voiceModel: "", twin: [], excluded: [],
+      facts: [], openPromises: [], audit: [], status: null,
+    },
   },
   lock: null,
 };
@@ -130,4 +171,16 @@ export const commands = {
   themesFolder: (reload: boolean) => invoke("themes_folder", { reload }),
   wallpaperImage: (pick: boolean) => invoke("wallpaper_image", { pick }),
   setLanguage: (code: string | null) => invoke("set_language", { code }),
+  // Znga (specs/znga-chat.md).
+  zngaSend: (text: string) => invoke("znga_send", { text }),
+  zngaStop: () => invoke("znga_stop"),
+  zngaCard: (entry: number, index: number, action: string) => invoke("znga_card", { entry, index, action }),
+  zngaTool: (chat: string, tool: string, text = "", language = "") => invoke("znga_tool", { chat, tool, text, language }),
+  zngaOfferDone: (id: number) => invoke("znga_offer_done", { id }),
+  zngaKey: (key: string | null) => invoke("znga_key", { key }),
+  zngaTest: () => invoke("znga_test"),
+  zngaChatList: (list: "twin" | "excluded", chat: string, on: boolean) => invoke("znga_chat_list", { list, chat, on }),
+  zngaFact: (chat: string, text: string, forget: boolean) => invoke("znga_fact", { chat, text, forget }),
+  zngaPromise: (chat: string, text: string, done: boolean) => invoke("znga_promise", { chat, text, done }),
+  zngaSet: (key: string, value: unknown) => invoke("znga_set", { key, value }),
 };

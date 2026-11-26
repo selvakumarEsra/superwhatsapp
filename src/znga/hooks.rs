@@ -28,7 +28,7 @@ const EXTRACT_SCAN: std::time::Duration = std::time::Duration::from_secs(15 * 60
 const PROMISE_CHECK: std::time::Duration = std::time::Duration::from_secs(60);
 const RHYTHM_SCAN: std::time::Duration = std::time::Duration::from_secs(6 * 3600);
 
-fn away(app: &App) -> bool {
+pub(super) fn away(app: &App) -> bool {
     app.window_hidden || !app.window_focused
 }
 
@@ -72,6 +72,15 @@ pub fn observe_incoming(app: &mut App, chat_id: &str, message: &Message) {
             at: message.timestamp,
             state: VoiceState::New,
         });
+        let added = app
+            .znga
+            .voice_notes
+            .iter()
+            .find(|n| n.message == message.id && n.chat == chat_id)
+            .cloned();
+        if let Some(note) = added {
+            super::chat::voice_note(app, &note);
+        }
     }
     let mentions_me = {
         let me: Vec<&str> = [app.account().me.as_deref(), app.account().me_lid.as_deref()]
@@ -103,9 +112,13 @@ pub fn observe_incoming(app: &mut App, chat_id: &str, message: &Message) {
         && app.znga.config.alerts
     {
         let reason = alert.reason.clone();
+        super::chat::needs_you(app, &alert);
         app.znga.push_alert(alert);
         let reading = !away(app) && app.open_chat.as_deref() == Some(chat_id);
-        if !reading && app.znga.audit.check(&Act::Notify, Origin::OthersText, now) {
+        if !reading
+            && !app.znga.chat_mode
+            && app.znga.audit.check(&Act::Notify, Origin::OthersText, now)
+        {
             notify(
                 app,
                 format!("Znga · {chat_title} needs you"),
@@ -121,7 +134,7 @@ pub fn observe_incoming(app: &mut App, chat_id: &str, message: &Message) {
     }
 }
 
-fn clip(text: &str, max: usize) -> String {
+pub(super) fn clip(text: &str, max: usize) -> String {
     if text.chars().count() <= max {
         text.to_owned()
     } else {
@@ -131,7 +144,7 @@ fn clip(text: &str, max: usize) -> String {
 
 /// A Znga notification, unless notifications are off. Behind the app lock
 /// it says nothing about the content.
-fn notify(
+pub(super) fn notify(
     app: &mut App,
     title: String,
     body: String,
@@ -182,7 +195,7 @@ fn lines_of(app: &App, account: &str, chat: &str) -> Vec<Line> {
     lines_n(app, account, chat, 30)
 }
 
-fn lines_n(app: &App, account: &str, chat: &str, n: usize) -> Vec<Line> {
+pub(super) fn lines_n(app: &App, account: &str, chat: &str, n: usize) -> Vec<Line> {
     let index = app
         .accounts
         .iter()
@@ -214,7 +227,7 @@ fn lines_n(app: &App, account: &str, chat: &str, n: usize) -> Vec<Line> {
         .collect()
 }
 
-fn your_name(app: &App, account: &str) -> String {
+pub(super) fn your_name(app: &App, account: &str) -> String {
     let configured = app.znga.config.persona(account).your_name;
     if !configured.is_empty() {
         return configured;
@@ -243,7 +256,7 @@ pub fn request_draft(app: &mut App, account: &str, chat: &str, kind: Kind) {
 
 /// The twin as it writes on `account` to `chat`: style, persona, examples
 /// and what Znga remembers about the person (REQ-ZNGA-019, REQ-ZNGA-025).
-fn twin_for(app: &App, account: &str, chat: &str) -> Twin {
+pub(super) fn twin_for(app: &App, account: &str, chat: &str) -> Twin {
     let persona = app.znga.config.persona(account);
     Twin {
         name: your_name(app, account),
@@ -441,7 +454,7 @@ fn visible_of(app: &App, account: &str) -> (Visible, HashMap<String, String>) {
 
 fn origin_of(asking: &Asking) -> Origin {
     match asking.origin {
-        AskOrigin::Panel => Origin::Person,
+        AskOrigin::Panel | AskOrigin::Thread { .. } => Origin::Person,
         AskOrigin::OwnChat { .. } => Origin::OwnChat,
     }
 }
@@ -453,7 +466,7 @@ fn search_for(app: &mut App, ask: u64, terms: Vec<String>) {
         return;
     };
     let account = match &asking.origin {
-        AskOrigin::OwnChat { account, .. } => account.clone(),
+        AskOrigin::OwnChat { account, .. } | AskOrigin::Thread { account } => account.clone(),
         AskOrigin::Panel => app.account().id.as_str().to_owned(),
     };
     let now = crate::util::now();
@@ -486,7 +499,7 @@ fn answer(app: &mut App, ask: u64) {
         return;
     };
     let account = match &asking.origin {
-        AskOrigin::OwnChat { account, .. } => account.clone(),
+        AskOrigin::OwnChat { account, .. } | AskOrigin::Thread { account } => account.clone(),
         AskOrigin::Panel => app.account().id.as_str().to_owned(),
     };
     let context = app.znga.activity.recent(120);
@@ -649,6 +662,12 @@ pub fn request_catch_up(app: &mut App) {
         app.znga.set_status("Open a chat first.", true);
         return;
     };
+    request_catch_up_for(app, &chat);
+}
+
+/// "Catch me up" on `chat` of the active account.
+pub fn request_catch_up_for(app: &mut App, chat: &str) {
+    let chat = chat.to_owned();
     let account = app.account().id.as_str().to_owned();
     let unread = app.chat(&chat).map_or(0, |known| known.unread as usize);
     let lines = lines_n(app, &account, &chat, unread.clamp(20, 80));
@@ -672,6 +691,12 @@ pub fn request_events(app: &mut App) {
         app.znga.set_status("Open a chat first.", true);
         return;
     };
+    request_events_for(app, &chat);
+}
+
+/// "Find plans" in `chat` of the active account.
+pub fn request_events_for(app: &mut App, chat: &str) {
+    let chat = chat.to_owned();
     let account = app.account().id.as_str().to_owned();
     let lines = lines_n(app, &account, &chat, 60);
     let chat_title = title_of(app, &account, &chat);
@@ -693,17 +718,29 @@ pub fn add_to_calendar(app: &mut App, index: usize) {
     let Some(found) = app.znga.events.get(index).cloned() else {
         return;
     };
-    let name = super::calendar::file_name(&found.event);
+    let now = crate::util::now();
+    if write_event(app, &found.event, &format!("{now}-{index}")) {
+        app.znga.set_status(
+            format!("Opening \"{}\" in your calendar…", found.event.title),
+            false,
+        );
+    }
+}
+
+/// Writes `event` as a calendar file and opens it, after the Sentinel
+/// allows it. Returns whether it was allowed.
+pub fn write_event(app: &mut App, event: &super::calendar::Event, uid: &str) -> bool {
+    let name = super::calendar::file_name(event);
     let now = crate::util::now();
     if !app
         .znga
         .audit
         .check(&Act::WriteFile { name: &name }, Origin::Person, now)
     {
-        return;
+        return false;
     }
     let path = app.dirs.cache.join("znga-calendar").join(&name);
-    let text = super::calendar::ics(&found.event, now, &format!("{now}-{index}"));
+    let text = super::calendar::ics(event, now, uid);
     std::thread::Builder::new()
         .name("znga-calendar".into())
         .spawn(move || {
@@ -721,10 +758,7 @@ pub fn add_to_calendar(app: &mut App, index: usize) {
             }
         })
         .ok();
-    app.znga.set_status(
-        format!("Opening \"{}\" in your calendar…", found.event.title),
-        false,
-    );
+    true
 }
 
 /// Transcribes and summarises a voice note (REQ-ZNGA-023).
@@ -927,7 +961,8 @@ fn apply(app: &mut App, effects: Vec<Effect>) {
                 message,
                 only_when_away,
             } => {
-                if only_when_away && !away(app) {
+                // The Znga chat posts and notifies instead.
+                if app.znga.chat_mode || only_when_away && !away(app) {
                     continue;
                 }
                 if !app.znga.audit.check(&Act::Notify, Origin::Schedule, now) {
@@ -996,6 +1031,9 @@ fn apply(app: &mut App, effects: Vec<Effect>) {
                 pump_self_chat(app);
             }
             Effect::Search { ask, terms } => search_for(app, ask, terms),
+            Effect::Answered { account, text } => {
+                super::chat::answer(app, &account, text, Vec::new());
+            }
         }
     }
 }
@@ -1187,11 +1225,12 @@ fn store_replies(app: &mut App) {
                 if app.znga.ask_account.as_deref() == Some(account.as_str())
                     && app.znga.ask.is_empty()
                 {
-                    app.znga.ask = loaded.ask;
+                    app.znga.ask = loaded.ask.clone();
                 }
                 // Merged with anything found before the load finished.
                 let first = app.znga.restored.insert(account.clone());
                 if first {
+                    super::chat::loaded(app, &account, loaded.thread, &loaded.ask);
                     app.znga.people.restore(loaded.facts);
                     app.znga.promises.restore(loaded.promises);
                     app.znga.people.mark_dirty();
@@ -1211,6 +1250,7 @@ fn store_replies(app: &mut App) {
             Reply::Rhythms { account, rhythms } => {
                 app.znga.rhythms.retain(|r| r.account != account);
                 app.znga.rhythms.extend(rhythms);
+                super::chat::rhythms(app, &account);
             }
             Reply::History { ask, messages } => self_chat_history(app, ask, messages),
             Reply::Failed(error) => log::warn!(target: "zapfast::znga", "store: {error}"),
@@ -1291,6 +1331,11 @@ fn scan_extract(app: &mut App) {
 fn check_promises(app: &mut App) {
     let now = crate::util::now();
     for promise in app.znga.promises.due(now) {
+        if app.znga.chat_mode {
+            super::chat::promise_due(app, &promise);
+            request_draft(app, &promise.account, &promise.chat, Kind::Suggestion);
+            continue;
+        }
         let title = match promise.owes {
             super::promises::Owes::Me => format!("Znga · you promised {}", promise.chat_title),
             super::promises::Owes::Them => {
@@ -1369,13 +1414,16 @@ fn forget_hidden(app: &mut App) {
 pub fn tick(app: &mut App) {
     let now = crate::util::now();
     for (purpose, answer) in app.znga.runner.poll() {
-        let effects = app.znga.handle(purpose, answer, now);
+        let before = super::chat::before(app);
+        let effects = app.znga.handle(purpose.clone(), answer.clone(), now);
         apply(app, effects);
+        super::chat::after(app, &purpose, &answer, before);
     }
     store_replies(app);
     while let Ok((note, result)) = app.znga.voice_results.1.try_recv() {
         voice_transcribed(app, note, result);
     }
+    super::chat::tick(app);
     app.znga.save_if_dirty(&app.files);
     if !app.znga.config.enabled {
         return;

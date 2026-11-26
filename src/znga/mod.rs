@@ -24,6 +24,7 @@
 
 pub mod archive_ask;
 pub mod calendar;
+pub mod chat;
 pub mod coach;
 pub mod config;
 #[cfg(any(test, feature = "demo"))]
@@ -42,6 +43,7 @@ pub mod selfchat;
 pub mod sentinel;
 pub mod store;
 pub mod style;
+pub mod thread;
 pub mod triage;
 pub mod ui;
 pub mod update;
@@ -107,6 +109,10 @@ pub enum Purpose {
     Voice {
         note: u64,
     },
+    /// A morning or evening digest in the Znga chat (REQ-ZCHAT-005).
+    Digest {
+        slot: &'static str,
+    },
     ExplainEdit {
         key: String,
     },
@@ -119,6 +125,7 @@ impl Purpose {
         matches!(
             self,
             Purpose::Briefing { proactive: true }
+                | Purpose::Digest { .. }
                 | Purpose::Draft {
                     kind: Kind::AutoReply | Kind::CheckIn,
                     ..
@@ -151,6 +158,19 @@ pub enum Effect {
     },
     /// Search the archive for an ask in progress (REQ-ZNGA-020).
     Search { ask: u64, terms: Vec<String> },
+    /// Znga's answer to a question asked in the Znga chat (REQ-ZCHAT-002).
+    Answered { account: String, text: String },
+}
+
+/// A rewrite or suggested reply offered to a chat's composer; it replaces
+/// the composer's text only when the person accepts it (REQ-ZCHAT-004).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Offer {
+    pub id: u64,
+    pub chat: String,
+    pub text: String,
+    /// A rewrite of the composer's text, not a new reply.
+    pub rewrite: bool,
 }
 
 /// A catch-up on one chat (REQ-ZNGA-021).
@@ -293,6 +313,25 @@ pub struct Znga {
     pub(crate) last_extract: Option<Instant>,
     pub(crate) last_rhythms: Option<Instant>,
     pub(crate) last_promise_check: Option<Instant>,
+    /// The Tauri interface: Znga lives in its chat (specs/znga-chat.md).
+    /// Off for the egui panel, which keeps working as it did.
+    pub chat_mode: bool,
+    /// The Znga chat is the open conversation.
+    pub chat_open: bool,
+    /// Each account's Znga chat, by account id.
+    pub threads: HashMap<String, thread::Thread>,
+    /// Accounts whose `znga.db` was asked for the Znga chat.
+    pub(crate) thread_requested: HashSet<String>,
+    /// Chats (by `chat_key`) whose next draft the person asked for, so it
+    /// is posted as an answer, not as an unasked message.
+    pub(crate) asked: HashSet<String>,
+    /// Chats whose next suggested reply goes to their composer.
+    pub(crate) composer_asks: HashSet<String>,
+    pub offer: Option<Offer>,
+    pub(crate) next_offer: u64,
+    /// Plans already reminded of, by title and start.
+    pub(crate) plans_reminded: HashSet<(String, i64)>,
+    pub(crate) last_digest_check: Option<Instant>,
 }
 
 impl Znga {
@@ -359,6 +398,16 @@ impl Znga {
             last_extract: None,
             last_rhythms: None,
             last_promise_check: None,
+            chat_mode: false,
+            chat_open: false,
+            threads: HashMap::new(),
+            thread_requested: HashSet::new(),
+            asked: HashSet::new(),
+            composer_asks: HashSet::new(),
+            offer: None,
+            next_offer: 0,
+            plans_reminded: HashSet::new(),
+            last_digest_check: None,
         }
     }
 
@@ -633,6 +682,13 @@ impl Znga {
                         self.ask_dirty = true;
                         self.status = None;
                     }
+                    archive_ask::AskOrigin::Thread { account } => {
+                        let text = match answer {
+                            Ok(text) => text,
+                            Err(error) => thread::explain_error(&error, self.config.engine),
+                        };
+                        effects.push(Effect::Answered { account, text });
+                    }
                     archive_ask::AskOrigin::OwnChat { account, chat } => {
                         let text = match answer {
                             Ok(text) => text,
@@ -759,6 +815,7 @@ impl Znga {
                     }
                 }
             }
+            (Purpose::Digest { .. }, Ok(_)) => {}
             (Purpose::ExplainEdit { key }, answer) => {
                 self.explanations.insert(key, answer);
             }

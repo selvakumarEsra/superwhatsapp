@@ -146,6 +146,8 @@ fn make_app(start: &Start) -> App {
         dirs.ensure().expect("demo folders");
         let settings = Settings::load(&dirs.settings_file());
         let mut app = App::headless(dirs, settings).0;
+        // Znga lives in its chat here (specs/znga-chat.md).
+        app.znga.chat_mode = true;
         zapfast::demo::populate(&mut app);
         zapfast::demo::apply_flags(&mut app, start.demo_page.as_deref());
         return app;
@@ -167,6 +169,7 @@ fn make_app(start: &Start) -> App {
     )
     .expect("core");
     app.set_remote_control(&instance.guard);
+    app.znga.chat_mode = true;
     app
 }
 

@@ -496,6 +496,15 @@ impl Archive {
         encryption::open(path, &key)
     }
 
+    /// `znga.db` under a fixed key, for tests that check it is encrypted.
+    #[cfg(test)]
+    pub(crate) fn znga_connection_with_key(
+        path: &Path,
+        key: &[u8; 32],
+    ) -> anyhow::Result<Connection> {
+        encryption::open(path, key)
+    }
+
     pub fn in_memory() -> Result<Self> {
         Self::prepare(Connection::open_in_memory()?)
     }

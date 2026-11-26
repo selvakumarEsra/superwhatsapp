@@ -11,6 +11,8 @@ use serde::Deserialize;
 pub enum AskOrigin {
     /// The Ask tab.
     Panel,
+    /// The Znga chat of this account (REQ-ZCHAT-002).
+    Thread { account: String },
     /// The person's own "Message yourself" chat (REQ-ZNGA-012).
     OwnChat { account: String, chat: String },
 }

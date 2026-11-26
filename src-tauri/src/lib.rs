@@ -5,6 +5,7 @@ mod desktop;
 mod engine;
 mod media;
 mod view;
+mod znga;
 
 use tauri::{Manager, State};
 use zapfast::model::{Action, ChatFilter, Page};
@@ -18,12 +19,22 @@ fn refresh(engine: State<'_, Engine>) {
 
 #[tauri::command]
 fn open_chat(engine: State<'_, Engine>, id: String) {
-    engine.send(Input::Action(Action::OpenChat(id)));
+    if id == zapfast::znga::thread::ZNGA_CHAT {
+        engine.send(Input::Edit(Box::new(znga::open)));
+        return;
+    }
+    engine.send(Input::Edit(Box::new(move |app| {
+        app.znga.chat_open = false;
+        app.actions.push(Action::OpenChat(id));
+    })));
 }
 
 #[tauri::command]
 fn close_chat(engine: State<'_, Engine>) {
-    engine.send(Input::Action(Action::CloseChat));
+    engine.send(Input::Edit(Box::new(|app| {
+        app.znga.chat_open = false;
+        app.actions.push(Action::CloseChat);
+    })));
 }
 
 #[tauri::command]
@@ -469,7 +480,18 @@ pub fn run() {
             themes_folder,
             wallpaper_image,
             translate,
-            set_language
+            set_language,
+            znga::znga_send,
+            znga::znga_stop,
+            znga::znga_card,
+            znga::znga_tool,
+            znga::znga_offer_done,
+            znga::znga_key,
+            znga::znga_test,
+            znga::znga_chat_list,
+            znga::znga_fact,
+            znga::znga_promise,
+            znga::znga_set
         ])
         .build(tauri::generate_context!())
         .expect("SuperWhatsapp could not start")

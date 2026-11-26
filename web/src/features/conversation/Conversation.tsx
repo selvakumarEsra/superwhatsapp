@@ -140,7 +140,7 @@ export default function Conversation(p: { chat: Open }) {
             }}
           </For>
         </div>
-        <Composer chat={p.chat.id} />
+        <Composer chat={p.chat.id} znga={p.chat.zngaTools} />
       </div>
     </section>
   );

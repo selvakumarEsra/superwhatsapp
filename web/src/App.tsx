@@ -1,7 +1,8 @@
 // The window: sidebar, chat list, conversation and info panel, as on
 // WhatsApp Desktop for macOS (REQ-WEBUI-004).
 import { createEffect, createSignal, onMount, Show } from "solid-js";
-import { commands, connect, state } from "./lib/bridge";
+import { commands, connect, state, ZNGA_CHAT } from "./lib/bridge";
+import ZngaChat from "./features/znga/ZngaChat";
 import { ask, asking } from "./lib/ui";
 import Sidebar, { type Section } from "./components/Sidebar";
 import { Confirm } from "./components/Menu";
@@ -13,7 +14,7 @@ import Settings from "./features/settings/Settings";
 import Link from "./features/Link";
 import LockScreen from "./features/LockScreen";
 
-/** Znga and Insights, which the new interface does not draw yet. */
+/** Insights, which the new interface does not draw yet. */
 function Pending(p: { name: string }) {
   return (
     <section
@@ -30,10 +31,10 @@ function Pending(p: { name: string }) {
 export default function App() {
   onMount(() => void connect());
   // Znga and Insights are chosen here; the other sections come from the core.
-  const [panel, setPanel] = createSignal<"znga" | "insights" | "settings" | null>(null);
+  const [panel, setPanel] = createSignal<"insights" | "settings" | null>(null);
   // Outside Tauri, `#settings` opens Settings, for screenshots.
   if (!("__TAURI_INTERNALS__" in window) && location.hash.startsWith("#settings")) setPanel("settings");
-  const section = (): Section | "settings" => panel() ?? state.section;
+  const section = (): Section | "settings" => panel() ?? (state.znga ? "znga" : state.section);
   // The chosen theme and zoom apply to the whole page (REQ-WEBUI-012).
   createEffect(() => {
     const root = document.documentElement;
@@ -68,7 +69,15 @@ export default function App() {
     }
   });
   const choose = (next: Section | "settings") => {
-    if (next === "znga" || next === "insights" || next === "settings") {
+    // ✨ opens the Znga chat; there is no separate Znga window
+    // (REQ-ZCHAT-001.A6).
+    if (next === "znga") {
+      setPanel(null);
+      void commands.showSection("chats");
+      void commands.openChat(ZNGA_CHAT);
+      return;
+    }
+    if (next === "insights" || next === "settings") {
       setPanel(next);
       return;
     }
@@ -86,10 +95,14 @@ export default function App() {
           fallback={
             <>
               <Show when={panel()} fallback={<ChatList />}>
-                {(name) => <Pending name={name() === "znga" ? "Znga" : "Insights"} />}
+                <Pending name="Insights" />
               </Show>
-              <Show when={state.open} fallback={<EmptyPane />}>
-                <Conversation chat={state.open!} />
+              <Show when={state.znga} fallback={
+                <Show when={state.open} fallback={<EmptyPane />}>
+                  <Conversation chat={state.open!} />
+                </Show>
+              }>
+                {(chat) => <ZngaChat chat={chat()} />}
               </Show>
               <InfoPanel />
             </>

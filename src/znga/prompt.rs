@@ -194,6 +194,26 @@ pub fn twin_reply(twin: &Twin, chat_title: &str, lines: &[Line]) -> Prompt {
     }
 }
 
+/// A message to `chat_title` saying what the person asked for in the Znga
+/// chat ("tell Ada I'll call at 5"), in the person's voice (REQ-ZCHAT-006).
+pub fn tell(twin: &Twin, chat_title: &str, instruction: &str, lines: &[Line]) -> Prompt {
+    let context = if lines.is_empty() {
+        String::new()
+    } else {
+        format!("Our recent messages:\n{}\n\n", conversation(lines))
+    };
+    Prompt {
+        system: twin_system(twin),
+        turns: vec![Turn::user(format!(
+            "{context}Write the message I would send to {chat_title} to say this: {}\n\nAnswer \
+             with the message only.",
+            clip(instruction, 600)
+        ))],
+        max_tokens: 2000,
+        effort: Effort::Low,
+    }
+}
+
 /// A warm check-in with someone close who has been quiet.
 pub fn checkin(
     twin: &Twin,

@@ -164,6 +164,19 @@ pub struct Config {
     /// Per linked account (by account id): how Znga sounds and behaves
     /// there (REQ-ZNGA-025).
     pub personas: BTreeMap<String, Persona>,
+    /// A morning and an evening digest in the Znga chat (REQ-ZCHAT-005).
+    pub digests: bool,
+    /// Local `HH:MM` times of the two digests.
+    pub digest_morning: String,
+    pub digest_evening: String,
+    /// The local day (days since 1970) each digest last ran, by slot.
+    pub digest_last: BTreeMap<String, i64>,
+    /// Promise, plan and drifting-friend reminders in the Znga chat.
+    pub reminders: bool,
+    /// Quiet hours: only Needs you is posted between these local times.
+    pub quiet_hours: bool,
+    pub quiet_from: String,
+    pub quiet_to: String,
 }
 
 /// One linked account's persona. Empty fields fall back to the global
@@ -225,6 +238,14 @@ impl Default for Config {
             voice_endpoint: String::new(),
             voice_model: String::new(),
             personas: BTreeMap::new(),
+            digests: false,
+            digest_morning: "08:00".into(),
+            digest_evening: "20:00".into(),
+            digest_last: BTreeMap::new(),
+            reminders: true,
+            quiet_hours: false,
+            quiet_from: "22:00".into(),
+            quiet_to: "07:00".into(),
         }
     }
 }
