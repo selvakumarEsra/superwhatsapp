@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
 <defs>
 <linearGradient id="bg" x1="8" y1="4" x2="120" y2="124" gradientUnits="userSpaceOnUse">
-<stop offset="0" stop-color="#8b5cf6"/>
-<stop offset="0.55" stop-color="#6d28d9"/>
-<stop offset="1" stop-color="#2563eb"/>
+<stop offset="0" stop-color="#25D366"/>
+<stop offset="0.55" stop-color="#1DAA61"/>
+<stop offset="1" stop-color="#128C7E"/>
 </linearGradient>
 <linearGradient id="spark" x1="40" y1="46" x2="74" y2="80" gradientUnits="userSpaceOnUse">
-<stop offset="0" stop-color="#7c3aed"/>
-<stop offset="1" stop-color="#2563eb"/>
+<stop offset="0" stop-color="#25D366"/>
+<stop offset="1" stop-color="#128C7E"/>
 </linearGradient>
 </defs>
 <rect x="4" y="4" width="120" height="120" rx="30" fill="url(#bg)"/>

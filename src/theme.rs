@@ -1073,7 +1073,7 @@ pub fn circle_button(
     }
 }
 
-/// Draws the app's mark as it ships: the violet square, the bubble and the
+/// Draws the app's mark as it ships: the green square, the bubble and the
 /// sparkles of `packaging/icons/superwhatsapp.svg`, rendered once per pixel
 /// size.
 pub fn mark(ui: &egui::Ui, center: egui::Pos2, diameter: f32) {

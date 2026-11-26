@@ -56,9 +56,10 @@ verifies:
 ## SuperWhatsapp MUST have its own logo
 
 An original mark that reads as "super" plus a proactive AI agent, used for
-the app icon on every platform, the tray, the website and the favicon. It
-MUST NOT resemble WhatsApp's logo (no phone handset in a speech bubble, no
-WhatsApp green as the main colour).
+the app icon on every platform, the tray, the website and the favicon. Its
+colours follow WhatsApp's greens (`#25D366` to `#128C7E`) so the app feels
+at home beside WhatsApp, but its shape MUST NOT copy WhatsApp's logo: no
+phone handset in a round speech bubble.
 
 implementations:
   - packaging/icons/superwhatsapp.svg

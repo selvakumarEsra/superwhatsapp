@@ -15,9 +15,9 @@ A fast desktop app for macOS, Windows and Linux, with Znga built in: it spots th
 </p>
 
 <p align="center">
-  <a href="https://github.com/selvakumarEsra/superwhatsapp/releases"><img src="https://img.shields.io/github/v/release/selvakumarEsra/superwhatsapp?include_prereleases&color=6d28d9&label=release" alt="Latest release"></a>
+  <a href="https://github.com/selvakumarEsra/superwhatsapp/releases"><img src="https://img.shields.io/github/v/release/selvakumarEsra/superwhatsapp?include_prereleases&color=25D366&label=release" alt="Latest release"></a>
   <a href="https://selvakumaresra.github.io/superwhatsapp/download/"><img src="https://img.shields.io/badge/macOS_%C2%B7_Windows_%C2%B7_Linux-24292f" alt="macOS, Windows and Linux"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-2563eb" alt="MIT license"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-128C7E" alt="MIT license"></a>
 </p>
 
 <picture>
