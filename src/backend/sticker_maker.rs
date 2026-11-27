@@ -45,7 +45,7 @@ pub fn make(
     }
     let webp = encode(&sticker)?;
     let info = crate::sticker_meta::StickerInfo {
-        pack_id: "zapfast".to_owned(),
+        pack_id: "superwhatsapp".to_owned(),
         pack_name: "SuperWhatsapp".to_owned(),
         emojis: emojis.to_vec(),
         ..Default::default()

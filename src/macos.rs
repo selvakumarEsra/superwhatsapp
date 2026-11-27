@@ -24,7 +24,7 @@ struct MenuInput(Arc<Mutex<Vec<egui::Event>>>);
 
 impl egui::plugin::Plugin for MenuInput {
     fn debug_name(&self) -> &'static str {
-        "zapfast-macos-menu"
+        "superwhatsapp-macos-menu"
     }
 
     fn input_hook(&mut self, _ctx: &egui::Context, input: &mut egui::RawInput) {

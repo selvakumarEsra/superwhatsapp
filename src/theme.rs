@@ -15,12 +15,12 @@ pub type Catalog = fastframe_theme::Catalog<Palette>;
 /// What a normal launch adds to the catalogue. Demos and tests leave it out
 /// and stay isolated from the desktop and its files.
 pub const DESKTOP_THEMES: fastframe_theme::DesktopThemes = fastframe_theme::DesktopThemes {
-    slug: "zapfast",
-    omarchy_template: include_str!("../contrib/omarchy/zapfast.json.tpl"),
+    slug: "superwhatsapp",
+    omarchy_template: include_str!("../contrib/omarchy/superwhatsapp.json.tpl"),
     // Every template SuperWhatsapp shipped before, so an untouched copy installed
     // by an older release is replaced with the current one.
     omarchy_previous_templates: &[include_str!(
-        "../contrib/omarchy/previous/zapfast-1.json.tpl"
+        "../contrib/omarchy/previous/superwhatsapp-1.json.tpl"
     )],
     presets: true,
 };
@@ -52,7 +52,7 @@ pub fn theme_status(status: fastframe_theme::Status) -> &'static str {
             "The Omarchy palette could not be loaded. Keeping the last usable appearance. See the log for details."
         }
         Status::Problem(Problem::LoaderFailed | _) => {
-            "Custom themes could not be loaded. Run zapfast reload-themes to try again."
+            "Custom themes could not be loaded. Run superwhatsapp reload-themes to try again."
         }
     }
 }
@@ -651,7 +651,7 @@ pub fn tabular(weight: fastframe_fonts::Weight, size: f32) -> egui::FontId {
 }
 
 fn tabular_family(weight: fastframe_fonts::Weight) -> egui::FontFamily {
-    egui::FontFamily::Name(format!("zapfast-tabular-{}", weight.name()).into())
+    egui::FontFamily::Name(format!("superwhatsapp-tabular-{}", weight.name()).into())
 }
 
 /// Installs fonts, icons, and base style.
@@ -812,7 +812,7 @@ fn install_fonts(ctx: &egui::Context) {
 fn add_tabular(fonts: &mut egui::FontDefinitions) {
     use fastframe_fonts::Weight;
     for weight in Weight::ALL {
-        let name = format!("zapfast-tabular-{}", weight.name());
+        let name = format!("superwhatsapp-tabular-{}", weight.name());
         let mut data = egui::FontData::from_static(fastframe_fonts::INTER);
         data.tweak.coords = egui::epaint::text::VariationCoords::new([(b"wght", weight.value())]);
         fonts
@@ -884,7 +884,7 @@ fastframe_icons::icons! {
     /// Every icon the interface draws. Icons Spotifast ships too come from
     /// fastframe-icons (`lucide`); the rest are SuperWhatsapp's own files.
     pub enum Icon {
-        prefix: "zapfast-icon-",
+        prefix: "superwhatsapp-icon-",
         directory: "../assets/icons/",
         Archive => "archive",
         ArrowDown => "arrow-down",
@@ -1079,14 +1079,14 @@ pub fn circle_button(
 pub fn mark(ui: &egui::Ui, center: egui::Pos2, diameter: f32) {
     let ctx = ui.ctx();
     let pixels = (diameter * ctx.pixels_per_point()).round().max(1.0) as usize;
-    let id = egui::Id::new(("zapfast-mark", pixels));
+    let id = egui::Id::new(("superwhatsapp-mark", pixels));
     let texture = match ctx.data_mut(|data| data.get_temp::<egui::TextureHandle>(id)) {
         Some(texture) => texture,
         None => {
             let rgba = crate::util::app_icon_rgba(pixels);
             let image = egui::ColorImage::from_rgba_unmultiplied([pixels, pixels], &rgba);
             let texture = ctx.load_texture(
-                format!("zapfast-mark-{pixels}"),
+                format!("superwhatsapp-mark-{pixels}"),
                 image,
                 egui::TextureOptions::LINEAR,
             );
@@ -1610,7 +1610,10 @@ mod tests {
         add_tabular(&mut fonts);
         for weight in Weight::ALL {
             let family = &fonts.families[&tabular_family(weight)];
-            assert_eq!(family[0], format!("zapfast-tabular-{}", weight.name()));
+            assert_eq!(
+                family[0],
+                format!("superwhatsapp-tabular-{}", weight.name())
+            );
             assert_eq!(family[1..], fonts.families[&weight.family()][..]);
         }
         let ctx = egui::Context::default();
@@ -1990,7 +1993,7 @@ mod tests {
     /// renders as Omarchy's own renderer does.
     #[test]
     fn the_omarchy_template_renders_like_omarchy_in_light_and_dark_themes() {
-        const TEMPLATE: &str = include_str!("../contrib/omarchy/zapfast.json.tpl");
+        const TEMPLATE: &str = include_str!("../contrib/omarchy/superwhatsapp.json.tpl");
         for (colors, expected) in [
             (
                 include_str!("../tests/fixtures/omarchy/catppuccin.tsv"),
@@ -2022,8 +2025,8 @@ mod tests {
     #[test]
     fn the_shipped_omarchy_hook_has_not_drifted() {
         assert_eq!(
-            include_str!("../contrib/omarchy/zapfast-theme").replace("\r\n", "\n"),
-            fastframe_theme::omarchy::hook_script("zapfast")
+            include_str!("../contrib/omarchy/superwhatsapp-theme").replace("\r\n", "\n"),
+            fastframe_theme::omarchy::hook_script("superwhatsapp")
         );
     }
 

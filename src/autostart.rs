@@ -11,7 +11,33 @@ use std::sync::mpsc::{Receiver, TryRecvError};
 use fastframe_autostart::{Autostart, Start, State};
 
 fn autostart() -> Autostart {
+    Autostart::new("superwhatsapp", "SuperWhatsapp")
+}
+
+/// The login item of installs from before the rename. On Linux its entry
+/// is named by the id; macOS names it by the bundle and Windows by the
+/// name, which have not changed.
+#[cfg(target_os = "linux")]
+fn previous_autostart() -> Autostart {
     Autostart::new("zapfast", "SuperWhatsapp")
+}
+
+/// An older install's login item becomes SuperWhatsapp's (REQ-SUPERWA-005).
+#[cfg(target_os = "linux")]
+fn move_previous_entry() {
+    let old = previous_autostart();
+    let start = match old.state() {
+        State::On(start) | State::NeedsApproval(start) => start,
+        _ => return,
+    };
+    match autostart().set(Some(start)) {
+        Ok(_) => {
+            if let Err(error) = old.set(None) {
+                log::warn!("could not remove the old login item: {error}");
+            }
+        }
+        Err(error) => log::info!("the old login item stays: {error}"),
+    }
 }
 
 /// What a finished read or change found.
@@ -37,6 +63,8 @@ impl LoginItem {
             move || {
                 #[cfg(target_os = "macos")]
                 move_launch_agent();
+                #[cfg(target_os = "linux")]
+                move_previous_entry();
                 Outcome {
                     state: Ok(autostart().state()),
                     changed: false,
@@ -130,7 +158,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_switch_shows_only_where_zapfast_can_start_at_login() {
+    fn the_switch_shows_only_where_superwhatsapp_can_start_at_login() {
         assert_eq!(switch(State::Unsupported), None);
         assert_eq!(switch(State::Off), Some(false));
         assert_eq!(switch(State::On(Start::Hidden)), Some(true));

@@ -89,7 +89,7 @@ pub fn preserve(connection: &Connection, chat: &str, id: &str, next: &Content, e
         _ => return,
     };
     if let Err(error) = preserve_inner(connection, chat, id, next, why) {
-        log::warn!(target: "zapfast::extras", "could not keep a copy: {error}");
+        log::warn!(target: "superwhatsapp::extras", "could not keep a copy: {error}");
     }
 }
 
@@ -417,7 +417,7 @@ pub fn drain_forgets(connection: &Connection, archive: &Path) {
         .unwrap_or_default();
     for (chat, id, why, version) in pending {
         if let Err(error) = forget(connection, &chat, &id, why, version) {
-            log::warn!(target: "zapfast::extras", "could not forget a kept copy: {error}");
+            log::warn!(target: "superwhatsapp::extras", "could not forget a kept copy: {error}");
         }
     }
 }

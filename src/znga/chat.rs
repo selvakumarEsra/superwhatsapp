@@ -182,6 +182,19 @@ pub fn open_thread(app: &mut App) {
 }
 
 pub fn send_message(app: &mut App, text: &str) {
+    send_with(app, text, None);
+}
+
+/// A follow-up to one of Znga's answers (REQ-ZANS-003.A3): the person's
+/// line shows the start of the answer it replies to, and Znga gets the
+/// whole answer as context.
+pub fn reply_to(app: &mut App, text: &str, quote: &str) {
+    let quote = thread::plain(quote);
+    let quote = quote.trim();
+    send_with(app, text, (!quote.is_empty()).then_some(quote));
+}
+
+fn send_with(app: &mut App, text: &str, quote: Option<&str>) {
     let text = text.trim();
     if text.is_empty() || !enabled(app) {
         return;
@@ -189,7 +202,19 @@ pub fn send_message(app: &mut App, text: &str) {
     let account = active(app);
     let now = crate::util::now();
     let thread = thread_of(app, &account);
-    thread.post_person(text, now);
+    match quote {
+        Some(quote) => {
+            let first: String = quote
+                .lines()
+                .find(|line| !line.trim().is_empty())
+                .unwrap_or_default()
+                .chars()
+                .take(120)
+                .collect();
+            thread.post_person(format!("> {first}\n{text}"), now)
+        }
+        None => thread.post_person(text, now),
+    };
     if let Some(question) = thread.question.take() {
         if let Some(choice) = thread::pick(text, &question.choices).cloned() {
             resolve(app, question.intent, choice);
@@ -227,6 +252,13 @@ pub fn send_message(app: &mut App, text: &str) {
         Intent::Forget { rest } => forget(app, &rest),
         Intent::Learn { .. } => {}
         Intent::Ask(question) => {
+            let question = match quote {
+                Some(quote) => format!(
+                    "{question}\n\nThis follows up your earlier answer:\n{}",
+                    quote.chars().take(2000).collect::<String>()
+                ),
+                None => question,
+            };
             if super::web::links(&question).is_empty() {
                 ask(app, question)
             } else {
@@ -234,6 +266,44 @@ pub fn send_message(app: &mut App, text: &str) {
             }
         }
     }
+}
+
+/// The chats an answer may be forwarded to: this account's, that Znga
+/// may see (REQ-ZANS-003.A4).
+pub fn forward_targets(app: &App) -> Vec<(String, String)> {
+    if !enabled(app) {
+        return Vec::new();
+    }
+    let account = active(app);
+    app.account()
+        .chats
+        .iter()
+        .filter(|chat| chat.id != thread::ZNGA_CHAT && chat_visible(app, &account, &chat.id))
+        .map(|chat| (chat.id.clone(), app.chat_title(chat)))
+        .collect()
+}
+
+/// Puts one of Znga's answers in `chat`'s composer as a draft and opens
+/// the chat (REQ-ZANS-003.A2). Nothing is sent; returns whether it was
+/// placed.
+pub fn forward(app: &mut App, entry: u64, chat: &str) -> bool {
+    if !enabled(app) || forward_targets(app).iter().all(|(id, _)| id != chat) {
+        return false;
+    }
+    let account = active(app);
+    let Some(text) = app
+        .znga
+        .threads
+        .get(&account)
+        .and_then(|t| t.entries().iter().find(|e| e.id == entry && !e.from_person))
+        .map(|e| thread::plain(&e.text))
+        .filter(|text| !text.is_empty())
+    else {
+        return false;
+    };
+    open_chat(app, chat);
+    offer(app, chat, &text, false);
+    true
 }
 
 /// A question with a web link, answered from that site (REQ-ZCHAT-008).
@@ -917,6 +987,18 @@ pub fn card_action(app: &mut App, entry: u64, index: usize, action: &str) {
     if !card.actions().iter().any(|(id, _)| *id == action) {
         return;
     }
+    if let Card::Cite { chat, .. } = &card
+        && app.account().chats.iter().all(|c| c.id != *chat)
+    {
+        // The chat was removed since the answer (REQ-ZANS-001.A5).
+        answer(
+            app,
+            &account,
+            "That chat is no longer here, so the message cannot be opened.",
+            Vec::new(),
+        );
+        return;
+    }
     if let Some(chat) = card.chat()
         && app.account().chats.iter().all(|c| c.id != chat)
     {
@@ -933,6 +1015,14 @@ pub fn card_action(app: &mut App, entry: u64, index: usize, action: &str) {
     let mut outcome = Some(Card::outcome(action).to_owned());
     match (&card, action) {
         (Card::NeedsYou { chat, .. } | Card::CatchUp { chat, .. }, "open") => open_chat(app, chat),
+        (Card::Cite { chat, message, .. }, "open") => {
+            // The jump says when the message itself is gone (REQ-ZANS-001).
+            app.znga.chat_open = false;
+            app.actions.push(Action::OpenMessage {
+                chat: chat.clone(),
+                message: message.clone(),
+            });
+        }
         (Card::NeedsYou { chat, text, .. }, "draft") => {
             app.znga
                 .alerts
@@ -1624,7 +1714,7 @@ fn digests(app: &mut App) {
     }
     let prompt = prompt::briefing(&hooks::your_name(app, &account), &items);
     if let Err(error) = app.znga.submit(prompt, Purpose::Digest { slot }) {
-        log::debug!(target: "zapfast::znga", "digest skipped: {}", error.len());
+        log::debug!(target: "superwhatsapp::znga", "digest skipped: {}", error.len());
     }
 }
 
@@ -2004,5 +2094,93 @@ mod tests {
         assert!(!tools_for(&app, "kim@s.whatsapp.net"));
         assert!(!tools_for(&app, "locked@s.whatsapp.net"));
         assert_eq!(sends(&app), 0);
+    }
+
+    #[test]
+    fn forwarding_an_answer_drafts_it_in_the_chosen_chat() {
+        let (_root, mut app) = app("unused");
+        let account = active(&app);
+        answer(
+            &mut app,
+            &account,
+            "## Plan\n- **Call** Ada [1]",
+            Vec::new(),
+        );
+        let entry = app.znga.threads[account.as_str()]
+            .entries()
+            .last()
+            .unwrap()
+            .id;
+        // Only chats Znga may see are offered (REQ-ZANS-003.A4).
+        let targets: Vec<String> = forward_targets(&app)
+            .into_iter()
+            .map(|(id, _)| id)
+            .collect();
+        assert!(targets.contains(&"ada@s.whatsapp.net".to_owned()));
+        assert!(!targets.contains(&"kim@s.whatsapp.net".to_owned()));
+        assert!(!targets.contains(&"locked@s.whatsapp.net".to_owned()));
+        assert!(!forward(&mut app, entry, "kim@s.whatsapp.net"));
+        assert!(!forward(&mut app, entry, "locked@s.whatsapp.net"));
+        assert!(app.znga.offer.is_none());
+        // The answer lands in Ada's composer, without marks, and is not sent.
+        assert!(forward(&mut app, entry, "ada@s.whatsapp.net"));
+        let offer = app.znga.offer.as_ref().unwrap();
+        assert_eq!(offer.chat, "ada@s.whatsapp.net");
+        assert_eq!(offer.text, "Plan\n• Call Ada");
+        assert!(
+            app.actions
+                .iter()
+                .any(|a| matches!(a, Action::OpenChat(id) if id == "ada@s.whatsapp.net"))
+        );
+        assert_eq!(sends(&app), 0);
+    }
+
+    #[test]
+    fn a_reply_quotes_the_answer_it_follows() {
+        let (_root, mut app) = app("Friday.");
+        reply_to(&mut app, "When is it?", "## Trip\n- **Goa** with Ada [2]");
+        let lines = texts(&app);
+        assert!(
+            lines.iter().any(|t| t == "> Trip\nWhen is it?"),
+            "{lines:?}"
+        );
+    }
+
+    #[test]
+    fn a_cited_message_opens_where_it_is() {
+        let (_root, mut app) = app("unused");
+        let account = active(&app);
+        let hits = [super::super::archive_ask::Hit {
+            chat: "ada@s.whatsapp.net".into(),
+            id: "m7".into(),
+            chat_title: "Ada Lovelace".into(),
+            sender: "Ada Lovelace".into(),
+            text: "ada@example.com".into(),
+            at: 0,
+        }];
+        let text = "Ada gave hers [1].";
+        answer(&mut app, &account, text, thread::cited(text, &hits));
+        let entry = app.znga.threads[account.as_str()]
+            .entries()
+            .last()
+            .unwrap()
+            .id;
+        card_action(&mut app, entry, 0, "open");
+        assert!(app.actions.iter().any(|a| matches!(a,
+            Action::OpenMessage { chat, message } if chat == "ada@s.whatsapp.net" && message == "m7")));
+        // Opening is not a one-time action: it stays available.
+        assert!(
+            app.znga.threads[account.as_str()]
+                .open_card(entry, 0)
+                .is_some()
+        );
+        // A chat that has gone says so (REQ-ZANS-001.A5).
+        app.account_mut()
+            .chats
+            .retain(|c| c.id != "ada@s.whatsapp.net");
+        app.actions.clear();
+        card_action(&mut app, entry, 0, "open");
+        assert!(app.actions.is_empty());
+        assert!(texts(&app).last().unwrap().contains("no longer here"));
     }
 }

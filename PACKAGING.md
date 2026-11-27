@@ -1,4 +1,4 @@
-> **SuperWhatsapp note.** This guide describes upstream ZapFast's packaging
+> **SuperWhatsapp note.** This guide describes the upstream project's packaging
 > and its store accounts (AUR, Homebrew, COPR, winget, Windows signing),
 > kept for reference and for merges. SuperWhatsapp builds with the same
 > tools under its own names (`superwhatsapp-*` files, the `superwhatsapp`
@@ -12,9 +12,9 @@ it pins the shared CLI and nFPM versions and declares Linux amd64/arm64 inputs,
 DEB/RPM/AppImage contents, dependencies, recipe templates and downstream repositories.
 Application assets and native recipes stay in `packaging/`.
 
-Version 0.13.0 introduces the ZapFast name and `zapfast` binary. Its AUR recipes
+Version 0.13.0 introduces the SuperWhatsapp name and `superwhatsapp` binary. Its AUR recipes
 provide and replace the corresponding FastsApp packages. The GitHub repository is
-`crmne/zapfast`, so source archives extract into `zapfast-VERSION`. Use the
+`selvakumarEsra/superwhatsapp`, so source archives extract into `superwhatsapp-VERSION`. Use the
 configuration from the matching tag to rebuild an older FastsApp release.
 Existing release files keep their original names.
 
@@ -119,27 +119,27 @@ recipe generation to the Linux packaging job after release assets exist.
 ## Windows installer
 
 Windows releases ship the portable zip and a per-user Windows Installer
-package, `zapfast-vX.Y.Z-<target>.msi`, built by native-packages from
-`packaging/windows/zapfast.wxs` (`packaging/windows/msi.rb`). Releases up to
+package, `superwhatsapp-vX.Y.Z-<target>.msi`, built by native-packages from
+`packaging/windows/superwhatsapp.wxs` (`packaging/windows/msi.rb`). Releases up to
 0.20.1 also shipped an Inno Setup program (`-setup.exe`); it is gone, because
 the package is the one winget's manifests install, and the one signed and tested.
 
 The package takes over a copy the Inno Setup program installed: it installs
 into that folder, removes Inno's uninstaller and its Settings > Apps entry, and
 leaves the user's data (session, archive, settings) alone, as they live
-outside the program folder. ZapFast 0.20.0 and later update to the package by
+outside the program folder. SuperWhatsapp 0.20.0 and later update to the package by
 themselves (the updater prefers the `.msi`). Older versions look for a
 `-setup.exe` that new releases no longer have, so they stop finding updates;
 their users download the `.msi` once (`docs/_guide/download.md` says so).
-`packaging/windows/zapfast.iss` stays only so `test-installer.ps1` can make an
+`packaging/windows/superwhatsapp.iss` stays only so `test-installer.ps1` can make an
 Inno install for the package to take over.
 
 ## Windows signing
 
-Tag releases sign `zapfast.exe` and the MSI with Azure Artifact Signing, as
+Tag releases sign `superwhatsapp.exe` and the MSI with Azure Artifact Signing, as
 **PlentyLabs UG (haftungsbeschränkt) & Co. KG**, through native-packages:
 `windows.signing` in `native-packages.yaml` turns it on,
-`native-packages sign-windows` signs `zapfast.exe` before the zip and the MSI
+`native-packages sign-windows` signs `superwhatsapp.exe` before the zip and the MSI
 pack it, and `native-packages build` signs the MSI before recording its
 checksum. Each
 signature is SHA-256 Authenticode with Microsoft's RFC 3161 timestamp, checked
@@ -152,8 +152,8 @@ is shared by Carmine's Windows apps and managed in `crmne/terraform`
 
 No secret is involved. The Windows build jobs run in this repository's
 `windows-signing` environment, which deploys only from `v*` tags, and sign in
-through GitHub's OIDC token as the Entra app `GitHub zapfast Windows signing`.
-That app trusts only `repo:crmne@106617/zapfast@1350713137:environment:windows-signing` (GitHub's immutable subject, with the owner's and repository's ids) and holds
+through GitHub's OIDC token as the Entra app `GitHub superwhatsapp Windows signing`.
+That app trusts only `repo:crmne@106617/superwhatsapp@1350713137:environment:windows-signing` (GitHub's immutable subject, with the owner's and repository's ids) and holds
 the "Artifact Signing Certificate Profile Signer" role on the account. The
 environment's variables, none of them secret, are `AZURE_CLIENT_ID`,
 `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `AZURE_SIGNING_ENDPOINT`,
@@ -171,7 +171,7 @@ with this identity.
 
 ## Flatpak
 
-`packaging/flatpak/rocks.zapfast.ZapFast.yml` builds from source, with offline Cargo
+`packaging/flatpak/cc.superwhatsapp.SuperWhatsapp.yml` builds from source, with offline Cargo
 sources generated from the selected revision's lockfile. The adjacent bundle
 manifest reuses the Linux release binary, as in Spotifast. Both grant Wayland/X11,
 GPU, audio, network, keyring and tray access; attachments chosen by the user use
@@ -182,11 +182,11 @@ Generate a pinned Flathub checkout (Python needs `aiohttp`, `tomlkit` and `PyYAM
 
 ```sh
 packaging/flatpak/flathub.sh vX.Y.Z /path/to/flathub-checkout
-flatpak-builder --user --install --force-clean build-dir /path/to/flathub-checkout/rocks.zapfast.ZapFast.yml
+flatpak-builder --user --install --force-clean build-dir /path/to/flathub-checkout/cc.superwhatsapp.SuperWhatsapp.yml
 ```
 
 Flathub submission/review is a separate publication step; the manifest alone does
-not make ZapFast available in Flathub. A maintainer must submit it manually:
+not make SuperWhatsapp available in Flathub. A maintainer must submit it manually:
 [Flathub's requirements](https://docs.flathub.org/docs/for-app-authors/requirements#generative-ai-policy)
 prohibit AI agents from submitting or writing submission interactions and require
 disclosure of generated material. Review the manifests and these changes before
@@ -196,8 +196,8 @@ in `checksums.txt`. No existing release files are replaced by this change.
 
 ## Fedora COPR and openSUSE OBS
 
-`packaging/rpm/zapfast.spec` builds ZapFast from its release source for the
-[paolino/zapfast](https://copr.fedorainfracloud.org/coprs/paolino/zapfast/) COPR
+`packaging/rpm/superwhatsapp.spec` builds SuperWhatsapp from its release source for the
+[cc/superwhatsapp](https://copr.fedorainfracloud.org/coprs/cc/superwhatsapp/) COPR
 and the `home:paolino` OBS project. Fill in `@VERSION@` and `@DATE@` (in RPM
 changelog form, such as `Tue Nov 03 2026`), then build a source RPM and submit
 it. Cargo fetches the locked dependencies during the build, so the COPR project
@@ -210,18 +210,18 @@ mounted read-only.
 
 ```sh
 sed -e "s/@VERSION@/X.Y.Z/g" -e "s/@DATE@/$(LC_ALL=C date '+%a %b %d %Y')/" \
-  packaging/rpm/zapfast.spec > zapfast.spec
-spectool -g -R zapfast.spec && rpmbuild -bs zapfast.spec
-copr-cli build paolino/zapfast ~/rpmbuild/SRPMS/zapfast-X.Y.Z-1.*.src.rpm
+  packaging/rpm/superwhatsapp.spec > superwhatsapp.spec
+spectool -g -R superwhatsapp.spec && rpmbuild -bs superwhatsapp.spec
+copr-cli build cc/superwhatsapp ~/rpmbuild/SRPMS/superwhatsapp-X.Y.Z-1.*.src.rpm
 ```
 
 ## winget
 
-`packaging/winget/` holds the manifests for the `crmne.ZapFast` package in
+`packaging/winget/` holds the manifests for the `SelvakumarEsra.SuperWhatsapp` package in
 [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs). They install
 the per-user MSI of each stable release, which also takes over a copy installed
 by the Inno Setup installer; its fixed UpgradeCode tells winget which installed
-program is ZapFast. v0.19.0 and earlier ship no MSI, so the first winget
+program is SuperWhatsapp. v0.19.0 and earlier ship no MSI, so the first winget
 version is the first release that does.
 
 Submission is a manual step for the maintainer, after the release's assets and
@@ -230,13 +230,13 @@ published release, then validate and submit them from a fork of winget-pkgs:
 
 ```sh
 python3 packaging/winget/manifests.py vX.Y.Z /path/to/winget-pkgs
-winget validate --manifest /path/to/winget-pkgs/manifests/c/crmne/ZapFast/X.Y.Z
-winget install --manifest /path/to/winget-pkgs/manifests/c/crmne/ZapFast/X.Y.Z
+winget validate --manifest /path/to/winget-pkgs/manifests/c/crmne/SuperWhatsapp/X.Y.Z
+winget install --manifest /path/to/winget-pkgs/manifests/c/crmne/SuperWhatsapp/X.Y.Z
 ```
 
 Commit only that version's directory and open a pull request to
 `microsoft/winget-pkgs` (or use `wingetcreate submit` on the directory). Its
 validation installs the package and records anything else it needs. Later
-releases can reuse the same command or `wingetcreate update crmne.ZapFast`;
+releases can reuse the same command or `wingetcreate update SelvakumarEsra.SuperWhatsapp`;
 change the templates here when the description or installers change, so the
 next submission keeps them.

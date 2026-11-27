@@ -320,8 +320,8 @@ const ALERT: &[u8] = include_bytes!("../assets/sounds/alert.wav");
 /// sounds go with it when the application bundle carries them.
 fn sound_file(sound: &NotificationSound) -> Option<&'static str> {
     match sound {
-        NotificationSound::Receive => Some("zapfast-receive.wav"),
-        NotificationSound::Alert => Some("zapfast-alert.wav"),
+        NotificationSound::Receive => Some("superwhatsapp-receive.wav"),
+        NotificationSound::Alert => Some("superwhatsapp-alert.wav"),
         _ => None,
     }
 }
@@ -434,7 +434,7 @@ fn notification_app_id() -> &'static str {
     if cfg!(target_os = "macos") {
         MACOS_BUNDLE_ID
     } else {
-        "me.paolino.zapfast"
+        "cc.superwhatsapp"
     }
 }
 
@@ -462,7 +462,7 @@ fn deliver(
         Client::new(
             App::new(notification_app_id(), "SuperWhatsapp")
                 .desktop_entry("superwhatsapp")
-                .icon("zapfast")
+                .icon("superwhatsapp")
                 // SuperWhatsapp's green, the theme's accent, behind the logo on
                 // Windows toasts, so Windows 11's dark theme leaves it as drawn.
                 .logo(
@@ -604,7 +604,7 @@ mod tests {
             .collect();
         assert_eq!(shortcuts.len(), 2);
         for shortcut in shortcuts {
-            assert!(shortcut.contains("AppUserModelID: \"me.paolino.zapfast\""));
+            assert!(shortcut.contains("AppUserModelID: \"cc.superwhatsapp\""));
         }
     }
 

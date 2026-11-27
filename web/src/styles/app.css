@@ -52,3 +52,36 @@ body {
 /* JumpHighlight: the message a jump landed on flashes for two seconds. */
 .jump-flash { animation: jump-flash 2s ease-out; }
 @keyframes jump-flash { 0%, 40% { background: color-mix(in srgb, var(--accent) 22%, transparent); } 100% { background: transparent; } }
+
+/* Znga answers (REQ-ZANS-002, 003): actions appear on hover or focus. */
+.znga-answer-actions {
+  position: absolute;
+  top: -18px;
+  right: -6px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  z-index: 2;
+}
+.znga-answer:hover .znga-answer-actions,
+.znga-answer:focus-within .znga-answer-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+.znga-prose > :first-child { margin-top: 0 !important; }
+.znga-prose > :last-child { margin-bottom: 0 !important; }
+.znga-cite:hover { filter: brightness(1.1); }
+
+/* Translate on someone else's message (REQ-ZANS-004). */
+.msg-actions {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+.msg-row:hover .msg-actions,
+.msg-row:focus-within .msg-actions {
+  opacity: 1;
+  pointer-events: auto;
+}

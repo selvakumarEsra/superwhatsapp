@@ -38,7 +38,7 @@ implementations:
 
 ## Acceptance
 <!-- id: REQ-EXTRAS-001.A1 -->
-- `cargo build --no-default-features` builds ZapFast without the extras.
+- `cargo build --no-default-features` builds SuperWhatsapp without the extras.
 <!-- id: REQ-EXTRAS-001.A2 -->
 - Every change outside `src/extras/`, `specs/` and docs carries an
   `extras hook` marker.
@@ -154,7 +154,7 @@ verifies:
 ## Insights MAY analyse a chat export the person chooses
 
 The person can pick a WhatsApp chat export (`.txt`, or the `.zip` WhatsApp
-makes) for a chat ZapFast has no history of. It is parsed in memory and
+makes) for a chat SuperWhatsapp has no history of. It is parsed in memory and
 shown as its own source with the same dashboard; nothing is written to the
 archive. Both the Android (`12/31/24, 21:05 - Name: text`) and iPhone
 (`[31/12/2024, 21:05:33] Name: text`) layouts are read, with multi-line
@@ -292,7 +292,7 @@ verifies:
 <!-- id: REQ-EXTRAS-010 -->
 ## Insights SHOULD fetch older history from the phone for chosen chats
 
-The person can choose chats and ask for their older history. ZapFast asks
+The person can choose chats and ask for their older history. SuperWhatsapp asks
 the person's own phone for messages before the oldest one archived, the way
 scrolling to the top of a chat does, and the answers are written to the
 archive like any other history, so they stay on this computer and "Save
@@ -476,7 +476,7 @@ Under the Forward dialog's search field, two chips, **All** and
 the chats marked as favourites (here or on the phone) that a message can be
 forwarded to, contacts and groups alike, in the phone's favourites order.
 The search narrows whichever tab is chosen. The chosen tab is remembered
-until ZapFast quits, so someone who forwards to favourites finds them there
+until SuperWhatsapp quits, so someone who forwards to favourites finds them there
 next time.
 
 implementations:
@@ -505,7 +505,7 @@ verifies:
   Mark a chat as a favourite from its menu." (or, with a search, "No
   favourite chats match.") instead of "No writable chats found".
 <!-- id: REQ-EXTRAS-015.A5 -->
-- The dialog opens on All when ZapFast starts and on the last chosen tab
+- The dialog opens on All when SuperWhatsapp starts and on the last chosen tab
   after that.
 <!-- id: REQ-EXTRAS-015.A6 -->
 - The chips are not shown while reviewing recipients, nor in a window too
@@ -517,7 +517,7 @@ verifies:
 
 WhatsApp keeps three pinned chats (twenty with WhatsApp Plus), and the
 phone silently unpins an older chat when a linked device pins one more.
-ZapFast lets the person pin as many chats as they like: pins up to
+SuperWhatsapp lets the person pin as many chats as they like: pins up to
 WhatsApp's limit go to the phone as before, and each pin beyond it is kept
 on this computer only, so the phone's pins are never displaced. A
 "pinned on this computer only" note says so when such a pin is made.

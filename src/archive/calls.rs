@@ -145,10 +145,10 @@ mod tests {
         archive.ensure_chat(ada, "Ada").unwrap();
         archive.ensure_chat(grace, "Grace").unwrap();
         archive
-            .insert_message(&entry(ada, "zapfast-call-a", true, 100), None)
+            .insert_message(&entry(ada, "superwhatsapp-call-a", true, 100), None)
             .unwrap();
         archive
-            .insert_message(&entry(grace, "zapfast-call-b", false, 300), None)
+            .insert_message(&entry(grace, "superwhatsapp-call-b", false, 300), None)
             .unwrap();
         let mut text = entry(ada, "TEXT", false, 200);
         text.content = Content::Text {
@@ -158,7 +158,7 @@ mod tests {
         archive.insert_message(&text, None).unwrap();
         let log = archive.call_log(CALL_LOG_LIMIT).unwrap();
         let ids: Vec<&str> = log.iter().map(|entry| entry.id.as_str()).collect();
-        assert_eq!(ids, ["zapfast-call-b", "zapfast-call-a"]);
+        assert_eq!(ids, ["superwhatsapp-call-b", "superwhatsapp-call-a"]);
         assert_eq!(log[0].chat, grace);
     }
 
@@ -235,7 +235,7 @@ mod tests {
         let chat = "15550001111@s.whatsapp.net";
         archive.ensure_chat(chat, "Ada").unwrap();
         archive
-            .insert_message(&entry(chat, "zapfast-call-1", false, 100), None)
+            .insert_message(&entry(chat, "superwhatsapp-call-1", false, 100), None)
             .unwrap();
         archive
             .insert_message(&entry(chat, "PHONE-CALL-LOG", false, 200), None)

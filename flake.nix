@@ -70,7 +70,7 @@
                   libxi
                   libxrandr
                 ];
-              ZAPFAST_TEST_RTL_FONT = "${pkgs.dejavu_fonts}/share/fonts/truetype/DejaVuSans.ttf";
+              SUPERWHATSAPP_TEST_RTL_FONT = "${pkgs.dejavu_fonts}/share/fonts/truetype/DejaVuSans.ttf";
             }
             // pkgs.lib.optionalAttrs isLinux {
               # The GUI dlopens its Wayland, X11 and GL libraries at run time.
@@ -150,7 +150,7 @@
                 libx11
               ]
             );
-            ZAPFAST_TEST_RTL_FONT = "${pkgs.dejavu_fonts}/share/fonts/truetype/DejaVuSans.ttf";
+            SUPERWHATSAPP_TEST_RTL_FONT = "${pkgs.dejavu_fonts}/share/fonts/truetype/DejaVuSans.ttf";
 
             # The vendored OpenSSL (through rusqlite's bundled SQLCipher) embeds
             # its build line, compiler path included, in the binary. The app
@@ -180,10 +180,10 @@
                   $out/share/applications/superwhatsapp.desktop
                 install -Dm644 packaging/icons/superwhatsapp.svg \
                   $out/share/icons/hicolor/scalable/apps/superwhatsapp.svg
-                install -Dm644 contrib/omarchy/zapfast.json.tpl \
-                  $out/share/zapfast/omarchy/zapfast.json.tpl
-                install -Dm755 contrib/omarchy/zapfast-theme \
-                  $out/share/zapfast/omarchy/zapfast-theme
+                install -Dm644 contrib/omarchy/superwhatsapp.json.tpl \
+                  $out/share/superwhatsapp/omarchy/superwhatsapp.json.tpl
+                install -Dm755 contrib/omarchy/superwhatsapp-theme \
+                  $out/share/superwhatsapp/omarchy/superwhatsapp-theme
               ''
               # Mirrors packaging/macos/bundle.sh: SuperWhatsapp.app around the built
               # binary, with the version stripped of any prerelease suffix.

@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    zapfast_desktop::run();
+    superwhatsapp_desktop::run();
 }

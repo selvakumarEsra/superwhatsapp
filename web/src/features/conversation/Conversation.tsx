@@ -206,7 +206,7 @@ export default function Conversation(p: { chat: Open }) {
                     </div>
                   </Show>
                   <div data-msg={msg.id} classList={{ "jump-flash": flash() === msg.id }}>
-                    <Message msg={msg} first={!run(prev(), msg)} last={!run(msg, next())} group={p.chat.group} />
+                    <Message msg={msg} first={!run(prev(), msg)} last={!run(msg, next())} group={p.chat.group} chat={p.chat.id} />
                   </div>
                 </>
               );

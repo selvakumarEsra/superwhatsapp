@@ -23,7 +23,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
         .inner_margin(Margin::same(22))
         .shadow(palette.modal_shadow());
     egui::Window::new(crate::i18n::gettext(locale, "Update SuperWhatsapp"))
-        .id(egui::Id::new("zapfast-update"))
+        .id(egui::Id::new("superwhatsapp-update"))
         .title_bar(false)
         .resizable(false)
         .auto_sized()

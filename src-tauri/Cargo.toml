@@ -1,6 +1,6 @@
 [package]
-name = "zapfast-desktop"
-version = "0.21.1-beta.11"
+name = "superwhatsapp-desktop"
+version = "0.21.1-beta.12"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
@@ -8,18 +8,18 @@ description = "SuperWhatsapp's Tauri shell (specs/tauri-ui.md)"
 publish = false
 
 [lib]
-name = "zapfast_desktop"
+name = "superwhatsapp_desktop"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [[bin]]
-name = "zapfast-desktop"
+name = "superwhatsapp-desktop"
 path = "src/main.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-zapfast = { path = "..", features = ["demo"] }
+superwhatsapp = { path = "..", features = ["demo"] }
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }
@@ -32,7 +32,7 @@ base64 = "0.23"
 egui = "0.36.2"
 image = { version = "0.25", default-features = false, features = ["jpeg"] }
 log = "0.4"
-# The accounts' startup permits (zapfast::backend::Backend::take_startup).
+# The accounts' startup permits (superwhatsapp::backend::Backend::take_startup).
 tokio = { version = "1", features = ["sync"] }
 anyhow = "1"
 # Installs updates and confirms a relaunch, as the egui build does.

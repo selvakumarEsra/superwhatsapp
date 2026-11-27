@@ -14,6 +14,10 @@ pub fn apply(app: &mut App, part: &str) -> bool {
         chat(app);
         return true;
     }
+    if part == "znga-translate" {
+        translate(app);
+        return true;
+    }
     if part == "znga-profile" {
         profile(app);
         return true;
@@ -174,9 +178,95 @@ fn chat(app: &mut App) {
         false,
         false,
     );
+    // An answer that cites messages and names a chat (specs/znga-answers.md).
+    thread.post_person("Show my messages that gave an email id", now - 40);
+    let hits: Vec<super::archive_ask::Hit> = [(&a, &a_title), (&b, &b_title)]
+        .into_iter()
+        .enumerate()
+        .map(|(i, (chat, title))| {
+            let message = app
+                .conversations
+                .get(chat.as_str())
+                .and_then(|c| c.messages.iter().rev().find(|m| !m.from_me))
+                .map(|m| (m.id.clone(), m.timestamp))
+                .unwrap_or_else(|| (format!("demo-{i}"), now - 86_400));
+            super::archive_ask::Hit {
+                chat: chat.clone(),
+                id: message.0,
+                chat_title: title.clone(),
+                sender: title.clone(),
+                text: format!(
+                    "My email is {}@example.com",
+                    title.split(' ').next().unwrap_or("me").to_lowercase()
+                ),
+                at: message.1,
+            }
+        })
+        .collect();
+    let answer = format!(
+        "## Emails in your chats\n\n- **{a_title}** shared {} [1]\n- **{b_title}** shared {} [2]\n\nBoth came in this week. Want me to draft a thank-you to {a_title}?",
+        hits[0].text.trim_start_matches("My email is "),
+        hits[1].text.trim_start_matches("My email is "),
+    );
+    let cites = super::thread::cited(&answer, &hits);
+    thread.post(answer, cites, now - 30, true);
     thread.unread = 0;
     app.znga.threads.insert(account.clone(), thread);
     app.znga.restored.insert(account);
+}
+
+/// A chat with a Spanish message and its translation open
+/// (`--demo-page znga-translate`, REQ-ZANS-004).
+fn translate(app: &mut App) {
+    use crate::model::{Content, Delivery, Message};
+    app.znga.config.enabled = true;
+    app.znga.chat_mode = true;
+    app.znga.chat_open = false;
+    let Some(chat) = app
+        .account()
+        .chats
+        .iter()
+        .find(|chat| !chat.locked && !chat.is_group())
+        .map(|chat| chat.id.clone())
+    else {
+        return;
+    };
+    let now = crate::util::now();
+    let message = Message {
+        id: "demo-spanish".into(),
+        chat: chat.clone(),
+        sender: chat.clone(),
+        sender_name: None,
+        from_me: false,
+        timestamp: now - 120,
+        content: Content::text("¿Nos vemos mañana a las 5 en el café de siempre?"),
+        status: Delivery::None,
+        delivered_at: None,
+        read_at: None,
+        quoted: None,
+        reactions: Vec::new(),
+        history_order: None,
+        edited: false,
+        mentions: Vec::new(),
+        forwarded: false,
+        thumbnail: None,
+    };
+    app.conversations
+        .entry(chat.clone())
+        .or_default()
+        .messages
+        .push(message);
+    let account = app.account().id.as_str().to_owned();
+    let key = (account, chat.clone(), "demo-spanish".to_owned());
+    app.znga.translations.states.insert(
+        key.clone(),
+        super::translate::State::Done {
+            text: "Shall we meet tomorrow at 5 at the usual café?".into(),
+            from: "Spanish".into(),
+        },
+    );
+    app.znga.translations.open = Some(key);
+    app.open_chat = Some(chat);
 }
 
 /// A sample profile for the open chat (`--dump-state info,znga-profile`),

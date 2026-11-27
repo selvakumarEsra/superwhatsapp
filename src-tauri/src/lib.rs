@@ -8,8 +8,8 @@ mod media;
 mod view;
 mod znga;
 
+use superwhatsapp::model::{Action, ChatFilter, Page};
 use tauri::{Manager, State};
-use zapfast::model::{Action, ChatFilter, Page};
 
 use engine::{Engine, Input, Start};
 
@@ -20,7 +20,7 @@ fn refresh(engine: State<'_, Engine>) {
 
 #[tauri::command]
 fn open_chat(engine: State<'_, Engine>, id: String) {
-    if id == zapfast::znga::thread::ZNGA_CHAT {
+    if id == superwhatsapp::znga::thread::ZNGA_CHAT {
         engine.send(Input::Edit(Box::new(znga::open)));
         return;
     }
@@ -145,7 +145,7 @@ fn close_info(engine: State<'_, Engine>) {
 /// `Action::ShowInfo`).
 #[tauri::command]
 fn info_page(engine: State<'_, Engine>, page: String) {
-    use zapfast::model::{InfoView, MediaTab};
+    use superwhatsapp::model::{InfoView, MediaTab};
     let view = match page.as_str() {
         "media" => InfoView::Media(MediaTab::Media),
         "docs" => InfoView::Media(MediaTab::Docs),
@@ -205,10 +205,11 @@ fn go_to_message(engine: State<'_, Engine>, chat: String, message: String) {
 /// action the egui build changes, so the value is stored the same way.
 #[tauri::command]
 fn set_setting(engine: State<'_, Engine>, key: String, value: serde_json::Value) {
-    use zapfast::settings::{NotificationSound, ThemeChoice};
+    use superwhatsapp::settings::{NotificationSound, ThemeChoice};
     let flag = value.as_bool();
     let text = value.as_str().map(str::to_owned);
-    let global: Option<fn(&mut zapfast::settings::Settings) -> &mut bool> = match key.as_str() {
+    let global: Option<fn(&mut superwhatsapp::settings::Settings) -> &mut bool> = match key.as_str()
+    {
         "enterSends" => Some(|s| &mut s.enter_sends),
         "notificationContent" => Some(|s| &mut s.notification_content),
         "groupSounds" => Some(|s| &mut s.group_sounds),
@@ -219,7 +220,7 @@ fn set_setting(engine: State<'_, Engine>, key: String, value: serde_json::Value)
         "pauseOtherMedia" => Some(|s| &mut s.pause_other_media),
         _ => None,
     };
-    let account: Option<fn(&mut zapfast::settings::AccountSettings) -> &mut bool> =
+    let account: Option<fn(&mut superwhatsapp::settings::AccountSettings) -> &mut bool> =
         match key.as_str() {
             "notifications" => Some(|s| &mut s.notifications),
             "autoDownload" => Some(|s| &mut s.auto_download),
@@ -241,8 +242,8 @@ fn set_setting(engine: State<'_, Engine>, key: String, value: serde_json::Value)
         ("startWithSystem", _, _, Some(on)) => Input::Action(Action::SetStartWithSystem(on)),
         ("showShortcutHints", _, _, Some(on)) => Input::Action(Action::SetShortcutHints(on)),
         ("font", ..) => Input::Action(Action::SetFont(match text.as_deref() {
-            Some("inter") => zapfast::settings::FontChoice::Inter,
-            _ => zapfast::settings::FontChoice::System,
+            Some("inter") => superwhatsapp::settings::FontChoice::Inter,
+            _ => superwhatsapp::settings::FontChoice::System,
         })),
         ("theme", ..) => Input::Action(Action::SetTheme(match text.as_deref() {
             Some("dark") => ThemeChoice::Dark,
@@ -254,9 +255,9 @@ fn set_setting(engine: State<'_, Engine>, key: String, value: serde_json::Value)
             _ => Input::Action(Action::ResetZoom),
         },
         ("autoLock", ..) => Input::Action(Action::SetAutoLock(match text.as_deref() {
-            Some("oneMinute") => zapfast::settings::AutoLock::OneMinute,
-            Some("oneHour") => zapfast::settings::AutoLock::OneHour,
-            _ => zapfast::settings::AutoLock::FifteenMinutes,
+            Some("oneMinute") => superwhatsapp::settings::AutoLock::OneMinute,
+            Some("oneHour") => superwhatsapp::settings::AutoLock::OneHour,
+            _ => superwhatsapp::settings::AutoLock::FifteenMinutes,
         })),
         ("proxy", ..) => Input::Action(Action::SetProxy(text.unwrap_or_default())),
         ("messageSound" | "mentionSound", ..) => {
@@ -323,7 +324,7 @@ fn app_lock_form(
     new: String,
     confirm: String,
 ) {
-    use zapfast::app_lock::{Form, FormMode};
+    use superwhatsapp::app_lock::{Form, FormMode};
     let mode = match mode.as_deref() {
         Some("set") => FormMode::Set,
         Some("change") => FormMode::Change,
@@ -405,7 +406,7 @@ fn measure_storage(engine: State<'_, Engine>) {
         app.storage_token += 1;
         let token = app.storage_token;
         app.backend
-            .send(zapfast::backend::Command::LoadStorageStats { token });
+            .send(superwhatsapp::backend::Command::LoadStorageStats { token });
     })));
 }
 
@@ -460,9 +461,9 @@ fn call_fullscreen(window: tauri::WebviewWindow) -> bool {
 #[tauri::command]
 fn set_call_filter(engine: State<'_, Engine>, filter: String) {
     let filter = if filter == "missed" {
-        zapfast::model::CallFilter::Missed
+        superwhatsapp::model::CallFilter::Missed
     } else {
-        zapfast::model::CallFilter::All
+        superwhatsapp::model::CallFilter::All
     };
     engine.send(Input::Action(Action::SetCallFilter(filter)));
 }
@@ -511,7 +512,7 @@ fn set_blocked(engine: State<'_, Engine>, chat: String, blocked: bool) {
 /// headless core does not keep in step with the page.
 #[tauri::command]
 fn set_wallpaper_color(engine: State<'_, Engine>, color: String, dark: bool) {
-    let Ok(color) = serde_json::from_value::<zapfast::settings::WallpaperColor>(
+    let Ok(color) = serde_json::from_value::<superwhatsapp::settings::WallpaperColor>(
         serde_json::Value::String(color),
     ) else {
         return;
@@ -609,8 +610,8 @@ fn start(arguments: &[std::ffi::OsString]) -> Start {
             // A number, a `wa.me` link, the `whatsapp://` URI the desktop
             // entry passes, or a group invite link.
             argument if !argument.starts_with('-') => {
-                start.target = zapfast::target::parse(argument);
-                start.invite = zapfast::safety::group_invite_code(argument);
+                start.target = superwhatsapp::target::parse(argument);
+                start.invite = superwhatsapp::safety::group_invite_code(argument);
             }
             _ => {}
         }
@@ -622,13 +623,13 @@ fn start(arguments: &[std::ffi::OsString]) -> Start {
 /// running copy, as in the egui build: they never start SuperWhatsapp.
 /// Returns the exit code when the command line was one of them.
 fn control(arguments: &[std::ffi::OsString]) -> Option<i32> {
-    use zapfast::single_instance::{Sent, send};
+    use superwhatsapp::single_instance::{Sent, send};
     let verb = match arguments.get(1)?.to_str()? {
         "quit" => "quit",
         "reload-themes" => "reload-themes",
         _ => return None,
     };
-    let dirs = zapfast::paths::AppDirs::discover();
+    let dirs = superwhatsapp::paths::AppDirs::discover();
     let (code, message) = match (verb, send(&dirs.runtime, verb)) {
         (_, Sent::Taken) | ("quit", Sent::NotRunning) => (0, None),
         (_, Sent::NotRunning) => (
@@ -655,7 +656,7 @@ pub fn run() {
     // First, before anything else: run the update helper when asked
     // (`--apply-update <job>`, then exit), and take the update flags off
     // the command line, as the egui build does.
-    let launch = fastframe_update::intercept(&zapfast::updates::CONFIG);
+    let launch = fastframe_update::intercept(&superwhatsapp::updates::CONFIG);
     // The updater checks a download with `--version`: `<slug> <version>`.
     if launch
         .arguments
@@ -665,7 +666,7 @@ pub fn run() {
     {
         println!(
             "{} {}",
-            zapfast::updates::CONFIG.slug,
+            superwhatsapp::updates::CONFIG.slug,
             env!("CARGO_PKG_VERSION")
         );
         return;
@@ -778,6 +779,8 @@ pub fn run() {
             translate,
             set_language,
             znga::znga_send,
+            znga::znga_forward,
+            znga::znga_translate,
             znga::znga_stop,
             znga::znga_card,
             znga::znga_tool,

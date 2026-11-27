@@ -4,6 +4,7 @@
 // voice notes and link previews drawn in place, WhatsApp's *bold* _italic_
 // ~strike~ formatting, and the reactions in a pill under the bubble. Text is
 // always text, never markup (REQ-WEBUI-003.A4).
+import Translate from "./Translate";
 import { createEffect, createSignal, For, on, onCleanup, Show, type JSX } from "solid-js";
 import type { MediaView, Msg, PreviewView } from "../../lib/bridge";
 import { Ticks } from "../../components/Icons";
@@ -255,7 +256,7 @@ function Preview(p: { preview: PreviewView }) {
 const [viewport, setViewport] = createSignal(0);
 if (typeof window !== "undefined") window.addEventListener("resize", () => setViewport((n) => n + 1));
 
-export default function Message(p: { msg: Msg; first: boolean; last: boolean; group: boolean }) {
+export default function Message(p: { msg: Msg; first: boolean; last: boolean; group: boolean; chat?: string }) {
   const out = () => p.msg.fromMe;
   const reactions = () => p.msg.reactions.reduce((n, [, c]) => n + c, 0);
   const media = () => p.msg.media;
@@ -369,7 +370,7 @@ export default function Message(p: { msg: Msg; first: boolean; last: boolean; gr
   return (
     <div
       ref={rowEl}
-      class="flex flex-col"
+      class="msg-row flex flex-col"
       style={{
         "align-items": out() ? "flex-end" : "flex-start",
         "margin-top": p.first ? "var(--bubble-gap-run)" : "var(--bubble-gap)",
@@ -398,6 +399,7 @@ export default function Message(p: { msg: Msg; first: boolean; last: boolean; gr
         }}
       >
         <Show when={p.first && !sticker()}><Tail out={out()} /></Show>
+        <Show when={p.chat && !out()}><Translate chat={p.chat!} msg={p.msg} part="button" /></Show>
         <div style={{ padding: block() ? "0 0 0" : undefined }}>
           <Show when={p.group && p.first && p.msg.sender && !out()}>
             <div
@@ -464,6 +466,7 @@ export default function Message(p: { msg: Msg; first: boolean; last: boolean; gr
           <div class="flex justify-end" style={{ padding: "6px 6px 0" }}>{meta()}</div>
         </Show>
       </div>
+      <Show when={p.chat && !out()}><Translate chat={p.chat!} msg={p.msg} part="popup" /></Show>
       <Show when={reactions() > 0}>
         {/* src/ui/conversation.rs:reactions: up to three emoji and the
             total, regular 13 on the overlay colour, outlined in the accent

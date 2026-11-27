@@ -13,10 +13,13 @@ priority: high
 `selvakumarEsra/superwhatsapp`, with its own name, logo, releases, website and
 roadmap, and presents no earlier project as its parent.
 
-Non-goals: renaming internal identifiers. The Rust library stays `zapfast`,
-and the data folders, keychain entries, bundle identifiers, Flatpak ID and
-single-instance slot keep their names, so an upgrade keeps the linked
-account, the chats and the archive key, and upstream merges stay easy.
+Since 2026-11-27 the internal names follow too (REQ-SUPERWA-005..008):
+data folders, keychain entries, the Flatpak ID, the Rust crates and every
+environment variable say superwhatsapp, and an existing install moves to
+them on its first start. The only names left from before are the ones
+SuperWhatsapp must recognise to find an older install or to accept an
+update (listed in REQ-SUPERWA-007), and links to the libraries it builds
+on. Non-goal: making upstream merges easy; the fork no longer merges them.
 SuperWhatsapp is not made by, affiliated with or endorsed by WhatsApp or
 Meta; the product says so wherever it introduces itself.
 
@@ -131,3 +134,125 @@ implementations:
 <!-- id: REQ-SUPERWA-004.A3 -->
 - The site says SuperWhatsapp is not affiliated with WhatsApp or Meta, and
   that it is open source under the MIT license.
+
+<!-- id: REQ-SUPERWA-005 -->
+## An existing install MUST move to the SuperWhatsapp folders and keys
+
+On its first start, before anything opens a file, SuperWhatsapp moves the
+data of an older install (the `me.paolino.zapfast` folders on macOS,
+`zapfast` on Linux, `paolino\zapfast` on Windows, and the still older
+`fastsapp` and `fastwhatsapp` ones) into its own folders, and copies each
+encrypted archive's key to its keychain entry under the new name and
+folder. The archive is the only copy of the history, so a folder moves
+only when every key it needs was copied and read back; if one cannot be,
+nothing moves, the old install stays as it was and the start fails with
+the reason. A copy of an older install that is still running is asked first,
+through its own single-instance slot, to show its window, and the new start
+then exits, so nothing moves while it runs. Folders that already exist in the new place are never overwritten:
+the new place wins and the old one is left alone, with a warning in the
+log. Old keychain entries are left in place, so a damaged move can be
+recovered. Saved Znga API keys move the same way the first time they are
+read.
+
+implementations:
+  - src/paths.rs:AppDirs.adopt_previous_names
+  - src/archive/encryption.rs:move_archive_key
+  - src/archive/encryption.rs:key_for
+  - src/znga/keys.rs:stored
+  - src/single_instance.rs:acquire_after_previous
+  - src/autostart.rs:move_previous_entry
+
+verifies:
+  - src/paths.rs:an_older_install_moves_with_its_archive_keys
+  - src/paths.rs:a_missing_key_moves_nothing
+  - src/paths.rs:the_new_folders_win_over_old_ones
+  - src/archive/encryption.rs:a_key_under_the_old_name_is_copied_to_the_new_one
+
+## Acceptance
+<!-- id: REQ-SUPERWA-005.A1 -->
+- After upgrading, Settings shows the archive under the SuperWhatsapp
+  folder (on macOS `~/Library/Application Support/cc.superwhatsapp`), the
+  account is still linked and the history opens.
+<!-- id: REQ-SUPERWA-005.A2 -->
+- When an archive's key cannot be read, no folder moves and the old
+  install still opens with an older SuperWhatsapp.
+<!-- id: REQ-SUPERWA-005.A3 -->
+- When both old and new folders exist, the new ones are used unchanged and
+  the old ones are not touched.
+
+<!-- id: REQ-SUPERWA-006 -->
+## A new install MUST use only SuperWhatsapp names
+
+A computer that never had an older install gets only SuperWhatsapp
+folders (`cc.superwhatsapp` on macOS, `superwhatsapp` on Linux,
+`cc\superwhatsapp` on Windows), keychain entries under `cc.superwhatsapp`, the log file
+`superwhatsapp.log`, and no folder, file or keychain entry with an older
+name is created.
+
+implementations:
+  - src/paths.rs:AppDirs.discover
+  - src/archive/encryption.rs:SERVICE
+
+verifies:
+  - src/paths.rs:a_new_install_uses_only_superwhatsapp_folders
+
+## Acceptance
+<!-- id: REQ-SUPERWA-006.A1 -->
+- On a fresh account, after linking, no `zapfast`, `fastsapp` or
+  `me.paolino` folder exists and the keychain holds no `rocks.zapfast`
+  entry.
+
+<!-- id: REQ-SUPERWA-007 -->
+## Internal names MUST say SuperWhatsapp
+
+The Rust crates are `superwhatsapp` and `superwhatsapp-desktop`, the
+environment variables start with `SUPERWHATSAPP_`, temporary files and
+log targets say superwhatsapp, the Linux Flatpak ID is
+`cc.superwhatsapp.SuperWhatsapp`, and the packaging recipes (Flatpak,
+Arch, RPM, winget, Homebrew, Omarchy) are named superwhatsapp. What stays,
+because it identifies something that already exists: the older folder,
+keychain, bundle and program names that migration and the updater look
+for, and the `fastsapp` single-instance wire name older copies answer on;
+the upstream update configuration of builds without the `znga` feature;
+the libraries SuperWhatsapp is built on, their repositories and upstream
+issue numbers; the copyright notice the MIT license requires; and the
+`ZAPFAST_UPDATE_SIGNING_KEY` and `ZAPFAST_GIPHY_KEY` repository secrets,
+which the release workflow still accepts after the `SUPERWHATSAPP_` ones
+until they are renamed in GitHub.
+
+implementations:
+  - Cargo.toml:package
+  - src-tauri/Cargo.toml:package
+  - packaging/flatpak/cc.superwhatsapp.SuperWhatsapp.yml
+
+verifies:
+  - src/znga/update.rs:updates_come_from_the_fork_with_its_own_key
+
+## Acceptance
+<!-- id: REQ-SUPERWA-007.A1 -->
+- Outside the listed exceptions, a search of the repository for
+  "zapfast" (any case) finds nothing.
+
+<!-- id: REQ-SUPERWA-008 -->
+## The macOS bundle ID MUST move to cc.superwhatsapp over two releases
+
+An installed copy refuses an update whose bundle ID it does not know, so
+the release after 0.21.1-beta.11 keeps the bundle ID
+`me.paolino.fastsapp` but accepts `cc.superwhatsapp` in updates, and the
+release after that ships as `cc.superwhatsapp`. macOS asks again for
+camera, microphone and notification permission after the switch.
+
+implementations:
+  - src/znga/update.rs:CONFIG
+  - packaging/macos/Info.plist
+
+verifies:
+  - src/znga/update.rs:updates_accept_the_next_bundle_id
+
+## Acceptance
+<!-- id: REQ-SUPERWA-008.A1 -->
+- A copy of the first release updates in place to a bundle with ID
+  `cc.superwhatsapp`.
+<!-- id: REQ-SUPERWA-008.A2 -->
+- The first release itself still has bundle ID `me.paolino.fastsapp`, so
+  0.21.1-beta.11 updates to it in place.

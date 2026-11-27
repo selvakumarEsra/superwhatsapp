@@ -46,6 +46,8 @@ export interface Msg {
   quoted: Quote | null; reactions: [string, number][]; reacted: boolean;
   /** The time as egui writes it in a bubble. */
   clock: string; starred: boolean; media: MediaView | null; preview: PreviewView | null;
+  /** Looks like another language: Translate is offered (REQ-ZANS-004). */
+  translatable: boolean;
 }
 export interface Open {
   id: string; title: string; avatar: string | null; group: boolean; complete: boolean; messages: Msg[];
@@ -59,11 +61,16 @@ export interface Open {
 export const ZNGA_CHAT = "znga@superwhatsapp.local";
 export interface ZAction { id: string; label: string }
 export interface ZCard {
-  kind: "needsYou" | "briefing" | "draft" | "catchUp" | "plan" | "voice" | "promise" | "drift" | "link";
+  kind: "needsYou" | "briefing" | "draft" | "catchUp" | "plan" | "voice" | "promise" | "drift" | "link" | "cite";
   title: string; body: string; meta: string; actions: ZAction[]; outcome: string | null;
+  /** A cited message's number, `[n]` in the answer (REQ-ZANS-001). */
+  n: number | null;
 }
-export interface ZEntry { id: number; at: number; fromMe: boolean; text: string; unasked: boolean; cards: ZCard[] }
-export interface ZngaChat { entries: ZEntry[]; writing: string | null; asking: boolean }
+export interface ZLink { id: string; title: string }
+export interface ZEntry { id: number; at: number; fromMe: boolean; text: string; unasked: boolean; cards: ZCard[]; chats: ZLink[] }
+export interface ZngaChat { entries: ZEntry[]; writing: string | null; asking: boolean; forwardTo: ZLink[] }
+/** The translation popup beside a message (REQ-ZANS-004). */
+export interface ZTranslation { chat: string; message: string; state: "pending" | "done" | "failed"; text: string; from: string }
 export interface OfferView { id: number; chat: string; text: string; rewrite: boolean }
 export interface ZFact { chat: string; chatTitle: string; text: string }
 export interface ZPromise { chat: string; chatTitle: string; text: string; due: number | null; owesMe: boolean }
@@ -146,7 +153,7 @@ export interface SettingsView {
 }
 export interface State {
   link: Link; call: CallView | null; me: string | null; meAvatar: string | null; filters: FilterChip[]; filter: string; search: string; chats: ChatRow[]; unreadChats: number; open: Open | null;
-  zngaRow: ChatRow | null; znga: ZngaChat | null; offer: OfferView | null;
+  zngaRow: ChatRow | null; znga: ZngaChat | null; offer: OfferView | null; translation: ZTranslation | null;
   section: Section; starred: StarredRow[]; calls: CallRow[]; callFilter: "all" | "missed"; callsSearch: string;
   /** The Calls tab's "New call" list, while open. */
   newCall: NewCall | null;
@@ -158,7 +165,7 @@ export interface State {
 
 const empty: State = {
   link: { state: "starting" }, call: null, me: null, meAvatar: null, filters: [], filter: "all", search: "", chats: [], unreadChats: 0, open: null,
-  zngaRow: null, znga: null, offer: null,
+  zngaRow: null, znga: null, offer: null, translation: null,
   section: "chats", starred: [], calls: [], callFilter: "all", callsSearch: "", newCall: null, info: null,
   settings: {
     theme: "system", zoom: 1, showWallpaper: true, enterSends: true, showShortcutHints: true, font: "system", autoDownload: true, historyPrefetch: true,
@@ -188,13 +195,13 @@ export { state };
 
 export async function connect() {
   // Outside Tauri (a browser, for screenshots and tests), show a state
-  // dumped by `zapfast-desktop --dump-state`.
+  // dumped by `superwhatsapp-desktop --dump-state`.
   if (!("__TAURI_INTERNALS__" in window)) {
     const response = await fetch("/demo-state.json");
     if (response.ok) setState(reconcile((await response.json()) as State, { key: "id" }));
     return;
   }
-  await listen<State>("zapfast://state", (event) => setState(reconcile(event.payload, { key: "id" })));
+  await listen<State>("superwhatsapp://state", (event) => setState(reconcile(event.payload, { key: "id" })));
   await invoke("refresh");
 }
 
@@ -252,7 +259,9 @@ export const commands = {
   wallpaperImage: (pick: boolean) => invoke("wallpaper_image", { pick }),
   setLanguage: (code: string | null) => invoke("set_language", { code }),
   // Znga (specs/znga-chat.md).
-  zngaSend: (text: string) => invoke("znga_send", { text }),
+  zngaSend: (text: string, quote: string | null = null) => invoke("znga_send", { text, quote }),
+  zngaForward: (entry: number, chat: string) => invoke("znga_forward", { entry, chat }),
+  zngaTranslate: (chat: string, message: string, op: "open" | "retry" | "close") => invoke("znga_translate", { chat, message, op }),
   zngaStop: () => invoke("znga_stop"),
   zngaCard: (entry: number, index: number, action: string) => invoke("znga_card", { entry, index, action }),
   zngaTool: (chat: string, tool: string, text = "", language = "") => invoke("znga_tool", { chat, tool, text, language }),

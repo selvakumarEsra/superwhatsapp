@@ -64,8 +64,8 @@ cargo build --locked --release
 install -Dm755 target/release/superwhatsapp %{buildroot}%{_bindir}/superwhatsapp
 install -Dm644 packaging/applications/superwhatsapp.desktop %{buildroot}%{_datadir}/applications/superwhatsapp.desktop
 install -Dm644 packaging/icons/superwhatsapp.svg %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/superwhatsapp.svg
-install -Dm644 contrib/omarchy/zapfast.json.tpl %{buildroot}%{_datadir}/superwhatsapp/omarchy/zapfast.json.tpl
-install -Dm755 contrib/omarchy/zapfast-theme %{buildroot}%{_datadir}/superwhatsapp/omarchy/zapfast-theme
+install -Dm644 contrib/omarchy/superwhatsapp.json.tpl %{buildroot}%{_datadir}/superwhatsapp/omarchy/superwhatsapp.json.tpl
+install -Dm755 contrib/omarchy/superwhatsapp-theme %{buildroot}%{_datadir}/superwhatsapp/omarchy/superwhatsapp-theme
 
 %files
 %license LICENSE THIRD-PARTY-NOTICES.md

@@ -133,3 +133,6 @@ export function DefaultAvatar(p: { size: number; group?: boolean; seed?: string 
     </svg>
   );
 }
+export const ReplyIcon = svg(() => <><path d="M20 18v-2a4 4 0 0 0-4-4H4" /><path d="m9 17-5-5 5-5" /></>);
+export const ForwardIcon = svg(() => <><path d="m15 17 5-5-5-5" /><path d="M4 18v-2a4 4 0 0 1 4-4h12" /></>);
+export const TranslateIcon = svg(() => <><path d="m5 8 6 6" /><path d="m4 14 6-6 2-3" /><path d="M2 5h12" /><path d="M7 2h1" /><path d="m22 22-5-10-5 10" /><path d="M14 18h6" /></>);

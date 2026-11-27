@@ -31,6 +31,8 @@ pub struct Asking {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Hit {
     pub chat: String,
+    /// The message's id, so the answer can link to it (REQ-ZANS-001).
+    pub id: String,
     pub chat_title: String,
     pub sender: String,
     pub text: String,
@@ -99,6 +101,7 @@ pub fn search(
             };
             hits.push(Hit {
                 chat: message.chat.clone(),
+                id: message.id.clone(),
                 chat_title: title.clone(),
                 sender,
                 text: message.content.full_summary(),

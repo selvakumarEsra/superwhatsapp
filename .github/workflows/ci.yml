@@ -159,9 +159,9 @@ jobs:
         with:
           cache-generation: desktop-v1
       - name: Clippy (desktop)
-        run: mbx clippy --locked -p zapfast-desktop --all-targets -- -D warnings
+        run: mbx clippy --locked -p superwhatsapp-desktop --all-targets -- -D warnings
       - name: Tests (desktop)
-        run: mbx test --locked -p zapfast-desktop
+        run: mbx test --locked -p superwhatsapp-desktop
 
   # Linux releases build in Debian 12 for its older glibc (release.yml).
   # Building here too catches a dependency that needs newer system

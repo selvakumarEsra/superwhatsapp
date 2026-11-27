@@ -1,12 +1,12 @@
 //! Moving pictures for the call tiles of a demo tour.
 //!
-//! `ZAPFAST_DEMO_CALL_FEEDS` names H.264 MP4 files as comma-separated
+//! `SUPERWHATSAPP_DEMO_CALL_FEEDS` names H.264 MP4 files as comma-separated
 //! `role=path` pairs. The roles are `peer` (the other side of a one-to-one
 //! call), `self` (our own camera), and a group call's members, by their place
 //! on the call's roster counted from 0 or by their chat id:
 //!
 //! ```text
-//! ZAPFAST_DEMO_CALL_FEEDS=peer=/clips/ada.mp4,self=/clips/me.mp4,0=/clips/jonas.mp4,491702222222@s.whatsapp.net=/clips/mira.mp4
+//! SUPERWHATSAPP_DEMO_CALL_FEEDS=peer=/clips/ada.mp4,self=/clips/me.mp4,0=/clips/jonas.mp4,491702222222@s.whatsapp.net=/clips/mira.mp4
 //! ```
 //!
 //! A clip starts where its tile first shows video, plays by the tour's own
@@ -21,7 +21,7 @@ use egui::ColorImage;
 use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};
 
 /// The environment variable naming the clips.
-pub const VARIABLE: &str = "ZAPFAST_DEMO_CALL_FEEDS";
+pub const VARIABLE: &str = "SUPERWHATSAPP_DEMO_CALL_FEEDS";
 
 /// Longest side of each picture: the peer fills the window, our own camera
 /// and a group's members share it.
@@ -152,7 +152,7 @@ pub(super) struct Feeds {
 }
 
 impl Feeds {
-    /// The clips `ZAPFAST_DEMO_CALL_FEEDS` names, if any.
+    /// The clips `SUPERWHATSAPP_DEMO_CALL_FEEDS` names, if any.
     pub(super) fn from_env() -> Self {
         Self::new(&std::env::var(VARIABLE).unwrap_or_default())
     }

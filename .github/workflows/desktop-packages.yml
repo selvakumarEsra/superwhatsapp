@@ -148,7 +148,7 @@ jobs:
       - uses: actions/upload-artifact@v5
         if: ${{ !inputs.preview }}
         with:
-          name: zapfast-desktop-${{ matrix.target }}
+          name: superwhatsapp-desktop-${{ matrix.target }}
           path: |
             target/${{ matrix.target }}/release/bundle/deb/*.deb
             target/${{ matrix.target }}/release/bundle/rpm/*.rpm

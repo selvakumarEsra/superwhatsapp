@@ -1,7 +1,7 @@
 //! Znga's own configuration file, `znga.json` beside SuperWhatsapp's settings.
 //!
 //! Kept apart from [`crate::settings::Settings`] on purpose: upstream
-//! Upstream ZapFast owns that struct, and a fork-only field there would conflict on
+//! Upstream SuperWhatsapp owns that struct, and a fork-only field there would conflict on
 //! every merge. API keys are never stored here (see [`super::keys`]).
 
 use std::collections::{BTreeMap, BTreeSet};

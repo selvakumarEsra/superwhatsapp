@@ -1,5 +1,5 @@
 //! Runs the core on its own thread (REQ-WEBUI-001, 002). The core's state
-//! machine still lives in `zapfast::app::App`, which steps once per wake with
+//! machine still lives in `superwhatsapp::app::App`, which steps once per wake with
 //! an egui context that draws nothing; the page gets a new [`view::State`]
 //! whenever what it shows changes.
 
@@ -9,9 +9,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::time::{Duration, Instant};
 
+use superwhatsapp::app::App;
+use superwhatsapp::model::Action;
 use tauri::{AppHandle, Emitter};
-use zapfast::app::App;
-use zapfast::model::Action;
 
 use crate::view;
 
@@ -48,7 +48,7 @@ pub struct Shared {
     /// Settings › Keep running when the window closes.
     keep_running: AtomicBool,
     /// The interface language, for translating the page's text.
-    locale: Mutex<zapfast::i18n::Locale>,
+    locale: Mutex<superwhatsapp::i18n::Locale>,
 }
 
 impl Engine {
@@ -92,7 +92,7 @@ pub struct Start {
     /// accounts start at once, as in the egui build.
     pub hidden: bool,
     /// A number, `wa.me` link or `whatsapp://` URI to open a chat for.
-    pub target: Option<zapfast::target::Request>,
+    pub target: Option<superwhatsapp::target::Request>,
     /// A group invite link's code, to show the invite.
     pub invite: Option<String>,
 }
@@ -100,17 +100,17 @@ pub struct Start {
 /// The slot that keeps one SuperWhatsapp, this interface or the egui one, on an
 /// account's archive and linked device at a time.
 pub struct Instance {
-    waker: zapfast::backend::Waker,
-    guard: zapfast::single_instance::Guard,
+    waker: superwhatsapp::backend::Waker,
+    guard: superwhatsapp::single_instance::Guard,
 }
 
 /// Becomes the running SuperWhatsapp, or asks the copy already running to
 /// show its window, open the linked chat or invite, and returns `None`, as
 /// the egui build's launch does.
 pub fn claim(start: &Start) -> Option<Instance> {
-    use zapfast::single_instance::{Outcome, acquire};
-    let dirs = zapfast::paths::AppDirs::discover();
-    let waker = zapfast::backend::Waker::default();
+    use superwhatsapp::single_instance::{Outcome, acquire_after_previous};
+    let dirs = superwhatsapp::paths::AppDirs::discover();
+    let waker = superwhatsapp::backend::Waker::default();
     // A hidden start must not surface a copy that is already running.
     let verb = match (&start.target, &start.invite) {
         (Some(request), _) => request.verb(),
@@ -118,7 +118,12 @@ pub fn claim(start: &Start) -> Option<Instance> {
         (None, None) if start.hidden => "ping".to_owned(),
         (None, None) => "show".to_owned(),
     };
-    match acquire(&dirs.runtime, &waker, &verb) {
+    match acquire_after_previous(
+        &dirs.runtime,
+        &superwhatsapp::paths::AppDirs::previous_runtimes(),
+        &waker,
+        &verb,
+    ) {
         Outcome::Only(guard) => Some(Instance { waker, guard }),
         Outcome::Surfaced if start.hidden && start.target.is_none() && start.invite.is_none() => {
             eprintln!("SuperWhatsapp is already running");
@@ -155,7 +160,7 @@ impl Instance {
     /// Whether a later launch asked for the window, before the core takes
     /// the request: the core's own answer only reaches an egui window.
     fn wants_window(&self) -> bool {
-        use zapfast::single_instance::ControlCommand;
+        use superwhatsapp::single_instance::ControlCommand;
         self.guard.commands().lock().is_ok_and(|queue| {
             queue.iter().any(|command| {
                 matches!(
@@ -175,7 +180,7 @@ pub fn spawn(handle: AppHandle, start: Start) -> Engine {
     let shared = Arc::new(Shared::default());
     let core = shared.clone();
     std::thread::Builder::new()
-        .name("zapfast-core".into())
+        .name("superwhatsapp-core".into())
         .spawn(move || run(handle, start, rx, wake, core))
         .expect("core thread");
     Engine { tx, shared }
@@ -219,18 +224,19 @@ where
 }
 
 fn make_app(start: &Start) -> App {
-    use zapfast::paths::AppDirs;
-    use zapfast::settings::Settings;
+    use superwhatsapp::paths::AppDirs;
+    use superwhatsapp::settings::Settings;
     if start.demo {
-        let root = std::env::temp_dir().join(format!("zapfast-tauri-demo-{}", std::process::id()));
+        let root =
+            std::env::temp_dir().join(format!("superwhatsapp-tauri-demo-{}", std::process::id()));
         let dirs = AppDirs::under(&root);
         dirs.ensure().expect("demo folders");
         let settings = Settings::load(&dirs.settings_file());
         let mut app = App::headless(dirs, settings).0;
         // Znga lives in its chat here (specs/znga-chat.md).
         app.znga.chat_mode = true;
-        zapfast::demo::populate(&mut app);
-        zapfast::demo::apply_flags(&mut app, start.demo_page.as_deref());
+        superwhatsapp::demo::populate(&mut app);
+        superwhatsapp::demo::apply_flags(&mut app, start.demo_page.as_deref());
         return app;
     }
     let dirs = AppDirs::discover();
@@ -246,7 +252,7 @@ fn make_app(start: &Start) -> App {
         &instance.waker,
         dirs,
         settings,
-        zapfast::app::AppOptions { tray: false },
+        superwhatsapp::app::AppOptions { tray: false },
     )
     .expect("core");
     app.set_remote_control(&instance.guard);
@@ -268,22 +274,24 @@ fn run(
     // A link this launch was started with opens its chat, as in the egui
     // build; the app drains its queue on the next step.
     if let Some(request) = start.target.take() {
-        app.actions.push(zapfast::model::Action::StartChat {
+        app.actions.push(superwhatsapp::model::Action::StartChat {
             name: request.display_name(),
             id: request.chat.clone(),
             dismiss_dialog: true,
         });
         if let Some(text) = request.text {
-            app.actions.push(zapfast::model::Action::PrefillComposer {
-                chat: request.chat,
-                text,
-            });
+            app.actions
+                .push(superwhatsapp::model::Action::PrefillComposer {
+                    chat: request.chat,
+                    text,
+                });
         }
     }
     if let Some(code) = start.invite.take() {
-        app.actions.push(zapfast::model::Action::OpenUrl(format!(
-            "https://chat.whatsapp.com/{code}"
-        )));
+        app.actions
+            .push(superwhatsapp::model::Action::OpenUrl(format!(
+                "https://chat.whatsapp.com/{code}"
+            )));
     }
     // The accounts wait to open their archive and connect until the
     // window is drawn (src/backend.rs, take_startup): here, until the page
@@ -381,7 +389,7 @@ fn run(
         }
         let state = view::build(&mut app);
         if force || last.as_ref() != Some(&state) {
-            if let Err(error) = handle.emit("zapfast://state", &state) {
+            if let Err(error) = handle.emit("superwhatsapp://state", &state) {
                 log::warn!("could not send the state to the page: {error}");
             }
             last = Some(state);
@@ -426,7 +434,7 @@ mod translation_tests {
         };
         let texts = ["Search".to_owned(), "Not in any catalogue".to_owned()];
         assert_eq!(engine.translate(&texts), texts);
-        *engine.shared.locale.lock().unwrap() = zapfast::i18n::Locale::Dutch;
+        *engine.shared.locale.lock().unwrap() = superwhatsapp::i18n::Locale::Dutch;
         assert_eq!(
             engine.translate(&texts),
             ["Zoeken".to_owned(), "Not in any catalogue".to_owned()]

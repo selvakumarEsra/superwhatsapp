@@ -47,6 +47,7 @@ pub mod sentinel;
 pub mod store;
 pub mod style;
 pub mod thread;
+pub mod translate;
 pub mod triage;
 pub mod ui;
 pub mod update;
@@ -136,6 +137,12 @@ pub enum Purpose {
     ExplainEdit {
         key: String,
     },
+    /// Someone else's message, translated into a popup (REQ-ZANS-004).
+    Translate {
+        account: String,
+        chat: String,
+        message: String,
+    },
     Test,
 }
 
@@ -180,7 +187,12 @@ pub enum Effect {
     /// Search the archive for an ask in progress (REQ-ZNGA-020).
     Search { ask: u64, terms: Vec<String> },
     /// Znga's answer to a question asked in the Znga chat (REQ-ZCHAT-002).
-    Answered { account: String, text: String },
+    Answered {
+        account: String,
+        text: String,
+        /// The archive messages the answer cites (REQ-ZANS-001).
+        cites: Vec<thread::Item>,
+    },
     /// Znga's answer from web pages, with the pages it recommends as
     /// (title, address) (REQ-ZCHAT-008).
     Browsed {
@@ -291,6 +303,8 @@ pub struct Znga {
     pub styles: HashMap<String, StyleProfile>,
     /// The Ask thread.
     pub ask: Vec<Turn>,
+    /// Message translations asked for while the app runs (REQ-ZANS-004).
+    pub translations: translate::Translations,
     pub ask_input: String,
     pub update_input: String,
     pub translate_to: String,
@@ -401,6 +415,7 @@ impl Znga {
             examples: Examples::default(),
             styles,
             ask: Vec::new(),
+            translations: translate::Translations::default(),
             ask_input: String::new(),
             update_input: String::new(),
             translate_to: "English".into(),
@@ -754,6 +769,16 @@ impl Znga {
                     .unwrap_or_default();
                 effects.push(Effect::Search { ask, terms });
             }
+            (
+                Purpose::Translate {
+                    account,
+                    chat,
+                    message,
+                },
+                result,
+            ) => {
+                self.translations.finish((account, chat, message), result);
+            }
             (Purpose::Answer { ask }, answer) => {
                 let Some(asking) = self.asking.remove(&ask) else {
                     return effects;
@@ -769,11 +794,21 @@ impl Znga {
                         self.status = None;
                     }
                     archive_ask::AskOrigin::Thread { account } => {
-                        let text = match answer {
-                            Ok(text) => text,
-                            Err(error) => thread::explain_error(&error, self.config.engine),
+                        let (text, cites) = match answer {
+                            Ok(text) => {
+                                let cites = thread::cited(&text, &asking.hits);
+                                (text, cites)
+                            }
+                            Err(error) => (
+                                thread::explain_error(&error, self.config.engine),
+                                Vec::new(),
+                            ),
                         };
-                        effects.push(Effect::Answered { account, text });
+                        effects.push(Effect::Answered {
+                            account,
+                            text,
+                            cites,
+                        });
                     }
                     archive_ask::AskOrigin::OwnChat { account, chat } => {
                         let text = match answer {

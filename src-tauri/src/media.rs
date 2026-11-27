@@ -29,7 +29,7 @@ fn allowed(path: &Path) -> bool {
         return false;
     };
     let roots: Vec<PathBuf> = [
-        Some(zapfast::paths::AppDirs::discover().cache),
+        Some(superwhatsapp::paths::AppDirs::discover().cache),
         Some(std::env::temp_dir()),
     ]
     .into_iter()
@@ -38,7 +38,7 @@ fn allowed(path: &Path) -> bool {
     .collect();
     // The chat background image Settings imported (wallpaper.<ext>).
     let wallpaper = path.parent().is_some_and(|parent| {
-        zapfast::paths::AppDirs::discover()
+        superwhatsapp::paths::AppDirs::discover()
             .state
             .canonicalize()
             .is_ok_and(|state| parent == state)

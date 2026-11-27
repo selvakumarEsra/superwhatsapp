@@ -330,6 +330,25 @@ pub fn rewrite(text: &str, how: Rewrite) -> Prompt {
     }
 }
 
+/// Someone else's message translated for the reader (REQ-ZANS-004).
+pub fn translate_message(text: &str, language: &str) -> Prompt {
+    Prompt {
+        system: format!(
+            "You translate one WhatsApp message for the person reading it. {DATA_RULE} \
+             Answer with exactly two parts: a first line `FROM: <the message's language, in \
+             English>`, then the translation into {}, keeping tone, emoji and names. Nothing \
+             else.",
+            clip(language, 40)
+        ),
+        turns: vec![Turn::user(format!(
+            "<messages>\n{}\n</messages>",
+            clip(text, 4000)
+        ))],
+        max_tokens: 2000,
+        effort: Effort::Low,
+    }
+}
+
 /// The composer text translated.
 pub fn translate(text: &str, language: &str) -> Prompt {
     Prompt {
@@ -555,12 +574,13 @@ pub fn plan_search(question: &str, history: &[Turn]) -> Prompt {
 
 fn hits_block(hits: &[super::archive_ask::Hit], zone: &jiff::tz::TimeZone) -> String {
     let mut out = String::from("<messages>\n");
-    for hit in hits {
+    for (index, hit) in hits.iter().enumerate() {
         let day = jiff::Timestamp::from_second(hit.at)
             .map(|t| t.to_zoned(zone.clone()).strftime("%Y-%m-%d").to_string())
             .unwrap_or_default();
         out.push_str(&format!(
-            "[{day}] {} — {}: {}\n",
+            "[{}] {day} {} — {}: {}\n",
+            index + 1,
             clip(&hit.chat_title, 60),
             clip(&hit.sender, 60),
             clip(&hit.text, MAX_LINE)
@@ -612,9 +632,14 @@ pub fn answer_with_hits(
         system: format!(
             "You are Znga, {who}'s personal assistant inside their WhatsApp desktop app. You \
              answer questions from {who}'s recent chats and from messages found in their \
-             archive. When you use an archive message, cite it as (chat, date). Say so when \
-             the answer is not in what you were given. You cannot send messages yourself: \
-             offer to draft one instead. {DATA_RULE} Be concise; plain text."
+             archive. Archive messages are numbered; when you use one, cite it by its \
+             number in square brackets right after what it supports, like [2], and cite \
+             every message you list. Name chats and groups by their exact titles. Say so \
+             when the answer is not in what you were given. You cannot send messages \
+             yourself: offer to draft one instead. {DATA_RULE} Be concise. Format for \
+             reading: a short `##` heading when the answer has parts, `-` bullets for \
+             lists, `**bold**` for the key fact, a blank line between paragraphs; no \
+             tables, HTML or images."
         ),
         turns,
         max_tokens: 4000,
@@ -866,6 +891,7 @@ mod tests {
     fn answers_with_hits_cite_the_archive() {
         let hit = crate::znga::archive_ask::Hit {
             chat: "r".into(),
+            id: "m1".into(),
             chat_title: "Ravi".into(),
             sender: "Ravi".into(),
             text: "lands at 9".into(),
@@ -873,8 +899,36 @@ mod tests {
         };
         let prompt = answer_with_hits("", &[], &[hit], &[], "when does he land?", &[]);
         assert!(prompt.turns[0].text.contains("Ravi — Ravi: lands at 9"));
-        assert!(prompt.system.contains("cite it as (chat, date)"));
+        assert!(prompt.system.contains("cite it by its number"));
         assert_eq!(prompt.turns.last().unwrap().text, "when does he land?");
+    }
+
+    #[test]
+    fn answers_with_hits_number_each_message() {
+        let hit = |id: &str, text: &str| crate::znga::archive_ask::Hit {
+            chat: "r".into(),
+            id: id.into(),
+            chat_title: "Ravi".into(),
+            sender: "Ravi".into(),
+            text: text.into(),
+            at: 0,
+        };
+        let prompt = answer_with_hits(
+            "",
+            &[],
+            &[hit("a", "mail me at a@b.co"), hit("b", "or c@d.co")],
+            &[],
+            "which messages gave an email?",
+            &[],
+        );
+        assert!(prompt.turns[0].text.contains("[1] "));
+        assert!(prompt.turns[0].text.contains("[2] "));
+        assert!(prompt.system.contains("square brackets"));
+        assert!(prompt.system.contains("`##` heading"));
+        assert_eq!(
+            prompt.turns.last().unwrap().text,
+            "which messages gave an email?"
+        );
     }
 
     #[test]

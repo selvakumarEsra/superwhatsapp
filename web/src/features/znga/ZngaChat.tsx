@@ -3,12 +3,22 @@
 // the right, Znga's answers and findings on the left; nothing written here
 // reaches WhatsApp.
 import { createEffect, createSignal, For, on, Show } from "solid-js";
-import { commands, state, type ZngaChat as Chat } from "../../lib/bridge";
+import { commands, state, type ZEntry, type ZngaChat as Chat } from "../../lib/bridge";
 import { clock, dayKey, dayLabel } from "../../lib/time";
 import { t } from "../../lib/i18n";
 import ZngaAvatar from "../../components/ZngaAvatar";
-import { SendIcon } from "../../components/Icons";
+import { CloseIcon, SendIcon } from "../../components/Icons";
 import ZngaCard from "./ZngaCard";
+import ZngaAnswer from "./ZngaAnswer";
+import ForwardPicker from "./ForwardPicker";
+import { plain } from "./format";
+
+/** A follow-up's quoted line ("> …") and the rest (REQ-ZANS-003.A3). */
+function quoted(text: string): [string | null, string] {
+  if (!text.startsWith("> ")) return [null, text];
+  const end = text.indexOf("\n");
+  return end < 0 ? [null, text] : [text.slice(2, end), text.slice(end + 1)];
+}
 
 function Bubble(p: { out: boolean; children: import("solid-js").JSX.Element }) {
   return (
@@ -38,6 +48,12 @@ export default function ZngaChat(p: { chat: Chat }) {
   let list!: HTMLDivElement;
   let field!: HTMLTextAreaElement;
   const [text, setText] = createSignal("");
+  const [quote, setQuote] = createSignal<ZEntry | null>(null);
+  const [forwarding, setForwarding] = createSignal<ZEntry | null>(null);
+  const reply = (entry: ZEntry) => {
+    setQuote(entry);
+    field.focus();
+  };
   createEffect(
     on(
       () => [p.chat.entries.length, p.chat.writing, p.chat.entries.at(-1)?.text],
@@ -47,7 +63,8 @@ export default function ZngaChat(p: { chat: Chat }) {
   const send = () => {
     const value = text().trim();
     if (!value) return;
-    void commands.zngaSend(value);
+    void commands.zngaSend(value, quote()?.text ?? null);
+    setQuote(null);
     setText("");
     field.style.height = "auto";
   };
@@ -129,8 +146,24 @@ export default function ZngaChat(p: { chat: Chat }) {
                     <Show when={entry.unasked}>
                       <div style={{ "font-size": "var(--fs-meta)", "font-weight": 600, color: "var(--accent-text)" }}>✨ {t("Znga noticed")}</div>
                     </Show>
-                    <span style={{ "white-space": "pre-wrap" }}>{entry.text}</span>
-                    <For each={entry.cards}>{(card, index) => <ZngaCard card={card} entry={entry.id} index={index()} />}</For>
+                    <Show
+                      when={!entry.fromMe}
+                      fallback={
+                        <>
+                          <Show when={quoted(entry.text)[0]}>
+                            {(line) => (
+                              <div style={{ "border-left": "3px solid var(--accent)", padding: "2px 8px", "margin-bottom": "4px", "border-radius": "4px", background: "var(--quote-bg, rgba(0,0,0,0.05))", "font-size": "13px", color: "var(--text-secondary)" }} class="truncate">
+                                {line()}
+                              </div>
+                            )}
+                          </Show>
+                          <span style={{ "white-space": "pre-wrap" }}>{quoted(entry.text)[1]}</span>
+                          <For each={entry.cards}>{(card, index) => <ZngaCard card={card} entry={entry.id} index={index()} />}</For>
+                        </>
+                      }
+                    >
+                      <ZngaAnswer entry={entry} onReply={reply} onForward={setForwarding} />
+                    </Show>
                     <div style={{ "text-align": "right", "font-size": "var(--fs-meta)", color: "var(--text-secondary)", "margin-top": "2px" }}>{clock(entry.at)}</div>
                   </Bubble>
                 </>
@@ -153,6 +186,22 @@ export default function ZngaChat(p: { chat: Chat }) {
             </Bubble>
           </Show>
         </div>
+        <Show when={quote()}>
+          {(entry) => (
+            <div class="flex shrink-0 items-center" style={{ gap: "8px", margin: "0 var(--composer-pad-x)", padding: "6px 10px", "border-left": "3px solid var(--accent)", "border-radius": "6px", background: "var(--input-bg)" }}>
+              <div class="min-w-0 flex-1">
+                <div style={{ "font-size": "var(--fs-meta)", "font-weight": 600, color: "var(--accent-text)" }}>{t("Replying to Znga")}</div>
+                <div class="truncate" style={{ "font-size": "13px", color: "var(--text-secondary)" }}>{plain(entry().text).split("\n")[0]}</div>
+              </div>
+              <button type="button" aria-label={t("Cancel reply")} onClick={() => setQuote(null)} style={{ color: "var(--text-secondary)" }}>
+                <CloseIcon size={16} />
+              </button>
+            </div>
+          )}
+        </Show>
+        <Show when={forwarding()}>
+          {(entry) => <ForwardPicker entry={entry()} chats={p.chat.forwardTo} onClose={() => setForwarding(null)} />}
+        </Show>
         <footer class="flex shrink-0 items-end" style={{ gap: "var(--composer-gap)", padding: "4px var(--composer-pad-x) 3px" }}>
           <div
             class="flex flex-1 items-end"

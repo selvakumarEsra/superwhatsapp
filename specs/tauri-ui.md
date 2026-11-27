@@ -9,7 +9,7 @@ version: 1
 <!-- id: WEBUI-DOC -->
 # Tauri 2 + Solid.js interface — replacing egui
 
-ZapFast's interface moves from egui to a Tauri 2 shell with a Solid.js,
+SuperWhatsapp's interface moves from egui to a Tauri 2 shell with a Solid.js,
 TypeScript and Tailwind front end, built with Vite, the stack OpenTrader
 uses. The goal is that the switch is invisible: the new interface looks
 and behaves like the egui app it replaces (REQ-WEBUI-004).
@@ -17,12 +17,12 @@ and behaves like the egui app it replaces (REQ-WEBUI-004).
 The egui interface is removed, not kept alongside. The Rust code that is
 not interface (the WhatsApp worker, archive, accounts, media, calls audio,
 Znga, extras logic) stays and becomes the core library the
-Tauri shell links. Everything ZapFast does today must work in the new
+Tauri shell links. Everything SuperWhatsapp does today must work in the new
 interface before it ships as a release.
 
 Layout in the repository, as in OpenTrader:
 
-- `src/` — the core library crate `zapfast` (no egui).
+- `src/` — the core library crate `superwhatsapp` (no egui).
 - `src-tauri/` — the Tauri 2 app: window, IPC commands, events, tray,
   updater, single instance, deep links.
 - `web/` — the Solid.js front end (`web/src/`), Tailwind styles, Vite
@@ -48,7 +48,7 @@ artwork. The look is matched with original assets drawn to the same
 size and position (icons, the bundled Noto emoji, the wallpaper pattern)
 and the same font the egui app uses.
 
-Mini-apps are removed from ZapFast with this move (the `miniapps`
+Mini-apps are removed from SuperWhatsapp with this move (the `miniapps`
 feature, `src/miniapps/` and specs/miniapps.md); they remain in the
 v0.21.1-beta.5 release and in git history.
 
@@ -76,9 +76,9 @@ implementations:
 
 ## Acceptance
 <!-- id: REQ-WEBUI-001.A1 -->
-- `cargo tree -p zapfast` lists no egui, eframe, egui_extras or winit.
+- `cargo tree -p superwhatsapp` lists no egui, eframe, egui_extras or winit.
 <!-- id: REQ-WEBUI-001.A2 -->
-- `cargo test -p zapfast` runs the core's tests (archive, worker
+- `cargo test -p superwhatsapp` runs the core's tests (archive, worker
   translation, Znga, extras logic) with no window and no web
   view.
 <!-- id: REQ-WEBUI-001.A3 -->
@@ -129,7 +129,7 @@ The web view loads only the bundled front end. A strict Content Security
 Policy blocks remote scripts, styles, frames and connections; link
 previews, avatars, media and stickers reach the page only through a
 custom protocol the core serves from the account's own cache. Tauri's
-capabilities allow only ZapFast's own commands and the plugins it uses.
+capabilities allow only SuperWhatsapp's own commands and the plugins it uses.
 No other program can call the commands. Message text, numbers, keys and
 QR payloads are never logged from either side.
 
@@ -480,8 +480,8 @@ Settings (appearance, wallpaper, notifications, privacy, storage and
 downloads, proxy, language, app lock, shortcuts, about and updates);
 notifications with replies where the platform allows; the tray icon and
 its menu; the dock or taskbar badge; start at login; one running
-instance; opening `zapfast <number>` and WhatsApp links; the native menu
-on macOS; the custom title bar where ZapFast draws one today. Updates use
+instance; opening `superwhatsapp <number>` and WhatsApp links; the native menu
+on macOS; the custom title bar where SuperWhatsapp draws one today. Updates use
 the Tauri updater against the fork's releases, signed with the fork's
 key.
 
@@ -502,7 +502,7 @@ implementations:
 - Each setting of the egui build exists, keeps its stored value from the
   egui build, and takes effect without a restart where it does today.
 <!-- id: REQ-WEBUI-012.A2 -->
-- Starting ZapFast a second time brings the first window forward instead
+- Starting SuperWhatsapp a second time brings the first window forward instead
   of opening another, whichever interface each copy uses: the egui app and
   the new interface never run at once on the same account.
 <!-- id: REQ-WEBUI-012.A3 -->
@@ -587,7 +587,7 @@ verifies:
 <!-- id: REQ-WEBUI-016 -->
 ## The new interface MUST stay fast and light
 
-ZapFast's reason to exist is speed, so the move carries budgets.
+SuperWhatsapp's reason to exist is speed, so the move carries budgets.
 [needs review] The numbers below are measured on a mid-range laptop with
 an account of 5,000 chats and 500,000 archived messages, in a release
 build.
@@ -653,7 +653,7 @@ implementations:
   core's.
 <!-- id: REQ-WEBUI-017.A5 -->
 - Before the switch, while `RELEASE_PREVIEW` is `true`, a release also
-  carries `zapfast-preview-<tag>-<target>` installers for every platform
+  carries `superwhatsapp-preview-<tag>-<target>` installers for every platform
   above, and none of them is named like the files the egui app's updater
   installs. While it is not set, the release carries only the egui app's
   files and still publishes. After the switch there is no preview.
