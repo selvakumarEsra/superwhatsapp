@@ -1,0 +1,95 @@
+﻿; No longer shipped: releases after 0.20.1 ship only the Windows Installer
+; package (superwhatsapp.wxs), which takes over a copy this script installed.
+; test-installer.ps1 still builds it to make such a copy to take over.
+;
+; Windows installer built from a release binary with Inno Setup 6.3 or newer:
+;
+;   iscc /DVersion=0.1.0 /DArch=x86_64 /DBinary=...\superwhatsapp.exe ^
+;        /DOutputDir=dist packaging\windows\superwhatsapp.iss
+;
+; Arch matches the Rust target: x86_64 or aarch64. Installation uses the
+; current user's Programs folder and does not need administrator rights.
+; Updates close a running copy before replacing it.
+
+#ifndef Version
+  #error Version must be defined on the ISCC command line
+#endif
+#ifndef Arch
+  #error Arch must be defined on the ISCC command line (x86_64 or aarch64)
+#endif
+#ifndef NumericVersion
+  #define NumericVersion Version
+#endif
+#ifndef Binary
+  #error Binary must be defined on the ISCC command line
+#endif
+#ifndef OutputDir
+  #error OutputDir must be defined on the ISCC command line
+#endif
+#if Arch == "aarch64"
+  #define InnoArch "arm64"
+#else
+  #define InnoArch "x64compatible"
+#endif
+
+#define AppName "SuperWhatsapp"
+#define AppExeName "superwhatsapp.exe"
+
+[Setup]
+; Never change: this is how Windows tells an update from a new program.
+AppId={{F2512314-384A-4002-9933-AB840FD01639}
+AppName={#AppName}
+AppVersion={#Version}
+AppVerName={#AppName} {#Version}
+AppPublisher=Selvakumar Esra
+AppCopyright=© 2026 Selvakumar Esra
+AppPublisherURL=https://selvakumaresra.github.io/superwhatsapp
+AppSupportURL=https://github.com/selvakumarEsra/superwhatsapp/issues
+AppUpdatesURL=https://github.com/selvakumarEsra/superwhatsapp/releases
+DefaultDirName={localappdata}\Programs\{#AppName}
+DefaultGroupName={#AppName}
+DisableProgramGroupPage=yes
+PrivilegesRequired=lowest
+ArchitecturesAllowed={#InnoArch}
+ArchitecturesInstallIn64BitMode={#InnoArch}
+MinVersion=10.0
+LicenseFile=..\..\LICENSE
+OutputDir={#OutputDir}
+OutputBaseFilename=superwhatsapp-v{#Version}-{#Arch}-pc-windows-msvc-setup
+SetupIconFile=superwhatsapp.ico
+Compression=lzma2/max
+SolidCompression=yes
+WizardStyle=modern
+CloseApplications=yes
+RestartApplications=no
+UninstallDisplayIcon={app}\{#AppExeName}
+VersionInfoVersion={#NumericVersion}.0
+
+[Tasks]
+Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
+
+[Files]
+Source: "{#Binary}"; DestDir: "{app}"; Flags: ignoreversion
+; Updaters up to 0.16.5 relaunch the executable they were started from, so an
+; update begun as fastsapp.exe needs that file to come back (as Spotifast's
+; #582). The app deletes the copy once it starts as superwhatsapp.exe with no update
+; running, and later updaters relaunch superwhatsapp.exe themselves.
+Source: "{#Binary}"; DestDir: "{app}"; DestName: "fastsapp.exe"; Flags: ignoreversion
+Source: "..\..\README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
+
+Source: "superwhatsapp-installer.txt"; DestDir: "{app}"; Flags: ignoreversion
+
+[InstallDelete]
+; AppId keeps upgrades in the existing installation directory. Remove the
+; previous shortcuts; fastsapp.exe is kept above for older updaters.
+Type: files; Name: "{autoprograms}\FastsApp.lnk"
+Type: files; Name: "{autodesktop}\FastsApp.lnk"
+
+[Icons]
+Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExeName}"; AppUserModelID: "me.paolino.zapfast"
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon; AppUserModelID: "me.paolino.zapfast"
+
+[Run]
+Filename: "{app}\{#AppExeName}"; Description: "Launch {#AppName}"; Flags: nowait postinstall skipifsilent

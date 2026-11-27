@@ -1,0 +1,39 @@
+# The release workflow's Flatpak: the binary the Linux job built, packaged
+# into the same sandbox as rocks.zapfast.ZapFast.yml describes. The
+# job unpacks the release tarball into built/ beside this file first.
+id: rocks.zapfast.ZapFast
+# GNOME's runtime carries the WebKitGTK the Tauri interface draws with.
+runtime: org.gnome.Platform
+runtime-version: '49'
+sdk: org.gnome.Sdk
+command: superwhatsapp
+finish-args:
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --device=all
+  - --socket=pulseaudio
+  - --share=network
+  # Archive encryption key.
+  - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.kde.StatusNotifierWatcher
+  # Desktop notifications, which Fastframe sends straight to the server.
+  - --talk-name=org.freedesktop.Notifications
+  - --persist=.local/state
+modules:
+  - name: superwhatsapp
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 superwhatsapp /app/bin/superwhatsapp
+      - install -Dm644 packaging/applications/*.desktop /app/share/applications/rocks.zapfast.ZapFast.desktop
+      - sed -i 's/^Icon=.*$/Icon=rocks.zapfast.ZapFast/;s/^StartupWMClass=superwhatsapp$/StartupWMClass=rocks.zapfast.ZapFast/' /app/share/applications/rocks.zapfast.ZapFast.desktop
+      - install -Dm644 packaging/icons/superwhatsapp.svg /app/share/icons/hicolor/scalable/apps/rocks.zapfast.ZapFast.svg
+      - install -Dm644 packaging/flatpak/rocks.zapfast.ZapFast.metainfo.xml /app/share/metainfo/rocks.zapfast.ZapFast.metainfo.xml
+      - install -Dm644 LICENSE /app/share/licenses/superwhatsapp/LICENSE
+    sources:
+      - type: dir
+        path: built
+      # Metainfo belongs to this packaging checkout, not the portable archive.
+      - type: file
+        path: rocks.zapfast.ZapFast.metainfo.xml
+        dest: packaging/flatpak

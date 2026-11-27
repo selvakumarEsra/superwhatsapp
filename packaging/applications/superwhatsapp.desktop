@@ -1,0 +1,18 @@
+[Desktop Entry]
+Type=Application
+Name=SuperWhatsapp
+GenericName=WhatsApp Client
+Comment=A native WhatsApp client
+Exec=superwhatsapp %U
+Icon=superwhatsapp
+Terminal=false
+Categories=Network;InstantMessaging;Chat;
+Keywords=whatsapp;chat;messaging;
+StartupWMClass=superwhatsapp
+MimeType=x-scheme-handler/whatsapp;x-scheme-handler/wa;
+SingleMainWindow=true
+Actions=quit;
+
+[Desktop Action quit]
+Name=Quit SuperWhatsapp
+Exec=superwhatsapp quit

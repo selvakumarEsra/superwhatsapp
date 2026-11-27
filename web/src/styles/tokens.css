@@ -1,0 +1,328 @@
+/*
+ * Design tokens (REQ-WEBUI-004): the egui app's own look, measured from its
+ * theme (src/theme.rs, Palette::light and Palette::dark) and layout
+ * (src/ui/rail.rs, chats.rs, conversation.rs, widgets.rs). Components use
+ * only these. A custom theme overrides the colours from the core
+ * (src-tauri/src/view.rs:palette).
+ */
+:root {
+  color-scheme: light;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  /* Palette::light */
+  --app-bg: #ffffff;
+  --sidebar-bg: #f2f2f2;          /* the rail: the list's colour, 5% darker */
+  --sidebar-selected: #d9dde1;    /* surface_active */
+  --sidebar-hover: #e6e9ec;       /* surface_hover */
+  --panel-bg: #ffffff;
+  --panel-border: #e9edef;        /* outline */
+  --search-bg: #f0f2f5;           /* surface */
+  --row-hover: #e6e9ec;
+  --row-selected: #d9dde1;
+  --row-edge: rgba(255, 255, 255, 0.55);
+  --row-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
+  --divider: #e9edef;
+  --round-button-bg: #f0f2f5;
+  --conversation-bg: #efeae2;     /* chat */
+  --conversation-header-bg: #ffffff;
+  --conversation-header-border: #e9edef;
+  --header-pill-bg: transparent;
+  --wallpaper-ink: rgba(30, 30, 30, 0.114);
+  --bubble-in: #ffffff;
+  --bubble-out: #d9fdd3;
+  --composer-button-bg: #f0f2f5;
+  --input-bg: #ffffff;
+  --input-border: #e9edef;
+  --date-chip-bg: #ffffff;
+  --empty-bg: #f0f2f5;
+  --empty-plate: rgba(255, 255, 255, 0.55);
+  --card-bg: #f8f9fa;           /* panel and surface, half and half */
+  --menu-bg: #ffffff;
+  --menu-hover: #f0f2f5;
+  --danger: #ea0038;
+  --scrollbar: rgba(0, 0, 0, 0.2);
+  --switch-off: #d9dde1;
+  --overlay: rgba(11, 20, 26, 0.35);
+  --info-w: 380px;
+  --shadow-bubble: 0 1px 1.5px rgba(11, 20, 26, 0.13);
+  --shadow-menu: 0 6px 20px rgba(0, 0, 0, 0.2);
+  --chip-bg: #ffffff;
+  --chip-border: #d9dde1;
+  --surface: #f0f2f5;
+  --window-bg: #f0f2f5;
+  --sender-s: 65%;
+  --sender-l: 38%;
+  --chip-on-bg: rgba(0, 128, 105, 0.18);
+  --chip-on-fg: #008069;
+
+  --text-primary: #111b21;
+  --text-secondary: #515f67;
+  --text-section: #636b72;
+  --text-meta: #636b72;           /* dim */
+  --text-call-sub: #515f67;
+  --icon: #515f67;
+  --icon-active: #111b21;
+  --accent: #008069;
+  --accent-hover: #006e5a;
+  --accent-text: #008069;
+  --accent-fg: #ffffff;
+  --new-chat-bg: #008069;
+  --unread: #008069;
+  --unread-time: #008069;
+  --unread-fg: #ffffff;
+  --muted-badge: #636b72;
+  --tick: #636b72;
+  --tick-read: #027eb5;
+  --link: #027eb5;
+  --quote-bar: #06cf9c;
+  --quote-bg: rgba(240, 242, 245, 0.35);
+  --typing: #008069;
+  --star: #f5b700;
+
+  /* Picture-less avatars: id-coloured rounds as egui paints them. */
+  --avatar-0-bg: #e1e1f7; --avatar-0-fg: #5f5fc4;
+  --avatar-1-bg: #f7e1ea; --avatar-1-fg: #c4517a;
+  --avatar-2-bg: #dff3e4; --avatar-2-fg: #2f9a4f;
+  --avatar-3-bg: #dcecf7; --avatar-3-fg: #3a84b8;
+  --avatar-4-bg: #f7ecdc; --avatar-4-fg: #b8792f;
+  --avatar-5-bg: #e6e6e6; --avatar-5-fg: #8a8a8a;
+  --reaction-border: #efeae2;
+  --reaction-bg: #ffffff;
+
+  /* Geometry, in points (egui's units). */
+  --titlebar-h: 30px;
+  --rail-w: 52px;               /* rail::WIDTH */
+  --rail-cell: 48px;            /* rail::CELL */
+  --rail-plate: 36px;           /* rail::PLATE */
+  --rail-gap: 8px;              /* rail::GAP */
+  --rail-icon: 20px;            /* rail::ICON */
+  --rail-avatar: 32px;          /* rail::AVATAR */
+  --sidebar-w: var(--rail-w);
+  --sidebar-radius: 10px;       /* theme::RADIUS + 2 */
+  --list-w: 299px;
+  --hairline: 1px;
+  --list-header-h: 60px;        /* theme::TOP_BAR_HEIGHT */
+  --list-title-l: 46px;         /* beside the macOS window buttons */
+  --header-icon: 18px;
+  --round-button: 34px;
+  --search-h: 34px;
+  --search-inset: 14px;
+  --chip-h: 28px;
+  --row-h: 68px;                /* theme::ROW_HEIGHT */
+  --row-inset: 8px;
+  --row-radius: 10px;
+  --row-pad-l: 0px;
+  --row-pad-r: 14px;
+  --row-gap: 14px;
+  --avatar-row: 48px;
+  --badge-h: 20px;
+  --conv-header-h: 59px;
+  --avatar-header: 40px;
+  --header-pill-h: 36px;
+  --bubble-gutter: 18px;        /* WHATSAPP_SIDE_MARGIN */
+  --bubble-pad-x: 9px;
+  --bubble-pad-y: 6px;
+  --bubble-radius: 10px;        /* widgets::BUBBLE_RADIUS */
+  --bubble-max: 72%;            /* WHATSAPP_WIDTH_SHARE */
+  --bubble-gap: 2px;
+  --bubble-gap-run: 10px;
+  --tail-w: 8px;
+  --date-chip-h: 26px;
+  --date-chip-w: 60px;
+  --date-chip-gap: 12px;
+  --composer-button: 32px;
+  --composer-input-h: 40px;
+  --composer-pad-x: 8px;
+  --composer-pad-b: 8px;
+  --composer-gap: 6px;
+
+  /* Type, egui's sizes. */
+  --fs-title: 20px;
+  --fw-title: 700;
+  --fs-sidebar: 14px;
+  --fs-section: 13px;
+  --fs-sidebar-count: 11px;
+  --fs-search: 14.5px;
+  --fs-chip: 12.5px;
+  --fs-archived: 14.5px;
+  --fs-row-title: 14.5px;
+  --fw-row-title: 500;
+  --fs-row-text: 13px;
+  --fs-meta: 11.5px;
+  --fs-badge: 11px;
+  --fs-msg: 14.5px;             /* widgets::MESSAGE_TEXT_SIZE */
+  --lh-msg: 19.5px;
+  --fs-msg-meta: 11px;
+  --fs-sender: 13px;
+  --fs-date-chip: 12.5px;
+  --fs-header-title: 16px;
+  --fs-header-sub: 13px;
+  --fs-input: 14.5px;
+  --fs-hint: 11.5px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --dur-panel: 220ms;           /* ui::SLIDE_SECONDS */
+  --dur-fade: 150ms;
+}
+
+/* Palette::dark: follows the system unless Settings chose a theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --app-bg: #111b21;
+    --sidebar-bg: #0d151a;
+    --sidebar-selected: #35444d;
+    --sidebar-hover: #2a3942;
+    --panel-bg: #111b21;
+    --panel-border: #222d34;
+    --search-bg: #202c33;
+    --row-hover: #2a3942;
+    --row-selected: #35444d;
+    --row-edge: rgba(233, 237, 239, 0.08);
+    --row-shadow: 0 2px 6px rgba(0, 0, 0, 0.33);
+    --divider: #222d34;
+    --round-button-bg: #202c33;
+    --conversation-bg: #0b141a;
+    --conversation-header-bg: #111b21;
+    --conversation-header-border: #222d34;
+    --wallpaper-ink: rgba(255, 255, 255, 0.161);
+    --bubble-in: #202c33;
+    --bubble-out: #005c4b;
+    --composer-button-bg: #202c33;
+    --input-bg: #202c33;
+    --input-border: #222d34;
+    --date-chip-bg: #202c33;
+    --empty-bg: #0b141a;
+  --empty-plate: rgba(255, 255, 255, 0.06);
+  --card-bg: #18242a;
+    --empty-plate: rgba(255, 255, 255, 0.06);
+    --card-bg: #18242a;
+    --menu-bg: #233138;
+    --menu-hover: #2a3942;
+    --danger: #f15c6d;
+    --scrollbar: rgba(255, 255, 255, 0.16);
+    --switch-off: #35444d;
+    --overlay: rgba(0, 0, 0, 0.55);
+    --shadow-bubble: 0 1px 1.5px rgba(0, 0, 0, 0.55);
+    --shadow-menu: 0 6px 20px rgba(0, 0, 0, 0.55);
+    --chip-bg: #111b21;
+    --chip-border: #35444d;
+  --surface: #202c33;
+  --window-bg: #0b141a;
+  --sender-s: 60%;
+  --sender-l: 68%;
+    --surface: #202c33;
+    --window-bg: #0b141a;
+    --sender-s: 60%;
+    --sender-l: 68%;
+    --chip-on-bg: rgba(0, 168, 132, 0.18);
+    --chip-on-fg: #00a884;
+    --text-primary: #e9edef;
+    --text-secondary: #97a5ae;
+    --text-section: #8a989f;
+    --text-meta: #8a989f;
+    --text-call-sub: #97a5ae;
+    --icon: #97a5ae;
+    --icon-active: #e9edef;
+    --accent: #00a884;
+    --accent-hover: #06cf9c;
+    --accent-text: #00a884;
+    --accent-fg: #0b141a;
+    --new-chat-bg: #00a884;
+    --unread: #00a884;
+    --unread-time: #00a884;
+    --unread-fg: #0b141a;
+    --muted-badge: #8a989f;
+    --tick: #8a989f;
+    --tick-read: #53bdeb;
+    --link: #53bdeb;
+    --quote-bg: rgba(11, 20, 26, 0.35);
+    --typing: #00a884;
+    --avatar-0-bg: #242445; --avatar-0-fg: #9d9df2;
+    --avatar-1-bg: #321a29; --avatar-1-fg: #ee7aa0;
+    --avatar-2-bg: #1a3224; --avatar-2-fg: #6fd58e;
+    --avatar-3-bg: #1a2a36; --avatar-3-fg: #79b8e6;
+    --avatar-4-bg: #352a1a; --avatar-4-fg: #e6ae6f;
+    --avatar-5-bg: #3a3a3a; --avatar-5-fg: #b3b3b3;
+    --reaction-border: #0b141a;
+    --reaction-bg: #233138;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --app-bg: #111b21;
+  --sidebar-bg: #0d151a;
+  --sidebar-selected: #35444d;
+  --sidebar-hover: #2a3942;
+  --panel-bg: #111b21;
+  --panel-border: #222d34;
+  --search-bg: #202c33;
+  --row-hover: #2a3942;
+  --row-selected: #35444d;
+  --row-edge: rgba(233, 237, 239, 0.08);
+  --row-shadow: 0 2px 6px rgba(0, 0, 0, 0.33);
+  --divider: #222d34;
+  --round-button-bg: #202c33;
+  --conversation-bg: #0b141a;
+  --conversation-header-bg: #111b21;
+  --conversation-header-border: #222d34;
+  --wallpaper-ink: rgba(255, 255, 255, 0.161);
+  --bubble-in: #202c33;
+  --bubble-out: #005c4b;
+  --composer-button-bg: #202c33;
+  --input-bg: #202c33;
+  --input-border: #222d34;
+  --date-chip-bg: #202c33;
+  --empty-bg: #0b141a;
+  --menu-bg: #233138;
+  --menu-hover: #2a3942;
+  --danger: #f15c6d;
+  --scrollbar: rgba(255, 255, 255, 0.16);
+  --switch-off: #35444d;
+  --overlay: rgba(0, 0, 0, 0.55);
+  --shadow-bubble: 0 1px 1.5px rgba(0, 0, 0, 0.55);
+  --shadow-menu: 0 6px 20px rgba(0, 0, 0, 0.55);
+  --chip-bg: #111b21;
+  --chip-border: #35444d;
+  --surface: #202c33;
+  --chip-on-bg: rgba(0, 168, 132, 0.18);
+  --chip-on-fg: #00a884;
+  --text-primary: #e9edef;
+  --text-secondary: #97a5ae;
+  --text-section: #8a989f;
+  --text-meta: #8a989f;
+  --text-call-sub: #97a5ae;
+  --icon: #97a5ae;
+  --icon-active: #e9edef;
+  --accent: #00a884;
+  --accent-hover: #06cf9c;
+  --accent-text: #00a884;
+  --accent-fg: #0b141a;
+  --new-chat-bg: #00a884;
+  --unread: #00a884;
+  --unread-time: #00a884;
+  --unread-fg: #0b141a;
+  --muted-badge: #8a989f;
+  --tick: #8a989f;
+  --tick-read: #53bdeb;
+  --link: #53bdeb;
+  --quote-bg: rgba(11, 20, 26, 0.35);
+  --typing: #00a884;
+  --avatar-0-bg: #242445; --avatar-0-fg: #9d9df2;
+  --avatar-1-bg: #321a29; --avatar-1-fg: #ee7aa0;
+  --avatar-2-bg: #1a3224; --avatar-2-fg: #6fd58e;
+  --avatar-3-bg: #1a2a36; --avatar-3-fg: #79b8e6;
+  --avatar-4-bg: #352a1a; --avatar-4-fg: #e6ae6f;
+  --avatar-5-bg: #3a3a3a; --avatar-5-fg: #b3b3b3;
+  --reaction-border: #0b141a;
+  --reaction-bg: #233138;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-panel: 0ms;
+    --dur-fade: 0ms;
+  }
+}

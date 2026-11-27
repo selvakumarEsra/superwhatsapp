@@ -1,0 +1,12 @@
+- title: Product
+  url: /what-is-superwhatsapp/
+  collections:
+    - guide
+- title: Znga AI
+  url: /znga/
+- title: Reference
+  url: /settings-and-files/
+  collections:
+    - reference
+- title: Download
+  url: /download/

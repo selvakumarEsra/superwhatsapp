@@ -1,0 +1,117 @@
+title: SuperWhatsapp
+superwhatsapp_version: "0.21.1-beta.11"
+release_repository: selvakumarEsra/superwhatsapp
+release_asset_prefix: superwhatsapp
+release_app_name: SuperWhatsapp
+description: WhatsApp on your desktop, fast and private, with Znga, a proactive AI agent that tells you what needs you and drafts replies in your voice.
+lang: en-US
+timezone: UTC
+url: https://selvakumaresra.github.io
+baseurl: "/superwhatsapp"
+logo: /assets/images/logo.svg
+image: /screenshot.png
+
+markdown: kramdown
+kramdown:
+  input: GFM
+
+permalink: pretty
+theme: jekyll-vitepress-theme
+
+collections:
+  guide:
+    output: true
+    permalink: "/:name/"
+  reference:
+    output: true
+    permalink: "/:name/"
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+      image: /screenshot.png
+      topics:
+        - WhatsApp desktop app
+        - AI agent for WhatsApp
+        - AI assistant
+        - Proactive AI
+        - Productivity
+        - Privacy
+  - scope:
+      type: guide
+    values:
+      layout: default
+  - scope:
+      type: reference
+    values:
+      layout: default
+
+jekyll_vitepress:
+  seo:
+    page_type: TechArticle
+    image:
+      path: /screenshot.png
+      alt: SuperWhatsapp with Znga's Today panel beside a chat, listing a message that needs a reply and a briefing
+    publisher:
+      type: Organization
+      name: SuperWhatsapp
+      url: https://selvakumaresra.github.io/superwhatsapp/
+      same_as:
+        - https://github.com/selvakumarEsra/superwhatsapp
+  llms:
+    title: SuperWhatsapp
+    description: >-
+      Documentation for SuperWhatsapp, a fast desktop WhatsApp app for
+      macOS, Windows and Linux with Znga, a proactive AI agent.
+    full: true
+    details: >-
+      Covers download, linking a phone, everyday use, the Znga AI agent,
+      privacy, settings and files. Source is on
+      [GitHub](https://github.com/selvakumarEsra/superwhatsapp).
+  branding:
+    site_title: SuperWhatsapp
+    logo:
+      default: /assets/images/logo.svg
+      alt: SuperWhatsapp
+  syntax:
+    light_theme: github
+    dark_theme: github.dark
+  footer:
+    enabled: true
+    show_on_docs: true
+    message: >-
+      SuperWhatsapp is open source under the <a href="https://github.com/selvakumarEsra/superwhatsapp/blob/main/LICENSE" target="_blank" rel="noreferrer">MIT license</a>.
+    copyright: >-
+      SuperWhatsapp is an independent project, not affiliated with, endorsed by or sponsored by WhatsApp LLC or Meta Platforms, Inc. WhatsApp is a trademark of WhatsApp LLC.
+  doc_footer:
+    enabled: true
+    previous_label: Previous page
+    next_label: Next page
+  last_updated:
+    enabled: true
+    text: Last updated
+    format: "%Y-%m-%d"
+  edit_link:
+    enabled: true
+    pattern: "https://github.com/selvakumarEsra/superwhatsapp/edit/main/docs/:path"
+    text: Edit this page on GitHub
+  github_star:
+    enabled: true
+    repository: selvakumarEsra/superwhatsapp
+    text: Star
+    show_count: true
+
+plugins:
+  - jekyll-redirect-from
+  - jekyll-vitepress-theme
+
+exclude:
+  - _site
+  - .jekyll-cache
+  - .sass-cache
+  - .bundle
+  - vendor
+  - Gemfile
+  - Gemfile.lock
