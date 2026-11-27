@@ -13,6 +13,11 @@ body {
   -webkit-font-smoothing: antialiased;
   user-select: none;
 }
+/* egui shapes the system font without its size-specific tracking (SF's
+   trak table: 0 at 12 pt, about -0.076 pt for every point above), which
+   WebKit applies; this gives it back, per element, so text runs as wide as
+   egui's. */
+* { letter-spacing: calc(0.076em - 0.912px); }
 .selectable { user-select: text; }
 .scroll {
   overflow-y: auto;
@@ -32,8 +37,18 @@ body {
 .chip:not(.on):hover { background: var(--row-hover); }
 .chip-row { overflow-x: auto; scrollbar-width: none; }
 .chip-row::-webkit-scrollbar { display: none; }
+/* widgets::search_field: the surface, the hover surface and the accent's
+   outline while it has focus. */
+.search-pill { background: var(--search-bg); }
+.search-pill:focus-within { background: var(--row-hover); box-shadow: inset 0 0 0 1px var(--accent); }
 .composer-pill:focus-within { border-color: var(--accent) !important; }
 .composer-pill textarea::placeholder { color: var(--text-meta); }
 .starred-row:hover { background: color-mix(in srgb, var(--row-hover) 50%, transparent); }
 .soft-pill:not(:disabled):hover { background: var(--row-hover) !important; }
 .call-control:not(:disabled):hover { filter: brightness(0.94); }
+/* theme::spinner: a ring with one bright quarter, turning. */
+.spinner { display: inline-block; border-radius: 50%; border: 2.5px solid color-mix(in srgb, currentColor 25%, transparent); border-top-color: currentColor; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+/* JumpHighlight: the message a jump landed on flashes for two seconds. */
+.jump-flash { animation: jump-flash 2s ease-out; }
+@keyframes jump-flash { 0%, 40% { background: color-mix(in srgb, var(--accent) 22%, transparent); } 100% { background: transparent; } }

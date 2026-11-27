@@ -79,6 +79,84 @@ pub struct ZPromise {
     pub owes_me: bool,
 }
 
+/// One value in a profile (REQ-ZPROF-001).
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZValue {
+    pub text: String,
+    pub confirmed: bool,
+    pub sensitive: bool,
+}
+
+/// One field of a profile, with its values (none when unknown).
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZField {
+    pub key: &'static str,
+    pub label: &'static str,
+    pub single: bool,
+    /// Computed on this computer; the person cannot edit it.
+    pub local: bool,
+    pub values: Vec<ZValue>,
+}
+
+/// A group member in the profile's analytics (REQ-ZPROF-004).
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZActive {
+    pub id: String,
+    pub name: String,
+    pub count: u32,
+    pub former: bool,
+    pub mood: Option<String>,
+    /// "up", "down", "same" or "".
+    pub trend: &'static str,
+}
+
+/// "Znga knows" in the info panel (REQ-ZPROF-007).
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZProfile {
+    pub group: bool,
+    pub fields: Vec<ZField>,
+    /// Facts from before profiles (REQ-ZPROF-001.A1).
+    pub facts: Vec<String>,
+    pub active: Vec<ZActive>,
+    pub mood_trend: &'static str,
+    /// Unix seconds of the last update; zero when never learned.
+    pub learned_at: i64,
+    pub backfilled: bool,
+    /// An update or history read for this chat is under way.
+    pub learning: bool,
+}
+
+/// A row in Settings › Znga › People.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZPerson {
+    pub id: String,
+    pub title: String,
+    pub group: bool,
+    /// How many values are known.
+    pub known: usize,
+    pub relation: Option<String>,
+    /// Has a chat the info panel can open.
+    pub chat: bool,
+}
+
+/// The one-time history read's progress (REQ-ZPROF-002).
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZBackfill {
+    /// "idle", "running", "paused", "waiting" or "done".
+    pub state: &'static str,
+    pub done: usize,
+    pub total: usize,
+    pub reason: Option<String>,
+    pub calls_today: u32,
+    pub daily_calls: u32,
+}
+
 /// One Sentinel decision: never message text (REQ-ZCHAT-007.A3).
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -123,6 +201,10 @@ pub struct ZngaSettings {
     pub include_groups: bool,
     pub promises: bool,
     pub memory: bool,
+    pub profiles: bool,
+    pub profile_questions: bool,
+    pub people: Vec<ZPerson>,
+    pub backfill: ZBackfill,
     pub checkin_days: u32,
     pub your_name: String,
     pub voice_notes: String,
@@ -198,9 +280,7 @@ pub fn row(app: &App) -> Option<ChatRow> {
                 .unwrap_or_else(|| "Ask me anything about your chats.".into()),
             status: "none",
         }),
-        stamp: last.map_or_else(String::new, |e| {
-            zapfast::util::chat_stamp(app.locale, e.at)
-        }),
+        stamp: last.map_or_else(String::new, |e| zapfast::util::chat_stamp(app.locale, e.at)),
         typing: None,
         draft: None,
         mention: false,
@@ -298,6 +378,10 @@ pub fn settings(app: &App) -> ZngaSettings {
         include_groups: config.include_groups,
         promises: config.promises,
         memory: config.memory,
+        profiles: config.profiles,
+        profile_questions: config.profile_questions,
+        people: people(app, &account),
+        backfill: backfill_view(app),
         checkin_days: config.checkin_days,
         your_name: if persona.your_name.is_empty() {
             config.your_name.clone()
@@ -355,6 +439,119 @@ pub fn settings(app: &App) -> ZngaSettings {
             .collect(),
         status: app.znga.status.as_ref().map(|s| (s.text.clone(), s.error)),
     }
+}
+
+fn people(app: &App, account: &str) -> Vec<ZPerson> {
+    use zapfast::znga::learn;
+    app.znga
+        .profiles
+        .for_account(account)
+        .into_iter()
+        .filter(|p| learn::may_see(app, account, &p.id))
+        .map(|p| ZPerson {
+            id: p.id.clone(),
+            title: learn::title(app, account, &p.id),
+            group: p.group,
+            known: p.fields.values().map(Vec::len).sum::<usize>() + p.active.len().min(1),
+            relation: p.relation(),
+            chat: app.account().chats.iter().any(|c| c.id == p.id) || !p.group,
+        })
+        .collect()
+}
+
+fn backfill_view(app: &App) -> ZBackfill {
+    use zapfast::znga::profiles::{BackfillState, DAILY_CALLS};
+    let backfill = &app.znga.backfill;
+    let (state, reason) = match &backfill.state {
+        BackfillState::Idle => ("idle", None),
+        BackfillState::Running => ("running", None),
+        BackfillState::Paused => ("paused", None),
+        BackfillState::Waiting(reason) => ("waiting", Some(reason.clone())),
+        BackfillState::Done => ("done", None),
+    };
+    ZBackfill {
+        state,
+        done: backfill.done,
+        total: backfill.total,
+        reason,
+        calls_today: app.znga.config.profile_calls,
+        daily_calls: DAILY_CALLS,
+    }
+}
+
+/// "Znga knows" for the info panel of `id`, when profiles are on and Znga
+/// may see it.
+pub fn profile_view(app: &App, id: &str) -> Option<ZProfile> {
+    use zapfast::znga::learn;
+    use zapfast::znga::profiles::{FIELDS, Profile};
+    if !learn::on(app) {
+        return None;
+    }
+    let account = app.account().id.as_str().to_owned();
+    if !learn::may_see(app, &account, id) {
+        return None;
+    }
+    let profile = app.znga.profiles.get(&account, id);
+    let group = app
+        .chat(id)
+        .map(|c| c.is_group())
+        .or(profile.map(|p| p.group))
+        .unwrap_or(false);
+    let empty = Profile::default();
+    let p = profile.unwrap_or(&empty);
+    let fields = FIELDS
+        .iter()
+        .filter(|f| if group { f.group } else { f.contact })
+        .map(|f| ZField {
+            key: f.key,
+            label: f.label,
+            single: f.single,
+            local: matches!(f.key, "replies" | "busy"),
+            values: p
+                .values(f.key)
+                .iter()
+                .map(|v| ZValue {
+                    text: v.text.clone(),
+                    confirmed: v.confirmed,
+                    sensitive: v.sensitive,
+                })
+                .collect(),
+        })
+        .collect();
+    let learning = app.znga.waiting_for(|purpose| {
+        matches!(purpose, zapfast::znga::Purpose::Profile { account: a, chat, .. } if *a == account && chat == id)
+    }) || app
+        .znga
+        .backfill
+        .current
+        .as_ref()
+        .is_some_and(|(a, c)| *a == account && c == id);
+    Some(ZProfile {
+        group,
+        fields,
+        facts: app.znga.people.about(&account, id),
+        active: p
+            .active
+            .iter()
+            .map(|a| {
+                let mood = p.moods.get(&a.id);
+                ZActive {
+                    id: a.id.clone(),
+                    name: a.name.clone(),
+                    count: a.count,
+                    former: a.former,
+                    mood: mood.map(|m| m.now.clone()),
+                    trend: mood.map_or("", |m| Profile::trend(&m.now, &m.before)),
+                }
+            })
+            .collect(),
+        mood_trend: p
+            .first("mood")
+            .map_or("", |m| Profile::trend(&m.text, &p.mood_before)),
+        learned_at: p.learned_at,
+        backfilled: p.backfilled,
+        learning,
+    })
 }
 
 // ---------------------------------------------------------------------
@@ -487,6 +684,64 @@ pub fn znga_fact(engine: State<'_, Core>, chat: String, text: String, forget: bo
     })));
 }
 
+/// Edits a profile from the info panel or Settings › Znga › People
+/// (REQ-ZPROF-007): `op` is "set", "confirm", "delete", "refresh",
+/// "learn" (from history), "count" (recount a group's members) or
+/// "forgetAll".
+#[tauri::command]
+pub fn znga_profile(engine: State<'_, Core>, chat: String, op: String, key: String, text: String) {
+    engine.send(Input::Edit(Box::new(move |app| {
+        profile_op(app, &chat, &op, &key, &text)
+    })));
+}
+
+pub fn profile_op(app: &mut App, chat: &str, op: &str, key: &str, text: &str) {
+    use zapfast::znga::learn;
+    let account = app.account().id.as_str().to_owned();
+    if op == "forgetAll" {
+        learn::forget_all(app, &account);
+        return;
+    }
+    if !learn::on(app) || !learn::may_see(app, &account, chat) {
+        return;
+    }
+    let now = zapfast::util::now();
+    let group = app.chat(chat).is_some_and(|c| c.is_group());
+    match op {
+        "set" => {
+            let title = learn::title(app, &account, chat);
+            app.znga
+                .profiles
+                .set(&account, chat, &title, group, key, text, now);
+        }
+        "confirm" => {
+            app.znga.profiles.confirm(&account, chat, key, text);
+        }
+        "delete" => {
+            app.znga.profiles.delete(&account, chat, key, text);
+        }
+        "refresh" => learn::refresh(app, &account, chat, false),
+        "learn" => learn::refresh(app, &account, chat, true),
+        "count" => learn::count_group(app, &account, chat),
+        _ => log::warn!("unknown profile operation {op}"),
+    }
+}
+
+/// The history read: "start", "pause", "resume" or "cancel".
+#[tauri::command]
+pub fn znga_backfill(engine: State<'_, Core>, op: String) {
+    engine.send(Input::Edit(Box::new(move |app| {
+        use zapfast::znga::learn;
+        match op.as_str() {
+            "start" => learn::start_backfill(app),
+            "pause" => learn::pause_backfill(app, true),
+            "resume" => learn::pause_backfill(app, false),
+            "cancel" => learn::cancel_backfill(app),
+            _ => {}
+        }
+    })));
+}
+
 /// Marks an open promise done or not a promise.
 #[tauri::command]
 pub fn znga_promise(engine: State<'_, Core>, chat: String, text: String, done: bool) {
@@ -538,6 +793,21 @@ pub fn set(app: &mut App, key: &str, value: &serde_json::Value) {
         ("includeGroups", Some(on)) => config.include_groups = on,
         ("promises", Some(on)) => config.promises = on,
         ("memory", Some(on)) => config.memory = on,
+        ("profileQuestions", Some(on)) => config.profile_questions = on,
+        ("profiles", Some(on)) => {
+            let first = on && !config.profiles;
+            config.profiles = on;
+            if !on {
+                // Kept until the person forgets them (REQ-ZPROF-007).
+                app.znga.backfill.cancel();
+                app.znga.config.backfill_running = false;
+            }
+            app.znga.mark_dirty();
+            if first && !app.znga.config.backfill_running {
+                zapfast::znga::learn::start_backfill(app);
+            }
+            return;
+        }
         ("selfChat", Some(on)) => {
             if on && !config.self_chat {
                 config.self_chat_since = zapfast::util::now();

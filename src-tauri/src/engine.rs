@@ -190,7 +190,10 @@ fn release_startup(app: &mut App, receipt: Option<fastframe_update::Receipt>) {
         .iter_mut()
         .filter_map(|account| account.backend.take_startup())
         .collect();
-    release(startups, receipt.map(|receipt| move || receipt.acknowledge()));
+    release(
+        startups,
+        receipt.map(|receipt| move || receipt.acknowledge()),
+    );
 }
 
 /// Sends each permit, after `acknowledge` succeeds when there is one.

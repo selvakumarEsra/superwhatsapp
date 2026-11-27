@@ -14,6 +14,10 @@ pub fn apply(app: &mut App, part: &str) -> bool {
         chat(app);
         return true;
     }
+    if part == "znga-profile" {
+        profile(app);
+        return true;
+    }
     let tab = match part {
         "znga" => Tab::Today,
         "znga-drafts" => Tab::Drafts,
@@ -173,4 +177,119 @@ fn chat(app: &mut App) {
     thread.unread = 0;
     app.znga.threads.insert(account.clone(), thread);
     app.znga.restored.insert(account);
+}
+
+/// A sample profile for the open chat (`--dump-state info,znga-profile`),
+/// so "Znga knows" can be seen (specs/znga-profiles.md). Sample content.
+fn profile(app: &mut App) {
+    use super::profiles::{Active, Answer, Item};
+    let account = app.account().id.as_str().to_owned();
+    app.znga.config.enabled = true;
+    app.znga.chat_mode = true;
+    app.znga.config.profiles = true;
+    app.znga.restored.insert(account.clone());
+    let Some(chat) = app.open_chat.clone() else {
+        return;
+    };
+    let group = app.chat(&chat).is_some_and(|c| c.is_group());
+    let title = app.chat_title_of(&chat);
+    let now = crate::util::now();
+    let item = |key: &str, value: &str, sensitive: bool| Item {
+        key: key.into(),
+        value: value.into(),
+        sensitive,
+    };
+    let answer = if group {
+        Answer {
+            profile: vec![
+                item("theme", "Planning family weekends and birthdays", false),
+                item("role", "organiser", false),
+                item(
+                    "norms",
+                    "warm, lots of photos, replies in the evening",
+                    false,
+                ),
+                item("mood", "positive", false),
+                item(
+                    "summary",
+                    "Sunday lunch is set for 1 pm; the cake is still open.",
+                    false,
+                ),
+                item("insights", "Who brings the cake on Sunday?", false),
+                item("topics", "birthdays", false),
+                item("topics", "weekend trips", false),
+            ],
+            members: Vec::new(),
+        }
+    } else {
+        Answer {
+            profile: vec![
+                item("relationship", "friend (since university)", false),
+                item("language", "English", false),
+                item("formality", "casual", false),
+                item("length", "short, one or two lines", false),
+                item("emoji", "a few, mostly 😂", false),
+                item("topics", "football", false),
+                item("likes", "jazz and long walks", false),
+                item("dates", "birthday on 12 March", false),
+                item("notes", "Started physiotherapy for a knee injury", true),
+            ],
+            members: Vec::new(),
+        }
+    };
+    app.znga.profiles.apply(
+        &account,
+        &chat,
+        &title,
+        group,
+        &[],
+        &answer,
+        now - 3 * 86_400,
+    );
+    if group {
+        let members: Vec<(String, String)> = app
+            .chat(&chat)
+            .map(|c| c.participants.clone())
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|id| !app.our_ids().contains(&id.as_str()))
+            .take(4)
+            .map(|id| {
+                let name = app.display_name(&id);
+                (id, name)
+            })
+            .collect();
+        let active = members
+            .iter()
+            .enumerate()
+            .map(|(n, (id, name))| Active {
+                id: id.clone(),
+                name: name.clone(),
+                count: 40 - n as u32 * 9,
+                former: false,
+            })
+            .collect();
+        app.znga
+            .profiles
+            .set_active(&account, &chat, &title, active);
+    } else {
+        app.znga.profiles.set(
+            &account,
+            &chat,
+            &title,
+            false,
+            "relationship",
+            "friend (since university)",
+            now,
+        );
+        app.znga.profiles.set_local(
+            &account,
+            &chat,
+            &title,
+            false,
+            "replies",
+            "usually within the hour",
+            now,
+        );
+    }
 }

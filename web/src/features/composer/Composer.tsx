@@ -67,6 +67,8 @@ export default function Composer(p: { chat: string; znga?: boolean }) {
       if (o && !o.rewrite && !text().trim()) take(o.text, o.id);
     }),
   );
+  // As in egui, opening a chat puts the cursor in its composer.
+  createEffect(on(() => p.chat, () => queueMicrotask(() => field?.focus({ preventScroll: true }))));
   const tool = (id: string) => void commands.zngaTool(p.chat, id, text(), id === "translate" ? language() : "");
   const empty = () => !text().trim();
   const entries = (): Entry[] => [

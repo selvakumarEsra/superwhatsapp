@@ -2,12 +2,12 @@
 // (src/ui/chats.rs): a large title with the side panel and new chat
 // buttons, a pill search field, the filter chips with their unread counts,
 // then one ungrouped list, the Znga chat first while Znga is on.
-import { For, Show } from "solid-js";
+import { createEffect, For, on, Show } from "solid-js";
 import { commands, state } from "../../lib/bridge";
-import { BackIcon, NewChatIcon, PanelIcon, SearchIcon } from "../../components/Icons";
+import { BackIcon, NewChatIcon, PanelIcon, PhonePlusIcon, SearchIcon } from "../../components/Icons";
 import ChatRow from "./ChatRow";
 import StarredList from "../starred/StarredList";
-import CallsList from "../calls/CallsList";
+import CallsList, { NewCallList } from "../calls/CallsList";
 import { t } from "../../lib/i18n";
 
 const TITLES: Record<string, string> = {
@@ -74,6 +74,11 @@ export default function ChatList() {
   };
   // Starred, Archived and Locked open from the rail with a way back.
   const sub = () => ["starred", "archived", "locked"].includes(state.section);
+  // Calls › New call: a back arrow, "New call" bold 20, its own search.
+  const newCall = () => state.section === "calls" && !!state.newCall;
+  // chats.rs:search_and_filters: the New call list opens ready for a name.
+  let searchEl: HTMLInputElement | undefined;
+  createEffect(on(newCall, (open) => open && queueMicrotask(() => searchEl?.focus())));
   const listing = () => state.section !== "starred" && state.section !== "calls";
   // egui (src/ui/chats.rs:filter_chips) keeps the chips in Archived and
   // Locked with none lit, and hides them while searching the chat list.
@@ -94,12 +99,12 @@ export default function ChatList() {
         class="flex shrink-0 items-center"
         style={{ height: "var(--list-header-h)", "padding-left": "var(--list-title-l)", "padding-right": "11px", gap: "4px" }}
       >
-        <Show when={sub()}>
+        <Show when={sub() || newCall()}>
           <button
             type="button"
-            title={t("Back to chats")}
-            aria-label={t("Back to chats")}
-            onClick={() => commands.showSection("chats")}
+            title={t(newCall() ? "Back to the calls" : "Back to chats")}
+            aria-label={t(newCall() ? "Back to the calls" : "Back to chats")}
+            onClick={() => (newCall() ? commands.showNewCall(false) : commands.showSection("chats"))}
             class="icon-button flex shrink-0 items-center justify-center rounded-full"
             style={{ width: "30px", height: "30px", "margin-right": "4px", color: "var(--text-secondary)" }}
           >
@@ -111,31 +116,42 @@ export default function ChatList() {
           class="flex-1 truncate"
           style={{ margin: 0, "font-size": sub() ? "16px" : "var(--fs-title)", "font-weight": "var(--fw-title)", color: "var(--text-primary)" }}
         >
-          {t(TITLES[state.section] ?? "Chats")}
+          {t(newCall() ? "New call" : TITLES[state.section] ?? "Chats")}
         </h1>
         {/* egui shows no buttons over the starred messages. */}
         <Show when={state.section !== "starred" && state.section !== "calls"}>
           <HeaderButton label="Hide chat list"><PanelIcon size={18} /></HeaderButton>
           <HeaderButton label="New chat"><NewChatIcon size={18} /></HeaderButton>
         </Show>
+        {/* chats.rs:header_buttons: Calls has New call, none over its list. */}
+        <Show when={state.section === "calls" && !newCall()}>
+          <HeaderButton label="New call" onClick={() => commands.showNewCall(true)}><PhonePlusIcon size={18} /></HeaderButton>
+        </Show>
       </header>
       <div class="shrink-0" style={{ padding: "4px var(--search-inset) 0" }}>
         <label
-          class="flex items-center"
-          style={{ height: "var(--search-h)", "border-radius": "calc(var(--search-h) / 2)", background: "var(--search-bg)", "padding-left": "11px" }}
+          class="search-pill flex items-center"
+          style={{ height: "var(--search-h)", "border-radius": "calc(var(--search-h) / 2)", "padding-left": "11px" }}
         >
           <span style={{ color: "var(--icon)" }}><SearchIcon size={17} /></span>
           <input
+            ref={searchEl}
             type="text"
             placeholder={t(state.section === "calls" ? "Search name or number" : "Search")}
-            value={state.section === "calls" ? state.callsSearch : state.search}
-            onInput={(e) => (state.section === "calls" ? commands.searchCalls(e.currentTarget.value) : commands.search(e.currentTarget.value))}
+            value={newCall() ? state.newCall!.search : state.section === "calls" ? state.callsSearch : state.search}
+            onInput={(e) =>
+              newCall()
+                ? commands.searchNewCall(e.currentTarget.value)
+                : state.section === "calls"
+                  ? commands.searchCalls(e.currentTarget.value)
+                  : commands.search(e.currentTarget.value)
+            }
             class="selectable h-full min-w-0 flex-1 bg-transparent outline-none"
             style={{ "padding-left": "9px", "padding-right": "12px", "font-size": "var(--fs-search)", color: "var(--text-primary)" }}
           />
         </label>
       </div>
-      <Show when={state.section === "calls"}>
+      <Show when={state.section === "calls" && !newCall()}>
         <div role="tablist" aria-label="Filters" class="chip-row flex shrink-0" style={{ padding: "14px var(--search-inset) 0", gap: "4px" }}>
           <Chip label={t("All")} count={0} on={state.callFilter === "all"} onClick={() => commands.setCallFilter("all")} />
           {/* A second click on Missed returns to every call. */}
@@ -162,7 +178,9 @@ export default function ChatList() {
           <StarredList />
         </Show>
         <Show when={state.section === "calls"}>
-          <CallsList />
+          <Show when={newCall()} fallback={<CallsList />}>
+            <NewCallList />
+          </Show>
         </Show>
         <Show when={state.section === "chats" && zngaRow()}>
           {(row) => <ChatRow row={row()} selected={!!state.znga} onOpen={() => commands.openChat(row().id)} />}

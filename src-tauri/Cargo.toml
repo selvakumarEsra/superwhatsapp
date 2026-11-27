@@ -30,6 +30,7 @@ base64 = "0.23"
 # The core still steps its state with an egui context until its state
 # leaves src/app.rs (REQ-WEBUI-001); nothing is drawn with it.
 egui = "0.36.2"
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
 log = "0.4"
 # The accounts' startup permits (zapfast::backend::Backend::take_startup).
 tokio = { version = "1", features = ["sync"] }

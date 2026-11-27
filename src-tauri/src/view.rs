@@ -44,6 +44,9 @@ pub struct State {
     /// all or missed: the Calls page's chip.
     pub call_filter: &'static str,
     pub calls_search: String,
+    /// The Calls tab's "New call" list, while it is open (egui's
+    /// `calls::new_call_list`).
+    pub new_call: Option<NewCall>,
     /// The contact or group info panel, when open.
     pub info: Option<Info>,
     pub settings: SettingsView,
@@ -480,6 +483,32 @@ pub struct Info {
     /// is in, and the three newest pictures and videos.
     pub media_count: Option<String>,
     pub media: Vec<MediaCell>,
+    /// What the panel shows: "overview", or the media view on its "media",
+    /// "docs" or "links" tab (egui's `InfoView`).
+    pub page: &'static str,
+    /// The listing is being made, or could not be.
+    pub media_pending: bool,
+    pub media_failed: bool,
+    /// The media view's tabs: each count, and whether the open one was cut.
+    pub tab_counts: [usize; 3],
+    pub tab_truncated: bool,
+    /// The open tab's rows, only while the media view is open.
+    pub gallery: Vec<MediaCell>,
+    pub docs: Vec<ItemRow>,
+    pub links: Vec<ItemRow>,
+    /// "Znga knows" (REQ-ZPROF-007): the profile, when profiles are on and
+    /// Znga may see this chat.
+    pub znga: Option<crate::znga::ZProfile>,
+}
+
+/// One document or link of the media view: egui's `item_row`. `target` is
+/// the message for a document and the address for a link.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ItemRow {
+    pub target: String,
+    pub title: String,
+    pub detail: String,
 }
 
 /// One picture of the info panel's media strip.
@@ -563,6 +592,9 @@ pub struct Open {
     pub subtitle: String,
     /// The subtitle is in the accent (online, typing).
     pub subtitle_accent: bool,
+    /// A message to scroll to and flash: a search result, a starred
+    /// message, a media cell (egui's `jump_highlight`).
+    pub jump: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -666,9 +698,11 @@ fn media_of(message: &Message) -> (Option<MediaView>, Option<PreviewView>, Optio
             }),
             Some(text.clone()),
         ),
-        Content::Image { caption, media, .. } => {
-            (Some(view(media)), None, Some(caption.clone().unwrap_or_default()))
-        }
+        Content::Image { caption, media, .. } => (
+            Some(view(media)),
+            None,
+            Some(caption.clone().unwrap_or_default()),
+        ),
         Content::Video {
             caption,
             media,
@@ -821,6 +855,11 @@ pub struct CallView {
     pub microphone: Option<String>,
     pub speaker: Option<String>,
     pub camera_device: Option<String>,
+    /// The peer's latest video frame and our own camera's, as `zapframe`
+    /// addresses (src/ui/call.rs: the peer fills the screen, our camera
+    /// sits in the top corner).
+    pub remote_frame: Option<String>,
+    pub local_frame: Option<String>,
 }
 
 fn call_view(app: &mut App) -> Option<CallView> {
@@ -859,12 +898,39 @@ fn call_view(app: &mut App) -> Option<CallView> {
         camera: call.group.is_none() || call.video,
         connected: call.phase.is_connected(),
         hidden,
-        microphones: app.call_devices.microphones.iter().map(|d| (d.id.clone(), d.label.clone())).collect(),
-        speakers: app.call_devices.speakers.iter().map(|d| (d.id.clone(), d.label.clone())).collect(),
-        cameras: app.call_devices.cameras.iter().map(|d| (d.id.clone(), d.label.clone())).collect(),
+        microphones: app
+            .call_devices
+            .microphones
+            .iter()
+            .map(|d| (d.id.clone(), d.label.clone()))
+            .collect(),
+        speakers: app
+            .call_devices
+            .speakers
+            .iter()
+            .map(|d| (d.id.clone(), d.label.clone()))
+            .collect(),
+        cameras: app
+            .call_devices
+            .cameras
+            .iter()
+            .map(|d| (d.id.clone(), d.label.clone()))
+            .collect(),
         microphone: call.microphone.clone(),
         speaker: call.speaker.clone(),
         camera_device: call.camera.clone(),
+        remote_frame: crate::frames::publish(
+            "remote",
+            (call.video && call.remote_video)
+                .then(|| app.call_remote_frame.clone())
+                .flatten(),
+        ),
+        local_frame: crate::frames::publish(
+            "local",
+            (call.video && call.camera_on)
+                .then(|| app.call_local_frame.clone())
+                .flatten(),
+        ),
     })
 }
 
@@ -1083,6 +1149,7 @@ pub fn build(app: &mut App) -> State {
         settings.znga.twin.clear();
         settings.znga.excluded.clear();
         settings.znga.facts.clear();
+        settings.znga.people.clear();
         settings.znga.open_promises.clear();
         settings.znga.audit.clear();
         return State {
@@ -1104,6 +1171,7 @@ pub fn build(app: &mut App) -> State {
             calls: Vec::new(),
             call_filter: "all",
             calls_search: String::new(),
+            new_call: None,
             info: None,
             settings,
             lock: Some(lock),
@@ -1136,6 +1204,11 @@ pub fn build(app: &mut App) -> State {
         Some(Open {
             subtitle,
             subtitle_accent,
+            jump: app
+                .jump_highlight
+                .as_ref()
+                .filter(|jump| jump.chat == id)
+                .map(|jump| jump.message.clone()),
             id,
             title,
             avatar,
@@ -1172,10 +1245,7 @@ pub fn build(app: &mut App) -> State {
         let rows: Vec<zapfast::archive::Starred> = app.starred.clone();
         rows.iter()
             // Stars in locked chats stay behind the lock, as in egui.
-            .filter(|row| {
-                !app.chat(&row.message.chat)
-                    .is_some_and(|chat| chat.locked)
-            })
+            .filter(|row| !app.chat(&row.message.chat).is_some_and(|chat| chat.locked))
             .map(|row| {
                 let chat = app.chat(&row.message.chat).cloned();
                 let group = chat.as_ref().is_some_and(Chat::is_group);
@@ -1252,6 +1322,7 @@ pub fn build(app: &mut App) -> State {
             zapfast::model::CallFilter::Missed => "missed",
         },
         calls_search: app.calls_search.clone(),
+        new_call: new_call(app),
         info,
         settings: settings(app),
         lock: None,
@@ -1299,7 +1370,114 @@ fn call_row(app: &mut App, row: &[Message]) -> CallRow {
     }
 }
 
+/// The "New call" list: the people called most, unless searching, then
+/// every contact matching the search by name or number.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewCall {
+    pub search: String,
+    pub frequent: Vec<Person>,
+    pub contacts: Vec<Person>,
+}
+
+/// One person to call: the picture, the name, and the number under it.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Person {
+    pub id: String,
+    pub name: String,
+    pub phone: Option<String>,
+    pub avatar: Option<String>,
+}
+
+fn new_call(app: &mut App) -> Option<NewCall> {
+    use zapfast::ui::calls;
+    if app.page != Page::Calls || !app.new_call {
+        return None;
+    }
+    let needle = zapfast::util::search_key(app.new_call_search.trim());
+    let frequent: Vec<String> = if needle.is_empty() {
+        calls::frequent(&calls::visible_calls(app), app.me.as_deref())
+            .into_iter()
+            .filter(|chat| !app.chat(chat).is_some_and(|chat| chat.locked))
+            .collect()
+    } else {
+        Vec::new()
+    };
+    let contacts: Vec<String> = zapfast::ui::dialogs::contact_choices(app, &needle)
+        .into_iter()
+        .map(|contact| contact.id)
+        .collect();
+    let mut person = |id: &str| Person {
+        id: id.to_owned(),
+        name: app.display_name(id),
+        phone: zapfast::model::phone_of(id).map(zapfast::util::phone),
+        avatar: media(app.avatar(id)),
+    };
+    let frequent = frequent.iter().map(|id| person(id)).collect();
+    let contacts = contacts.iter().map(|id| person(id)).collect();
+    Some(NewCall {
+        search: app.new_call_search.clone(),
+        frequent,
+        contacts,
+    })
+}
+
+/// One picture or video cell: the file when downloaded, else the preview
+/// sent with it; a video shows its preview and length.
+fn media_cell(message: &Message) -> MediaCell {
+    let (view, _, _) = media_of(message);
+    let video = view.as_ref().is_some_and(|v| v.mime.starts_with("video/"));
+    MediaCell {
+        id: message.id.clone(),
+        src: view.as_ref().and_then(|v| {
+            if video {
+                v.thumb.clone()
+            } else {
+                v.url.clone().or_else(|| v.thumb.clone())
+            }
+        }),
+        video,
+        seconds: view.and_then(|v| v.seconds),
+    }
+}
+
+/// A document row: its name, then pages, size and day (egui's `docs_list`).
+fn doc_row(app: &App, message: &Message) -> Option<ItemRow> {
+    let Content::Document {
+        media,
+        file_name,
+        pages,
+        ..
+    } = &message.content
+    else {
+        return None;
+    };
+    let mut detail = Vec::new();
+    if let Some(pages) = pages {
+        detail.push(
+            zapfast::i18n::ngettext(app.locale, "{} page", "{} pages", *pages)
+                .replace("{}", &pages.to_string()),
+        );
+    }
+    detail.push(zapfast::util::bytes(media.size));
+    detail.push(zapfast::util::chat_stamp(app.locale, message.timestamp));
+    Some(ItemRow {
+        target: message.id.clone(),
+        title: file_name.clone(),
+        detail: detail.join(" · "),
+    })
+}
+
 fn info(app: &mut App, id: &str, now: i64) -> Info {
+    use zapfast::model::{InfoView, MediaTab};
+    let view = app
+        .info
+        .as_ref()
+        .filter(|panel| panel.chat == id)
+        .map_or(InfoView::Overview, |panel| panel.view);
+    let listing_owned = app.info_media.clone().filter(|m| m.chat == id);
+    let listing = listing_owned.as_ref();
     // Group members may have no chat of their own.
     let chat = app
         .chat(id)
@@ -1362,7 +1540,10 @@ fn info(app: &mut App, id: &str, now: i64) -> Info {
             .filter(|phone| !phone.is_empty()),
         status: (!chat.is_group() && !chat.is_channel())
             .then(|| zapfast::ui::conversation::subtitle(app, &chat).0)
-            .filter(|line| !line.is_empty() && Some(line.as_str()) != chat.phone().map(zapfast::util::phone).as_deref()),
+            .filter(|line| {
+                !line.is_empty()
+                    && Some(line.as_str()) != chat.phone().map(zapfast::util::phone).as_deref()
+            }),
         blockable: zapfast::blocking::eligible(id, app.me.as_deref(), app.me_lid.as_deref()),
         blocked: app.blocklist.contains(id),
         block_editable: app.is_connected() && app.blocklist.editable(),
@@ -1383,32 +1564,58 @@ fn info(app: &mut App, id: &str, now: i64) -> Info {
                 count.to_string()
             }
         }),
-        media: app
-            .info_media
-            .as_ref()
-            .filter(|m| m.chat == id)
-            .map(|m| {
-                m.media
-                    .iter()
-                    .take(3)
-                    .map(|message| {
-                        let (view, _, _) = media_of(message);
-                        let video = view.as_ref().is_some_and(|v| v.mime.starts_with("video/"));
-                        MediaCell {
-                            id: message.id.clone(),
-                            src: view.as_ref().and_then(|v| {
-                                if video { v.thumb.clone() } else { v.url.clone().or_else(|| v.thumb.clone()) }
-                            }),
-                            video,
-                            seconds: view.and_then(|v| v.seconds),
-                        }
-                    })
-                    .collect()
-            })
+        media: listing
+            .map(|m| m.media.iter().take(3).map(media_cell).collect())
             .unwrap_or_default(),
+        page: match view {
+            InfoView::Media(MediaTab::Media) => "media",
+            InfoView::Media(MediaTab::Docs) => "docs",
+            InfoView::Media(MediaTab::Links) => "links",
+            _ => "overview",
+        },
+        media_pending: app.info_media_pending,
+        media_failed: app.info_media_failed,
+        tab_counts: listing.map_or([0; 3], |m| [m.media.len(), m.docs.len(), m.links.len()]),
+        tab_truncated: listing.is_some_and(|m| match view {
+            InfoView::Media(MediaTab::Media) => m.media_truncated,
+            InfoView::Media(MediaTab::Docs) => m.docs_truncated,
+            InfoView::Media(MediaTab::Links) => m.links_truncated,
+            _ => false,
+        }),
+        gallery: match (view, listing) {
+            (InfoView::Media(MediaTab::Media), Some(m)) => m.media.iter().map(media_cell).collect(),
+            _ => Vec::new(),
+        },
+        docs: match (view, listing) {
+            (InfoView::Media(MediaTab::Docs), Some(m)) => m
+                .docs
+                .iter()
+                .filter_map(|message| doc_row(app, message))
+                .collect(),
+            _ => Vec::new(),
+        },
+        links: match (view, listing) {
+            (InfoView::Media(MediaTab::Links), Some(m)) => m
+                .links
+                .iter()
+                .map(|link| ItemRow {
+                    target: link.url.clone(),
+                    title: link.title.clone().unwrap_or_else(|| link.url.clone()),
+                    detail: format!(
+                        "{} · {}",
+                        zapfast::ui::info::domain(&link.url),
+                        zapfast::util::chat_stamp(app.locale, link.timestamp)
+                    ),
+                })
+                .collect(),
+            _ => Vec::new(),
+        },
         editor_names: zapfast::util::editor_names(
             app.chat_title(&chat).trim_start_matches('~'),
-            app.contacts.get(id).and_then(zapfast::model::Contact::first_name),
+            app.contacts
+                .get(id)
+                .and_then(zapfast::model::Contact::first_name),
         ),
+        znga: crate::znga::profile_view(app, id),
     }
 }

@@ -3,6 +3,7 @@
 
 mod desktop;
 mod engine;
+mod frames;
 mod media;
 mod view;
 mod znga;
@@ -138,6 +139,44 @@ fn open_info(engine: State<'_, Engine>, chat: String) {
 #[tauri::command]
 fn close_info(engine: State<'_, Engine>) {
     engine.send(Input::Action(Action::CloseInfo));
+}
+
+/// The info panel's overview, or its media view on one tab (egui's
+/// `Action::ShowInfo`).
+#[tauri::command]
+fn info_page(engine: State<'_, Engine>, page: String) {
+    use zapfast::model::{InfoView, MediaTab};
+    let view = match page.as_str() {
+        "media" => InfoView::Media(MediaTab::Media),
+        "docs" => InfoView::Media(MediaTab::Docs),
+        "links" => InfoView::Media(MediaTab::Links),
+        _ => InfoView::Overview,
+    };
+    engine.send(Input::Action(Action::ShowInfo(view)));
+}
+
+/// Opens or closes the Calls tab's "New call" list.
+#[tauri::command]
+fn show_new_call(engine: State<'_, Engine>, open: bool) {
+    engine.send(Input::Action(Action::ShowNewCall(open)));
+}
+
+/// The "New call" list's search, by name or number.
+#[tauri::command]
+fn search_new_call(engine: State<'_, Engine>, text: String) {
+    engine.send(Input::Edit(Box::new(move |app| app.new_call_search = text)));
+}
+
+/// Asks again for the chat's media listing after it failed.
+#[tauri::command]
+fn retry_info_media(engine: State<'_, Engine>) {
+    engine.send(Input::Action(Action::RetryInfoMedia));
+}
+
+/// The page scrolled to the jumped-to message and flashed it.
+#[tauri::command]
+fn jumped(engine: State<'_, Engine>) {
+    engine.send(Input::Edit(Box::new(|app| app.jump_highlight = None)));
 }
 
 #[tauri::command]
@@ -618,8 +657,17 @@ pub fn run() {
     // the command line, as the egui build does.
     let launch = fastframe_update::intercept(&zapfast::updates::CONFIG);
     // The updater checks a download with `--version`: `<slug> <version>`.
-    if launch.arguments.iter().skip(1).any(|arg| arg == "--version" || arg == "-V") {
-        println!("{} {}", zapfast::updates::CONFIG.slug, env!("CARGO_PKG_VERSION"));
+    if launch
+        .arguments
+        .iter()
+        .skip(1)
+        .any(|arg| arg == "--version" || arg == "-V")
+    {
+        println!(
+            "{} {}",
+            zapfast::updates::CONFIG.slug,
+            env!("CARGO_PKG_VERSION")
+        );
         return;
     }
     // `--dump-state <page>`: print the demo's state as the page receives it
@@ -649,7 +697,10 @@ pub fn run() {
     // A relaunch after an update shows its window, so the page loads and
     // confirms the update.
     let start_hidden = launch.receipt.is_none()
-        && launch.arguments.iter().any(|arg| arg == desktop::START_HIDDEN);
+        && launch
+            .arguments
+            .iter()
+            .any(|arg| arg == desktop::START_HIDDEN);
     start.hidden = start_hidden;
     if !start.demo {
         match engine::claim(&start) {
@@ -665,6 +716,7 @@ pub fn run() {
             desktop::show(app);
         }))
         .register_uri_scheme_protocol("zapmedia", media::serve)
+        .register_uri_scheme_protocol("zapframe", frames::serve)
         .setup(move |app| {
             let engine = engine::spawn(app.handle().clone(), start);
             app.manage(engine);
@@ -689,6 +741,11 @@ pub fn run() {
             clear_chat,
             open_info,
             close_info,
+            info_page,
+            show_new_call,
+            search_new_call,
+            retry_info_media,
+            jumped,
             leave_group,
             set_star,
             go_to_message,
@@ -730,6 +787,8 @@ pub fn run() {
             znga::znga_chat_list,
             znga::znga_fact,
             znga::znga_promise,
+            znga::znga_profile,
+            znga::znga_backfill,
             znga::znga_set
         ])
         .build(tauri::generate_context!())

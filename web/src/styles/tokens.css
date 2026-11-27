@@ -120,12 +120,13 @@
   --avatar-header: 40px;
   --header-pill-h: 36px;
   --bubble-gutter: 18px;        /* WHATSAPP_SIDE_MARGIN */
-  --bubble-pad-x: 9px;
+  --bubble-pad-x: 10px;         /* conversation.rs:bubble_margin */
   --bubble-pad-y: 6px;
+  --bubble-pad-bottom: 5px;
   --bubble-radius: 10px;        /* widgets::BUBBLE_RADIUS */
   --bubble-max: 72%;            /* WHATSAPP_WIDTH_SHARE */
-  --bubble-gap: 2px;
-  --bubble-gap-run: 10px;
+  --bubble-gap: 3px;
+  --bubble-gap-run: 7px;         /* RUN_GAP 5 + the row spacing 3, less the shadow */
   --tail-w: 8px;
   --date-chip-h: 26px;
   --date-chip-w: 60px;
@@ -151,7 +152,7 @@
   --fs-meta: 11.5px;
   --fs-badge: 11px;
   --fs-msg: 14.5px;             /* widgets::MESSAGE_TEXT_SIZE */
-  --lh-msg: 19.5px;
+  --lh-msg: 17px;               /* egui row height of BODY_SIZE */
   --fs-msg-meta: 11px;
   --fs-sender: 13px;
   --fs-date-chip: 12.5px;

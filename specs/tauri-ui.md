@@ -391,6 +391,13 @@ implementations:
   - src-tauri/src/lib.rs:call_control
   - src-tauri/src/lib.rs:call_device
   - src-tauri/src/view.rs:call_view
+  - src-tauri/src/view.rs:new_call
+  - src-tauri/src/lib.rs:show_new_call
+  - src-tauri/src/lib.rs:search_new_call
+  - web/src/features/calls/CallsList.tsx:NewCallList
+  - web/src/features/calls/StartCall.tsx:StartCall
+  - src-tauri/src/frames.rs:publish
+  - src-tauri/src/frames.rs:serve
 
 ## Acceptance
 <!-- id: REQ-WEBUI-010.A1 -->
@@ -408,6 +415,13 @@ implementations:
   with egui's controls: Decline and Accept while ringing; Mute, the
   camera, Devices and Hang up while live. Its back arrow sets the screen
   aside behind a strip that returns to the call or hangs up.
+<!-- id: REQ-WEBUI-010.A5 -->
+- With no chat open, the Calls tab shows egui's Start call pane. Start
+  call, or the header's New call button, opens the New call list:
+  "Frequently contacted" (not while searching) and "All contacts", each
+  person with a voice and a video button that start the call and close
+  the list; its search narrows by name or number, and Back returns to the
+  history.
 
 <!-- id: REQ-WEBUI-011 -->
 ## Info panels and dialogs MUST offer everything they do today
@@ -424,6 +438,10 @@ implementations:
   - web/src/components/Menu.tsx:Confirm
   - web/src/features/dialogs/Forward.tsx:Forward
   - src-tauri/src/view.rs:info
+  - src-tauri/src/lib.rs:info_page
+  - src-tauri/src/lib.rs:retry_info_media
+  - src-tauri/src/lib.rs:jumped
+  - web/src/features/conversation/Conversation.tsx:Conversation
 
 ## Acceptance
 <!-- id: REQ-WEBUI-011.A1 -->
@@ -444,6 +462,16 @@ implementations:
   First name and Surname, saved with Enter and dropped with Escape; the
   panel lists "Media, links and docs" with its count and the three newest
   pictures.
+<!-- id: REQ-WEBUI-011.A6 -->
+- "Media, links and docs" opens egui's page: Media, Docs and Links chips
+  with their counts (and a note when the listing was cut short), a
+  four-column picture grid, document rows and link rows, a spinner while
+  the listing loads and Try again when it failed; Back returns to the
+  panel.
+<!-- id: REQ-WEBUI-011.A7 -->
+- A picture or document there, or a picture in the panel's strip, opens
+  the chat at that message, scrolled into view and flashed; a link opens
+  in the browser.
 
 <!-- id: REQ-WEBUI-012 -->
 ## Settings and desktop integration MUST work on every platform

@@ -96,6 +96,11 @@ pub fn inline(value: &mut serde_json::Value) {
     use base64::Engine as _;
     match value {
         serde_json::Value::String(text) => {
+            if let Some(bytes) = crate::frames::inline(text) {
+                let data = base64::engine::general_purpose::STANDARD.encode(bytes);
+                *text = format!("data:image/jpeg;base64,{data}");
+                return;
+            }
             let Some(rest) = text.strip_prefix("http://zapmedia.localhost/") else {
                 return;
             };

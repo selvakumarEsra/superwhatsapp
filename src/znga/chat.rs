@@ -195,7 +195,11 @@ pub fn send_message(app: &mut App, text: &str) {
             resolve(app, question.intent, choice);
             return;
         }
-        if matches!(thread::intent(text), Intent::Ask(_)) {
+        // A profile question not answered is simply let go
+        // (REQ-ZPROF-006): what was written is handled as usual.
+        if !matches!(question.intent, Intent::Learn { .. })
+            && matches!(thread::intent(text), Intent::Ask(_))
+        {
             // Neither a pick nor a new instruction: ask again.
             let again = Question {
                 intent: question.intent,
@@ -219,6 +223,9 @@ pub fn send_message(app: &mut App, text: &str) {
         Intent::Tell { rest } => tell(app, &rest),
         Intent::Remind { what } => remind(app, &what),
         Intent::CatchUp { name } => catch_up_named(app, &name),
+        Intent::Know { name } => know(app, &name, text),
+        Intent::Forget { rest } => forget(app, &rest),
+        Intent::Learn { .. } => {}
         Intent::Ask(question) => {
             if super::web::links(&question).is_empty() {
                 ask(app, question)
@@ -323,8 +330,307 @@ fn resolve(app: &mut App, intent: Intent, (chat, title): (String, String)) {
         }
         Intent::Remind { what } => remind_for(app, &what, Some((chat, title))),
         Intent::CatchUp { .. } => catch_up_chat(app, &chat),
+        Intent::Know { .. } => show_profile(app, &chat),
+        Intent::Forget { rest } => {
+            let choices = vec![(chat.clone(), title.clone())];
+            let what = thread::addressee(&rest, &choices)
+                .map(|(_, what)| what)
+                .unwrap_or_else(|| {
+                    rest.split_once(' ')
+                        .map_or(rest.clone(), |(_, w)| w.to_owned())
+                });
+            forget_in(app, &chat, &title, &what);
+        }
+        Intent::Learn {
+            chat: id,
+            title: name,
+            key,
+        } => {
+            let account = active(app);
+            if chat == "skip" {
+                app.znga.profiles.skip_question(&account, &id, &key);
+                answer(
+                    app,
+                    &account,
+                    "Skipped. I won't ask about that again.",
+                    Vec::new(),
+                );
+            } else {
+                let now = crate::util::now();
+                app.znga
+                    .profiles
+                    .set(&account, &id, &name, false, &key, &chat, now);
+                let what = match chat.as_str() {
+                    "family" => "family".to_owned(),
+                    "partner" => "your partner".to_owned(),
+                    "other" => "someone else to you".to_owned(),
+                    word => format!("a {word}"),
+                };
+                answer(
+                    app,
+                    &account,
+                    format!("Got it: {name} is {what}. I'll write to them that way."),
+                    Vec::new(),
+                );
+            }
+        }
         Intent::Done | Intent::Ask(_) => {}
     }
+}
+
+// ---------------------------------------------------------------------
+// Profiles in the chat (REQ-ZPROF-006, REQ-ZPROF-007).
+
+/// Chats and group members Znga has a profile of, as (id, title).
+fn profile_choices(app: &App) -> Vec<(String, String)> {
+    let account = active(app);
+    let mut choices = all_chats(app);
+    for profile in app.znga.profiles.for_account(&account) {
+        if !choices.iter().any(|(id, _)| *id == profile.id) && !profile.title.is_empty() {
+            choices.push((profile.id.clone(), profile.title.clone()));
+        }
+    }
+    choices
+}
+
+/// "What do you know about Ada?": her profile, read on this computer.
+/// A name that is no chat or member is a question for the archive.
+fn know(app: &mut App, name: &str, text: &str) {
+    let choices = profile_choices(app);
+    let found = thread::candidates(name, &choices);
+    match readable_choices(app, found).as_slice() {
+        [] => ask(app, text.to_owned()),
+        [one] => show_profile(app, &one.0),
+        many => ask_which(
+            app,
+            Question {
+                intent: Intent::Know {
+                    name: name.to_owned(),
+                },
+                choices: many.to_vec(),
+            },
+        ),
+    }
+}
+
+/// Whether Znga may show or change what it knows about `id`: a chat's
+/// own check, or for a member with no chat, their exclusion.
+fn may_know(app: &mut App, id: &str) -> bool {
+    if app.account().chats.iter().any(|c| c.id == id) {
+        return may_read(app, id);
+    }
+    let account = active(app);
+    let allowed = super::learn::may_see(app, &account, id);
+    if !allowed {
+        answer(
+            app,
+            &account,
+            "I can't do that: that chat is locked or excluded, and Znga never reads those.",
+            Vec::new(),
+        );
+    }
+    allowed
+}
+
+fn show_profile(app: &mut App, id: &str) {
+    if !may_know(app, id) {
+        return;
+    }
+    let account = active(app);
+    let title = super::learn::title(app, &account, id);
+    let facts = app.znga.people.about(&account, id);
+    let text = match app.znga.profiles.get(&account, id) {
+        Some(profile) if !profile.is_empty() || !facts.is_empty() => {
+            describe(profile, &title, &facts)
+        }
+        _ if !facts.is_empty() => {
+            let mut text = format!("What I know about {title}:");
+            for fact in &facts {
+                text.push_str(&format!("\n• {fact}"));
+            }
+            text
+        }
+        _ if !app.znga.config.profiles => format!(
+            "I don't know anything about {title} yet. Turn on Profiles in Settings \u{203a} Znga \
+             and I'll learn from your chats."
+        ),
+        _ => format!("I don't know anything about {title} yet."),
+    };
+    answer(app, &account, text, Vec::new());
+}
+
+/// A profile as Znga says it in the chat. Sensitive values not confirmed
+/// are shown marked, as the profile does (REQ-ZPROF-003).
+fn describe(profile: &super::profiles::Profile, title: &str, facts: &[String]) -> String {
+    use super::profiles::{FIELDS, Profile};
+    let mut text = format!("What I know about {title}:");
+    for def in FIELDS {
+        let values = profile.values(def.key);
+        if values.is_empty() {
+            continue;
+        }
+        let list: Vec<String> = values
+            .iter()
+            .map(|v| {
+                if v.usable() {
+                    v.text.clone()
+                } else {
+                    format!("{} (sensitive, not used until you confirm it)", v.text)
+                }
+            })
+            .collect();
+        text.push_str(&format!("\n• {}: {}", def.label, list.join("; ")));
+    }
+    if profile.group {
+        let active: Vec<String> = profile
+            .active
+            .iter()
+            .filter(|a| !a.former)
+            .take(5)
+            .map(|a| {
+                let mood = profile
+                    .moods
+                    .get(&a.id)
+                    .map(|m| format!(", {}", m.now))
+                    .unwrap_or_default();
+                format!("{} ({}{mood})", a.name, a.count)
+            })
+            .collect();
+        if !active.is_empty() {
+            text.push_str(&format!(
+                "\n• Most active in 30 days: {}",
+                active.join(", ")
+            ));
+        }
+        if let Some(mood) = profile.first("mood") {
+            match Profile::trend(&mood.text, &profile.mood_before) {
+                "up" => text.push_str("\n• The mood is better than before."),
+                "down" => text.push_str("\n• The mood is worse than before."),
+                _ => {}
+            }
+        }
+    }
+    for fact in facts {
+        text.push_str(&format!("\n• {fact}"));
+    }
+    text.push_str("\n\nChange any of it in the chat's info panel, or tell me \"forget that …\".");
+    text
+}
+
+/// "forget that Ada likes jazz" (REQ-ZPROF-007.A4).
+fn forget(app: &mut App, rest: &str) {
+    let account = active(app);
+    let choices = profile_choices(app);
+    match thread::addressee(rest, &choices) {
+        None => answer(
+            app,
+            &account,
+            "I couldn't tell who you mean. Say it like \"forget that Ada likes jazz\".",
+            Vec::new(),
+        ),
+        Some((found, what)) => {
+            let found: Vec<(String, String)> = found.into_iter().cloned().collect();
+            let refs: Vec<&(String, String)> = found.iter().collect();
+            match readable_choices(app, refs).as_slice() {
+                [one] => forget_in(app, &one.0, &one.1, &what),
+                many => ask_which(
+                    app,
+                    Question {
+                        intent: Intent::Forget {
+                            rest: rest.to_owned(),
+                        },
+                        choices: many.to_vec(),
+                    },
+                ),
+            }
+        }
+    }
+}
+
+fn forget_in(app: &mut App, id: &str, title: &str, what: &str) {
+    if !may_know(app, id) {
+        return;
+    }
+    let account = active(app);
+    let what = what.trim();
+    let mut gone = app.znga.profiles.forget_matching(&account, id, what);
+    let wanted = super::thread::fold(what);
+    for fact in app.znga.people.about(&account, id) {
+        let folded = super::thread::fold(&fact);
+        if !wanted.is_empty() && (folded.contains(&wanted) || wanted.contains(&folded)) {
+            app.znga.people.forget(&account, id, &fact);
+            gone.push(fact);
+        }
+    }
+    let text = if gone.is_empty() {
+        format!("I don't have that about {title}.")
+    } else {
+        format!(
+            "Forgotten about {title}: {}. I won't learn it again.",
+            gone.join("; ")
+        )
+    };
+    answer(app, &account, text, Vec::new());
+}
+
+/// One profile question a day (REQ-ZPROF-006): never in quiet hours,
+/// never about a sensitive trait, never again after Skip.
+fn profile_question(app: &mut App) {
+    let config = &app.znga.config;
+    if !super::learn::on(app) || !config.profile_questions || quiet(config) {
+        return;
+    }
+    let day = day_of(&local_now());
+    if config.profile_question_day == day {
+        return;
+    }
+    let account = active(app);
+    if app
+        .znga
+        .threads
+        .get(&account)
+        .is_some_and(|t| t.question.is_some())
+    {
+        return;
+    }
+    let chats = super::learn::direct_chats(app, &account);
+    let Some((id, title, key)) = app.znga.profiles.next_question(&account, &chats) else {
+        return;
+    };
+    app.znga.config.profile_question_day = day;
+    app.znga.mark_dirty();
+    let choices: Vec<(String, String)> = super::profiles::RELATIONSHIPS
+        .iter()
+        .map(|r| {
+            let mut label = r.to_string();
+            label[..1].make_ascii_uppercase();
+            (r.to_string(), label)
+        })
+        .chain(std::iter::once(("skip".to_owned(), "Skip".to_owned())))
+        .collect();
+    let list = choices
+        .iter()
+        .enumerate()
+        .map(|(n, (_, label))| format!("{}. {label}", n + 1))
+        .collect::<Vec<_>>()
+        .join("\n");
+    answer(
+        app,
+        &account,
+        format!(
+            "So I write to {title} the way you would: who is {title} to you?\n{list}\nAnswer \
+             with the number or the word."
+        ),
+        Vec::new(),
+    );
+    thread_of(app, &account).question = Some(Question {
+        intent: Intent::Learn {
+            chat: id,
+            title,
+            key: key.to_owned(),
+        },
+        choices,
+    });
 }
 
 /// The Sentinel's check before Znga reads a chat the person named
@@ -1062,11 +1368,16 @@ fn place_draft(app: &mut App, draft: Draft) {
 /// A message that needs the person, posted at once with no AI call
 /// (REQ-ZCHAT-005.A1).
 pub fn needs_you(app: &mut App, alert: &super::proactive::Alert) {
+    // Why the sender matters, from their profile (REQ-ZPROF-005).
+    let who = match super::learn::relation(app, &alert.account, &alert.chat) {
+        Some(relation) => format!("{} ({relation})", alert.chat_title),
+        None => alert.chat_title.clone(),
+    };
     unasked(
         app,
         &alert.account.clone(),
         Kind::NeedsYou,
-        format!("{} needs you: {}", alert.chat_title, alert.reason),
+        format!("{who} needs you: {}", alert.reason),
         vec![Item::new(Card::NeedsYou {
             chat: alert.chat.clone(),
             chat_title: alert.chat_title.clone(),
@@ -1230,6 +1541,7 @@ pub fn tick(app: &mut App) {
         }
         digests(app);
         plan_reminders(app);
+        profile_question(app);
     }
     // Saved once the account's znga.db was read, so it is never
     // overwritten unread.

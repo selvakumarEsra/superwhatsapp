@@ -33,9 +33,11 @@ pub mod demo;
 pub mod drafts;
 pub mod hooks;
 pub mod keys;
+pub mod learn;
 pub mod memory;
 pub mod privacy;
 pub mod proactive;
+pub mod profiles;
 pub mod promises;
 pub mod prompt;
 pub mod provider;
@@ -103,6 +105,17 @@ pub enum Purpose {
         chat: String,
         chat_title: String,
     },
+    /// Learning a contact's or group's profile (REQ-ZPROF-002). `tags`
+    /// name the group members the prompt used; `backfill` marks the
+    /// one-time history read.
+    Profile {
+        account: String,
+        chat: String,
+        chat_title: String,
+        group: bool,
+        tags: Vec<profiles::Tag>,
+        backfill: bool,
+    },
     CatchUp {
         account: String,
         chat: String,
@@ -139,6 +152,7 @@ impl Purpose {
                 }
                 | Purpose::Promises { .. }
                 | Purpose::Facts { .. }
+                | Purpose::Profile { .. }
         )
     }
 }
@@ -296,6 +310,11 @@ pub struct Znga {
     pub store: store::Store,
     pub audit: sentinel::Audit,
     pub people: memory::People,
+    /// Profiles of contacts, groups and members (specs/znga-profiles.md).
+    pub profiles: profiles::Profiles,
+    pub backfill: profiles::Backfill,
+    pub(crate) last_profile_scan: Option<Instant>,
+    pub(crate) last_activity_scan: Option<Instant>,
     pub promises: promises::Promises,
     /// Asks in progress (plan → search → answer).
     pub asking: HashMap<u64, archive_ask::Asking>,
@@ -398,6 +417,10 @@ impl Znga {
             store: store::Store::new(waker.clone()),
             audit: sentinel::Audit::default(),
             people: memory::People::default(),
+            profiles: profiles::Profiles::default(),
+            backfill: profiles::Backfill::default(),
+            last_profile_scan: None,
+            last_activity_scan: None,
             promises: promises::Promises::default(),
             asking: HashMap::new(),
             next_ask: 0,
@@ -787,6 +810,49 @@ impl Znga {
             ) => {
                 let facts = memory::parse_facts(&text);
                 self.people.add(&account, &chat, &chat_title, &facts, now);
+            }
+            (
+                Purpose::Profile {
+                    account,
+                    chat,
+                    chat_title,
+                    group,
+                    tags,
+                    backfill,
+                },
+                Ok(text),
+            ) => {
+                // An answer that is not a profile leaves it as it was
+                // (REQ-ZPROF-002.A5).
+                if let Some(answer) = profiles::parse(&text) {
+                    self.profiles
+                        .apply(&account, &chat, &chat_title, group, &tags, &answer, now);
+                    if backfill {
+                        self.profiles
+                            .mark_backfilled(&account, &chat, &chat_title, group);
+                    }
+                } else {
+                    log::debug!("znga: a profile answer could not be read");
+                }
+                if backfill {
+                    self.backfill.finished(&account, &chat);
+                }
+            }
+            (
+                Purpose::Profile {
+                    account,
+                    chat,
+                    group,
+                    backfill,
+                    ..
+                },
+                Err(_),
+            ) => {
+                log::debug!("znga: a profile update failed");
+                self.profiles.retry(&account, &chat, group);
+                if backfill {
+                    self.backfill.finished(&account, &chat);
+                }
             }
             (Purpose::Promises { .. } | Purpose::Facts { .. }, Err(_)) => {
                 log::debug!("znga: an extraction failed");

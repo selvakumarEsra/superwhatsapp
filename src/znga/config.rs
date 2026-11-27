@@ -177,6 +177,19 @@ pub struct Config {
     pub quiet_hours: bool,
     pub quiet_from: String,
     pub quiet_to: String,
+    /// Keep a profile of every contact, group and member Znga may see
+    /// (specs/znga-profiles.md). Off until the person turns it on.
+    pub profiles: bool,
+    /// Ask in the Znga chat to fill gaps in profiles (REQ-ZPROF-006).
+    pub profile_questions: bool,
+    /// The one-time history read is under way, so it resumes after a
+    /// restart or the next day (REQ-ZPROF-002.A2).
+    pub backfill_running: bool,
+    /// Profile model calls spent on `profile_calls_day` (local day number).
+    pub profile_calls_day: i64,
+    pub profile_calls: u32,
+    /// The local day a profile question was last asked.
+    pub profile_question_day: i64,
 }
 
 /// One linked account's persona. Empty fields fall back to the global
@@ -246,6 +259,12 @@ impl Default for Config {
             quiet_hours: false,
             quiet_from: "22:00".into(),
             quiet_to: "07:00".into(),
+            profiles: false,
+            profile_questions: true,
+            backfill_running: false,
+            profile_calls_day: 0,
+            profile_calls: 0,
+            profile_question_day: 0,
         }
     }
 }
@@ -303,6 +322,19 @@ impl Config {
     /// Whether Znga may send requests now: on, and consented when cloud.
     pub fn may_call(&self) -> bool {
         self.enabled && (!self.is_cloud() || self.cloud_consent)
+    }
+
+    /// Takes one profile model call from today's budget, if any is left.
+    pub fn spend_profile_call(&mut self, day: i64) -> bool {
+        if self.profile_calls_day != day {
+            self.profile_calls_day = day;
+            self.profile_calls = 0;
+        }
+        if self.profile_calls >= super::profiles::DAILY_CALLS {
+            return false;
+        }
+        self.profile_calls += 1;
+        true
     }
 
     pub fn is_twin(&self, account: &str, chat: &str) -> bool {

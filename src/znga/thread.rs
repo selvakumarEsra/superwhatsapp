@@ -587,6 +587,17 @@ pub enum Intent {
     CatchUp { name: String },
     /// "done", about the latest Needs you.
     Done,
+    /// "what do you know about Ada?" (REQ-ZPROF-007).
+    Know { name: String },
+    /// "forget that Ada likes jazz": `rest` starts with the name.
+    Forget { rest: String },
+    /// The answer to a profile question Znga asked (REQ-ZPROF-006): the
+    /// choices are (value, label). Never parsed from text.
+    Learn {
+        chat: String,
+        title: String,
+        key: String,
+    },
     /// Anything else: a question for the archive (REQ-ZNGA-020).
     Ask(String),
 }
@@ -645,6 +656,36 @@ pub fn intent(text: &str) -> Intent {
         let name = strip_prefix_ci(name, &["the "]).unwrap_or(name);
         return Intent::CatchUp {
             name: name.to_owned(),
+        };
+    }
+    if let Some(name) = strip_prefix_ci(
+        text,
+        &[
+            "what do you know about ",
+            "what do you know of ",
+            "what do you know on ",
+            "who is ",
+            "who's ",
+        ],
+    ) && !name.is_empty()
+    {
+        let name = name.trim_end_matches(['.', '?', '!']).trim();
+        let name = strip_prefix_ci(name, &["the "]).unwrap_or(name);
+        if !name.is_empty() {
+            return Intent::Know {
+                name: name.to_owned(),
+            };
+        }
+    }
+    if let Some(rest) = strip_prefix_ci(text, &["forget that ", "forget "])
+        && !rest.is_empty()
+        && !matches!(
+            rest.to_lowercase().as_str(),
+            "it" | "it." | "that" | "everything"
+        )
+    {
+        return Intent::Forget {
+            rest: rest.trim_end_matches(['.', '!']).trim().to_owned(),
         };
     }
     Intent::Ask(text.to_owned())

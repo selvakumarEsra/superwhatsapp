@@ -2,7 +2,7 @@
 // (src/ui/conversation.rs): the picture, name and status line, the search,
 // call and menu buttons, the doodle wallpaper in egui's ink, and the
 // composer floating over it.
-import { createEffect, createSignal, For, on, Show } from "solid-js";
+import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 import { commands, state, ZNGA_CHAT, type Open } from "../../lib/bridge";
 import { dayKey, dayLabel } from "../../lib/time";
 import Avatar from "../../components/Avatar";
@@ -40,11 +40,50 @@ export default function Conversation(p: { chat: Open }) {
     const id = dark ? state.settings.wallpaperDark : state.settings.wallpaperLight;
     return (dark ? state.settings.swatchesDark : state.settings.swatchesLight).find((s) => s.id === id)?.color ?? null;
   };
-  // Opening a chat or a new message keeps the newest in view.
+  // Opening a chat or a new message keeps the newest in view, unless a
+  // jump to an older message is under way.
   createEffect(
     on(
       () => [p.chat.id, p.chat.messages.length],
-      () => queueMicrotask(() => (list.scrollTop = list.scrollHeight)),
+      () => queueMicrotask(() => {
+        if (p.chat.jump) return;
+        list.scrollTop = list.scrollHeight;
+        pinned = true;
+      }),
+    ),
+  );
+  // At the newest message the view stays there while bubbles settle their
+  // size and the composer grows, as egui's stick-to-bottom does; scrolled
+  // up, it stays where the reader left it.
+  let content!: HTMLDivElement;
+  let pinned = true;
+  const settle = new ResizeObserver(() => {
+    if (pinned && !p.chat.jump) list.scrollTop = list.scrollHeight;
+  });
+  queueMicrotask(() => {
+    settle.observe(content);
+    settle.observe(list);
+  });
+  onCleanup(() => settle.disconnect());
+  // A jump (a search result, a starred message, a media cell) scrolls its
+  // message to the middle and flashes it, as egui's JumpHighlight does. An
+  // older message the core is still loading is reached when it arrives.
+  const [flash, setFlash] = createSignal<string | null>(null);
+  createEffect(
+    on(
+      () => [p.chat.jump, p.chat.messages.length] as const,
+      ([jump]) => {
+        if (!jump) return;
+        queueMicrotask(() => {
+          const target = list.querySelector<HTMLElement>(`[data-msg="${CSS.escape(jump)}"]`);
+          if (!target) return;
+          target.scrollIntoView({ block: "center" });
+          setFlash(null);
+          requestAnimationFrame(() => setFlash(jump));
+          setTimeout(() => setFlash((now) => (now === jump ? null : now)), 2000);
+          void commands.jumped();
+        });
+      },
     ),
   );
   const run = (a: Open["messages"][number] | undefined, b: Open["messages"][number] | undefined) =>
@@ -70,15 +109,19 @@ export default function Conversation(p: { chat: Open }) {
           onClick={() => (state.info?.id === p.chat.id ? commands.closeInfo() : commands.openInfo(p.chat.id))}
           class="flex min-w-0 shrink items-center text-left"
         >
-          <Avatar src={p.chat.avatar} size={40} group={p.chat.group} seed={p.chat.id} />
+          {/* Measured against egui: the picture 1 and the name 2 higher than
+              centring puts them; the status line where it was. */}
+          <span class="flex" style={{ "margin-bottom": "2px" }}>
+            <Avatar src={p.chat.avatar} size={40} group={p.chat.group} seed={p.chat.id} />
+          </span>
           <span class="flex min-w-0 flex-col" style={{ "margin-left": "12px" }}>
-            <span class="truncate" style={{ "font-size": "var(--fs-header-title)", "font-weight": 600, "line-height": "20px", color: "var(--text-primary)" }}>
+            <span class="truncate" style={{ "font-size": "var(--fs-header-title)", "font-weight": 600, "line-height": "16px", color: "var(--text-primary)" }}>
               {p.chat.title}
             </span>
             <Show when={p.chat.subtitle}>
               <span
                 class="truncate"
-                style={{ "font-size": "var(--fs-header-sub)", "line-height": "17px", "margin-top": "3px", color: p.chat.subtitleAccent ? "var(--accent-text)" : "var(--text-secondary)" }}
+                style={{ "font-size": "var(--fs-header-sub)", "line-height": "17px", "margin-top": "7px", color: p.chat.subtitleAccent ? "var(--accent-text)" : "var(--text-secondary)" }}
               >
                 {p.chat.subtitle}
               </span>
@@ -126,7 +169,15 @@ export default function Conversation(p: { chat: Open }) {
             }}
           />
         </Show>
-        <div ref={list} class="scroll relative min-h-0 flex-1" style={{ "padding-bottom": "8px" }} role="log" aria-label="Messages">
+        <div
+          ref={list}
+          class="scroll relative min-h-0 flex-1"
+          style={{ "padding-bottom": "12px" }}
+          role="log"
+          aria-label="Messages"
+          onScroll={() => (pinned = list.scrollHeight - list.scrollTop - list.clientHeight < 4)}
+        >
+          <div ref={content}>
           <For each={p.chat.messages}>
             {(msg, i) => {
               const prev = () => p.chat.messages[i() - 1];
@@ -154,11 +205,14 @@ export default function Conversation(p: { chat: Open }) {
                       </span>
                     </div>
                   </Show>
-                  <Message msg={msg} first={!run(prev(), msg)} last={!run(msg, next())} group={p.chat.group} />
+                  <div data-msg={msg.id} classList={{ "jump-flash": flash() === msg.id }}>
+                    <Message msg={msg} first={!run(prev(), msg)} last={!run(msg, next())} group={p.chat.group} />
+                  </div>
                 </>
               );
             }}
           </For>
+          </div>
         </div>
         <Composer chat={p.chat.id} znga={p.chat.zngaTools} />
       </div>
