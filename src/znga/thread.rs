@@ -248,6 +248,8 @@ pub struct Entry {
     pub items: Vec<Item>,
     /// Znga wrote it without being asked (REQ-ZCHAT-005).
     pub unasked: bool,
+    /// The messages an answer may cite, by number (REQ-ZANS-001).
+    pub refs: Vec<super::answer::Ref>,
 }
 
 /// What an unasked message is, for its switch and quiet hours.
@@ -326,6 +328,7 @@ impl Thread {
                 text: turn.text.clone(),
                 items: Vec::new(),
                 unasked: false,
+                refs: Vec::new(),
             })
             .collect()
     }
@@ -370,6 +373,7 @@ impl Thread {
             text: text.into(),
             items: Vec::new(),
             unasked: false,
+            refs: Vec::new(),
         })
     }
 
@@ -378,6 +382,18 @@ impl Thread {
         &mut self,
         text: impl Into<String>,
         items: Vec<Item>,
+        now: i64,
+        reading: bool,
+    ) -> u64 {
+        self.post_cited(text, items, Vec::new(), now, reading)
+    }
+
+    /// [`Self::post`], with the messages the answer may cite (REQ-ZANS-001).
+    pub fn post_cited(
+        &mut self,
+        text: impl Into<String>,
+        items: Vec<Item>,
+        refs: Vec<super::answer::Ref>,
         now: i64,
         reading: bool,
     ) -> u64 {
@@ -391,6 +407,7 @@ impl Thread {
             text: text.into(),
             items,
             unasked: false,
+            refs,
         })
     }
 
@@ -436,6 +453,7 @@ impl Thread {
             text: line,
             items,
             unasked: true,
+            refs: Vec::new(),
         });
         self.last_unasked = Some((id, now));
         Posted::New(id)

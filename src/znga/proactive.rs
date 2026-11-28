@@ -12,6 +12,8 @@ use super::triage::{self, Score, Signals};
 pub struct Seen {
     pub account: String,
     pub chat: String,
+    /// The message id, so an answer can link to it (REQ-ZANS-001).
+    pub id: String,
     pub chat_title: String,
     pub group: bool,
     pub sender: String,
@@ -244,6 +246,7 @@ mod tests {
         Seen {
             account: "1".into(),
             chat: chat.into(),
+            id: format!("{chat}-{at}"),
             chat_title: chat.into(),
             group: false,
             sender: sender.into(),
@@ -386,6 +389,7 @@ mod tests {
         let live = Seen {
             account: "1".into(),
             chat: "a".into(),
+            id: "a-100".into(),
             chat_title: "A".into(),
             group: false,
             sender: "a".into(),

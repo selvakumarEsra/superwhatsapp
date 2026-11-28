@@ -14,6 +14,10 @@ pub fn apply(app: &mut App, part: &str) -> bool {
         chat(app);
         return true;
     }
+    if part == "znga-translate" {
+        translate(app);
+        return true;
+    }
     let tab = match part {
         "znga" => Tab::Today,
         "znga-drafts" => Tab::Drafts,
@@ -170,7 +174,112 @@ fn chat(app: &mut App) {
         false,
         false,
     );
+    // An answer that cites messages and is laid out (specs/znga-answers.md).
+    let message_of = |chat: &str, fallback: &str| {
+        app.conversations
+            .get(chat)
+            .and_then(|c| c.messages.iter().rev().find(|m| !m.from_me))
+            .map(|m| m.id.clone())
+            .unwrap_or_else(|| fallback.to_owned())
+    };
+    let refs = vec![
+        super::answer::Ref::new(
+            1,
+            &a,
+            &a_title,
+            &message_of(&a, "demo-a"),
+            &a_title,
+            now - 86_400 * 3,
+            "my email is ada.l@example.com, send the invite there",
+        ),
+        super::answer::Ref::new(
+            2,
+            &b,
+            &b_title,
+            &message_of(&b, "demo-b"),
+            &b_title,
+            now - 86_400 * 9,
+            "bookings go to hello@harbourhouse.example",
+        ),
+    ];
+    thread.post_person("Show my messages that have an email address", now - 40);
+    thread.post_cited(
+        format!(
+            "## Emails people gave you\n\n- **{a_title}** asked you to send the invite to \
+             `ada.l@example.com` [1]\n- **{b_title}** shared the venue's booking address, \
+             `hello@harbourhouse.example` [2]\n\nWant me to draft the invite to {a_title}?"
+        ),
+        Vec::new(),
+        refs,
+        now - 30,
+        true,
+    );
     thread.unread = 0;
     app.znga.threads.insert(account.clone(), thread);
     app.znga.restored.insert(account);
+}
+
+/// A chat with messages in Spanish, one translated in the popup
+/// (`--demo-page znga-translate`, specs/znga-answers.md REQ-ZANS-004).
+fn translate(app: &mut App) {
+    let Some(chat) = app
+        .account()
+        .chats
+        .iter()
+        .find(|chat| !chat.locked && !chat.is_group())
+        .map(|chat| chat.id.clone())
+    else {
+        return;
+    };
+    app.znga.config.enabled = true;
+    app.znga.chat_mode = true;
+    app.znga.chat_open = false;
+    let now = crate::util::now();
+    // Shaped like a message the demo already has in that chat.
+    let Some(template) = app
+        .conversations
+        .get(&chat)
+        .and_then(|c| c.messages.iter().rev().find(|m| !m.from_me).cloned())
+    else {
+        return;
+    };
+    let incoming = |id: &str, text: &str, at: i64| {
+        let mut message = template.clone();
+        message.content = crate::model::Content::text(text);
+        message.reactions = Default::default();
+        message.id = id.to_owned();
+        message.chat = chat.clone();
+        message.sender = chat.clone();
+        message.from_me = false;
+        message.timestamp = at;
+        message
+    };
+    let first = incoming(
+        "demo-es-1",
+        "¡Hola! ¿Nos vemos mañana en la casa de mi madre a las ocho?",
+        now - 120,
+    );
+    let second = incoming(
+        "demo-es-2",
+        "Y no te olvides de traer el pastel, por favor 🎂",
+        now - 60,
+    );
+    let conversation = app.conversations.entry(chat.clone()).or_default();
+    conversation.messages.push(first.clone());
+    conversation.messages.push(second);
+    app.open_chat = Some(chat.clone());
+    app.znga.translations.done.insert(
+        (chat.clone(), first.id.clone()),
+        "Hi! Shall we meet tomorrow at my mother's house at eight?".into(),
+    );
+    app.znga.translations.popup = Some(super::translate::Popup {
+        account: app.account().id.as_str().to_owned(),
+        chat,
+        messages: vec![super::translate::Shown {
+            message: first.id.clone(),
+            sender: "Ada Lovelace".into(),
+            at: first.timestamp,
+            original: "¡Hola! ¿Nos vemos mañana en la casa de mi madre a las ocho?".into(),
+        }],
+    });
 }

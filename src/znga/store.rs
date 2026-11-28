@@ -81,6 +81,15 @@ pub struct Loaded {
 impl Db {
     pub fn new(connection: Connection) -> rusqlite::Result<Self> {
         connection.execute_batch(SCHEMA)?;
+        // The cited messages of an answer (REQ-ZANS-001.A4), added after
+        // the first release of the Znga chat.
+        let has_refs = connection
+            .prepare("SELECT 1 FROM pragma_table_info('thread') WHERE name = 'refs'")?
+            .exists([])?;
+        if !has_refs {
+            connection
+                .execute_batch("ALTER TABLE thread ADD COLUMN refs TEXT NOT NULL DEFAULT '[]'")?;
+        }
         Ok(Self { connection })
     }
 
@@ -155,9 +164,13 @@ impl Db {
             .rev()
             .collect();
         let thread = c
-            .prepare("SELECT position, at, from_user, text, items, unasked FROM thread ORDER BY position")?
+            .prepare(
+                "SELECT position, at, from_user, text, items, unasked, refs
+                 FROM thread ORDER BY position",
+            )?
             .query_map([], |row| {
                 let items: String = row.get(4)?;
+                let refs: String = row.get(6)?;
                 Ok(thread::Entry {
                     id: row.get::<_, i64>(0)? as u64 + 1,
                     at: row.get(1)?,
@@ -165,6 +178,7 @@ impl Db {
                     text: row.get(3)?,
                     items: serde_json::from_str(&items).unwrap_or_default(),
                     unasked: row.get(5)?,
+                    refs: serde_json::from_str(&refs).unwrap_or_default(),
                 })
             })?
             .collect::<rusqlite::Result<_>>()?;
@@ -196,16 +210,18 @@ impl Db {
         let skip = entries.len().saturating_sub(thread::KEEP);
         for (position, entry) in entries.iter().skip(skip).enumerate() {
             let items = serde_json::to_string(&entry.items).unwrap_or_else(|_| "[]".into());
+            let refs = serde_json::to_string(&entry.refs).unwrap_or_else(|_| "[]".into());
             tx.execute(
-                "INSERT INTO thread (position, at, from_user, text, items, unasked)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                "INSERT INTO thread (position, at, from_user, text, items, unasked, refs)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                 params![
                     position as i64,
                     entry.at,
                     entry.from_person,
                     entry.text,
                     items,
-                    entry.unasked
+                    entry.unasked,
+                    refs
                 ],
             )?;
         }
@@ -556,6 +572,7 @@ pub fn seed(
             seen.push(Seen {
                 account: account.to_owned(),
                 chat: chat.clone(),
+                id: message.id.clone(),
                 chat_title: title.clone(),
                 group: *group,
                 sender: message.sender.clone(),
@@ -607,6 +624,36 @@ mod tests {
         );
         db.save_thread(chat.entries()).unwrap();
         assert_eq!(db.load("1").unwrap().thread, chat.entries());
+    }
+
+    #[test]
+    fn an_answers_links_survive_a_reload() {
+        let mut db = db();
+        let mut chat = thread::Thread::default();
+        let cited =
+            crate::znga::answer::Ref::new(1, "ada", "Ada", "m1", "Ada", 5, "ada@example.com");
+        chat.post_cited("Ada gave it [1].", Vec::new(), vec![cited], 2, false);
+        db.save_thread(chat.entries()).unwrap();
+        let loaded = db.load("1").unwrap().thread;
+        assert_eq!(loaded, chat.entries());
+        assert_eq!(loaded[0].refs[0].message, "m1");
+    }
+
+    #[test]
+    fn a_znga_db_from_before_links_gains_them() {
+        let connection = Connection::open_in_memory().unwrap();
+        connection
+            .execute_batch(
+                "CREATE TABLE thread (position INTEGER PRIMARY KEY, at INTEGER NOT NULL,
+                 from_user INTEGER NOT NULL, text TEXT NOT NULL, items TEXT NOT NULL,
+                 unasked INTEGER NOT NULL);
+                 INSERT INTO thread VALUES (0, 1, 0, 'old answer', '[]', 0);",
+            )
+            .unwrap();
+        let db = Db::new(connection).unwrap();
+        let loaded = db.load("1").unwrap().thread;
+        assert_eq!(loaded[0].text, "old answer");
+        assert!(loaded[0].refs.is_empty());
     }
 
     #[test]

@@ -333,6 +333,40 @@ pub fn translate(text: &str, language: &str) -> Prompt {
     }
 }
 
+/// Others' messages, numbered, translated into `language` for the
+/// person to read (REQ-ZANS-004).
+pub fn translate_incoming(lines: &[(String, String)], language: &str) -> Prompt {
+    let language = if language.trim().is_empty() {
+        "English"
+    } else {
+        language.trim()
+    };
+    let mut body = String::from("<messages>\n");
+    for (n, (sender, text)) in lines.iter().enumerate() {
+        body.push_str(&format!(
+            "[{}] {}: {}\n",
+            n + 1,
+            clip(sender, 60),
+            clip(text, 2000)
+        ));
+    }
+    body.push_str("</messages>");
+    Prompt {
+        system: format!(
+            "You translate WhatsApp messages that someone received, so they can read them. \
+             {DATA_RULE} Translate each numbered message into {}. Answer with one line per \
+             message, starting with its number in square brackets, like \"[1] ...\": the \
+             translation only, keeping tone, emoji and names, without the sender's name. \
+             A message already in {} is repeated as it is.",
+            clip(language, 40),
+            clip(language, 40)
+        ),
+        turns: vec![Turn::user(body)],
+        max_tokens: 3000,
+        effort: Effort::Low,
+    }
+}
+
 /// A free-form question about recent chats; `history` is the Ask thread.
 pub fn ask(your_name: &str, context: &[Seen], history: &[Turn], question: &str) -> Prompt {
     let who = persona(your_name);
@@ -450,14 +484,97 @@ pub fn plan_search(question: &str, history: &[Turn]) -> Prompt {
     }
 }
 
-fn hits_block(hits: &[super::archive_ask::Hit], zone: &jiff::tz::TimeZone) -> String {
+/// Gives a message a number, or the number it already has.
+fn number_of(
+    refs: &mut Vec<super::answer::Ref>,
+    chat: &str,
+    chat_title: &str,
+    message: &str,
+    sender: &str,
+    at: i64,
+    text: &str,
+) -> u32 {
+    if let Some(known) = refs.iter().find(|r| r.chat == chat && r.message == message) {
+        return known.n;
+    }
+    let n = refs.len() as u32 + 1;
+    refs.push(super::answer::Ref::new(
+        n, chat, chat_title, message, sender, at, text,
+    ));
+    n
+}
+
+/// Recent messages grouped by chat, each with its number (REQ-ZANS-001).
+fn numbered_transcript(items: &[Seen], refs: &mut Vec<super::answer::Ref>) -> String {
+    let skip = items.len().saturating_sub(MAX_LINES);
+    let items = &items[skip..];
+    let mut order: Vec<String> = Vec::new();
+    for seen in items {
+        let key = seen.key();
+        order.retain(|known| *known != key);
+        order.push(key);
+    }
+    let mut out = String::from("<messages>\n");
+    for key in order {
+        let chat: Vec<&Seen> = items.iter().filter(|seen| seen.key() == key).collect();
+        let Some(first) = chat.first() else { continue };
+        let kind = if first.group { "group" } else { "chat" };
+        out.push_str(&format!("## {} ({kind})\n", first.chat_title));
+        for seen in chat {
+            let time = jiff::Timestamp::from_second(seen.at)
+                .map(|t| {
+                    t.to_zoned(jiff::tz::TimeZone::system())
+                        .strftime("%a %H:%M")
+                        .to_string()
+                })
+                .unwrap_or_default();
+            let number = if seen.id.is_empty() {
+                String::new()
+            } else {
+                let n = number_of(
+                    refs,
+                    &seen.chat,
+                    &seen.chat_title,
+                    &seen.id,
+                    &seen.sender_name,
+                    seen.at,
+                    &seen.text,
+                );
+                format!("[{n}] ")
+            };
+            out.push_str(&format!(
+                "{number}[{time}] {}: {}\n",
+                seen.sender_name,
+                clip(&seen.text, MAX_LINE)
+            ));
+        }
+        out.push('\n');
+    }
+    out.push_str("</messages>");
+    out
+}
+
+fn hits_block(
+    hits: &[super::archive_ask::Hit],
+    zone: &jiff::tz::TimeZone,
+    refs: &mut Vec<super::answer::Ref>,
+) -> String {
     let mut out = String::from("<messages>\n");
     for hit in hits {
         let day = jiff::Timestamp::from_second(hit.at)
             .map(|t| t.to_zoned(zone.clone()).strftime("%Y-%m-%d").to_string())
             .unwrap_or_default();
+        let n = number_of(
+            refs,
+            &hit.chat,
+            &hit.chat_title,
+            &hit.message,
+            &hit.sender,
+            hit.at,
+            &hit.text,
+        );
         out.push_str(&format!(
-            "[{day}] {} — {}: {}\n",
+            "[{n}] [{day}] {} — {}: {}\n",
             clip(&hit.chat_title, 60),
             clip(&hit.sender, 60),
             clip(&hit.text, MAX_LINE)
@@ -467,42 +584,59 @@ fn hits_block(hits: &[super::archive_ask::Hit], zone: &jiff::tz::TimeZone) -> St
     out
 }
 
+/// How Znga lays out an answer and cites messages (REQ-ZANS-001, 002).
+const ANSWER_STYLE: &str = "Each message you are given starts with its number in square \
+     brackets, like [12]. When your answer uses, lists or mentions a message, cite it right \
+     after by that number, like [12] or [3, 7]; cite only numbers you were given, never \
+     invent one, and never write the number any other way. When the person asks you to \
+     find or show messages, list each one as its own bullet with who wrote it, the chat, \
+     the part that matters, and its number. Format the answer in Markdown for easy \
+     reading: a short `##` heading when the answer has sections, `-` bullets or `1.` \
+     numbered lists for several items, **bold** for the key fact, blank lines between \
+     paragraphs. No tables, no links, no code blocks. Be concise.";
+
 /// An answer from recent activity and archive hits, citing what it uses
-/// (REQ-ZNGA-020.A1). `history` is the conversation with Znga so far.
+/// by number (REQ-ZNGA-020.A1, REQ-ZANS-001). `history` is the
+/// conversation with Znga so far. Returns the prompt and the numbered
+/// messages its answer may cite.
 pub fn answer_with_hits(
     your_name: &str,
     context: &[Seen],
     hits: &[super::archive_ask::Hit],
     history: &[Turn],
     question: &str,
-) -> Prompt {
+) -> (Prompt, Vec<super::answer::Ref>) {
     let zone = jiff::tz::TimeZone::system();
     let who = persona(your_name);
+    let mut refs = Vec::new();
     let mut turns: Vec<Turn> = Vec::new();
+    let recent = numbered_transcript(context, &mut refs);
     let found = if hits.is_empty() {
         "Nothing in the archive matched.".to_owned()
     } else {
-        format!("Messages found in my archive:\n{}", hits_block(hits, &zone))
+        format!(
+            "Messages found in my archive:\n{}",
+            hits_block(hits, &zone, &mut refs)
+        )
     };
     turns.push(Turn::user(format!(
-        "Recent messages in my chats:\n\n{}\n\n{found}",
-        transcript(context)
+        "Recent messages in my chats:\n\n{recent}\n\n{found}"
     )));
     turns.push(Turn::assistant("Got it. What would you like to know?"));
     turns.extend(history.iter().rev().take(20).rev().cloned());
     turns.push(Turn::user(clip(question, 2000)));
-    Prompt {
+    let prompt = Prompt {
         system: format!(
             "You are Znga, {who}'s personal assistant inside their WhatsApp desktop app. You \
              answer questions from {who}'s recent chats and from messages found in their \
-             archive. When you use an archive message, cite it as (chat, date). Say so when \
-             the answer is not in what you were given. You cannot send messages yourself: \
-             offer to draft one instead. {DATA_RULE} Be concise; plain text."
+             archive. Say so when the answer is not in what you were given. You cannot send \
+             messages yourself: offer to draft one instead. {DATA_RULE} {ANSWER_STYLE}"
         ),
         turns,
         max_tokens: 4000,
         effort: Effort::Medium,
-    }
+    };
+    (prompt, refs)
 }
 
 /// What changed in one chat since the person last read it (REQ-ZNGA-021).
@@ -615,6 +749,7 @@ mod tests {
         Seen {
             account: "1".into(),
             chat: chat.into(),
+            id: format!("{chat}-{at}"),
             chat_title: format!("{chat} title"),
             group: false,
             sender: "x".into(),
@@ -744,14 +879,30 @@ mod tests {
         let hit = crate::znga::archive_ask::Hit {
             chat: "r".into(),
             chat_title: "Ravi".into(),
+            message: "m9".into(),
             sender: "Ravi".into(),
             text: "lands at 9".into(),
             at: 0,
         };
-        let prompt = answer_with_hits("", &[], &[hit], &[], "when does he land?");
-        assert!(prompt.turns[0].text.contains("Ravi — Ravi: lands at 9"));
-        assert!(prompt.system.contains("cite it as (chat, date)"));
+        let recent = [
+            seen("a", "my email is ada@example.com", 5),
+            seen("a", "ok", 6),
+        ];
+        let (prompt, refs) =
+            answer_with_hits("", &recent, &[hit.clone(), hit], &[], "when does he land?");
+        assert!(prompt.turns[0].text.contains("[1] ["));
+        assert!(
+            prompt.turns[0].text.contains("[3] [")
+                && prompt.turns[0].text.contains("Ravi — Ravi: lands at 9")
+        );
+        assert!(prompt.system.contains("cite it right after by that number"));
+        assert!(prompt.system.contains("Markdown"));
+        assert!(!prompt.system.contains("plain text"));
         assert_eq!(prompt.turns.last().unwrap().text, "when does he land?");
+        // Each message has one number; the repeated hit keeps its own.
+        let numbers: Vec<(u32, &str)> = refs.iter().map(|r| (r.n, r.message.as_str())).collect();
+        assert_eq!(numbers, vec![(1, "a-5"), (2, "a-6"), (3, "m9")]);
+        assert_eq!(refs[2].chat_title, "Ravi");
     }
 
     #[test]

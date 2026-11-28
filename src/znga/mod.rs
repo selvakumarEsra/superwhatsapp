@@ -22,6 +22,7 @@
 //! - [`hooks`]: the bridge to [`crate::app::App`]
 //! - [`ui`]: the Znga panel and its rail button
 
+pub mod answer;
 pub mod archive_ask;
 pub mod calendar;
 pub mod chat;
@@ -45,6 +46,7 @@ pub mod sentinel;
 pub mod store;
 pub mod style;
 pub mod thread;
+pub mod translate;
 pub mod triage;
 pub mod ui;
 pub mod update;
@@ -117,6 +119,12 @@ pub enum Purpose {
     ExplainEdit {
         key: String,
     },
+    /// Others' messages in one chat, translated for the popup
+    /// (REQ-ZANS-004); `messages` are their ids, in the prompt's order.
+    Translate {
+        chat: String,
+        messages: Vec<String>,
+    },
     Test,
 }
 
@@ -160,7 +168,12 @@ pub enum Effect {
     /// Search the archive for an ask in progress (REQ-ZNGA-020).
     Search { ask: u64, terms: Vec<String> },
     /// Znga's answer to a question asked in the Znga chat (REQ-ZCHAT-002).
-    Answered { account: String, text: String },
+    Answered {
+        account: String,
+        text: String,
+        /// The messages the answer may cite (REQ-ZANS-001).
+        refs: Vec<answer::Ref>,
+    },
 }
 
 /// A rewrite or suggested reply offered to a chat's composer; it replaces
@@ -338,6 +351,15 @@ pub struct Znga {
     /// Plans already reminded of, by title and start.
     pub(crate) plans_reminded: HashSet<(String, i64)>,
     pub(crate) last_digest_check: Option<Instant>,
+    /// The Znga answer quoted above the Znga composer: (entry id, its
+    /// plain text) (REQ-ZANS-003).
+    pub reply_to: Option<(u64, String)>,
+    /// An answer's text waiting for the person to pick a chat to forward
+    /// it to (REQ-ZANS-003), and the picker's filter.
+    pub forwarding: Option<String>,
+    pub forward_filter: String,
+    /// Translations of others' messages (REQ-ZANS-004).
+    pub translations: translate::Translations,
 }
 
 impl Znga {
@@ -416,6 +438,10 @@ impl Znga {
             next_offer: 0,
             plans_reminded: HashSet::new(),
             last_digest_check: None,
+            reply_to: None,
+            forwarding: None,
+            forward_filter: String::new(),
+            translations: translate::Translations::default(),
         }
     }
 
@@ -683,7 +709,7 @@ impl Znga {
                 match asking.origin {
                     archive_ask::AskOrigin::Panel => {
                         let text = match answer {
-                            Ok(text) => text,
+                            Ok(text) => answer::plain(&text, &asking.refs),
                             Err(error) => format!("⚠ {error}"),
                         };
                         self.ask.push(Turn::assistant(text));
@@ -695,11 +721,17 @@ impl Znga {
                             Ok(text) => text,
                             Err(error) => thread::explain_error(&error, self.config.engine),
                         };
-                        effects.push(Effect::Answered { account, text });
+                        effects.push(Effect::Answered {
+                            account,
+                            text,
+                            refs: asking.refs,
+                        });
                     }
                     archive_ask::AskOrigin::OwnChat { account, chat } => {
+                        // WhatsApp cannot carry the links: citations become
+                        // "(chat, date)".
                         let text = match answer {
-                            Ok(text) => text,
+                            Ok(text) => answer::plain(&text, &asking.refs),
                             Err(error) => format!("⚠ {error}"),
                         };
                         effects.push(Effect::SendOwn {
@@ -826,6 +858,12 @@ impl Znga {
             (Purpose::Digest { .. }, Ok(_)) => {}
             (Purpose::ExplainEdit { key }, answer) => {
                 self.explanations.insert(key, answer);
+            }
+            (Purpose::Translate { chat, messages }, Ok(text)) => {
+                self.translations.arrived(&chat, &messages, &text);
+            }
+            (Purpose::Translate { chat, messages }, Err(error)) => {
+                self.translations.failed(&chat, &messages, error);
             }
             (Purpose::Test, Ok(_)) => self.set_status("Connected. Znga is ready.", false),
             (Purpose::Briefing { proactive: true }, Err(error))

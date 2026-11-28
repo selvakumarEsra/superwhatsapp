@@ -96,6 +96,23 @@ pub fn answer(app: &mut App, account: &str, text: impl Into<String>, items: Vec<
     thread_of(app, account).post(text, items, now, reading);
 }
 
+/// An answer that may cite messages by number (REQ-ZANS-001). Only
+/// messages from chats Znga may still read are kept.
+pub fn answer_cited(
+    app: &mut App,
+    account: &str,
+    text: impl Into<String>,
+    refs: Vec<super::answer::Ref>,
+) {
+    let refs: Vec<_> = refs
+        .into_iter()
+        .filter(|r| chat_visible(app, account, &r.chat))
+        .collect();
+    let reading = reading(app) && account == active(app);
+    let now = crate::util::now();
+    thread_of(app, account).post_cited(text, Vec::new(), refs, now, reading);
+}
+
 /// A line saying what the person asked for, written as theirs.
 fn asked_line(app: &mut App, text: impl Into<String>) {
     let account = active(app);
@@ -188,8 +205,15 @@ pub fn send_message(app: &mut App, text: &str) {
     }
     let account = active(app);
     let now = crate::util::now();
+    let quoted = app.znga.reply_to.take();
     let thread = thread_of(app, &account);
     thread.post_person(text, now);
+    if let Some((_, quoted)) = quoted {
+        // A reply to an answer is a question about it (REQ-ZANS-003.A3).
+        thread.question = None;
+        ask(app, replying(&quoted, text));
+        return;
+    }
     if let Some(question) = thread.question.take() {
         if let Some(choice) = thread::pick(text, &question.choices).cloned() {
             resolve(app, question.intent, choice);
@@ -221,6 +245,12 @@ pub fn send_message(app: &mut App, text: &str) {
         Intent::CatchUp { name } => catch_up_named(app, &name),
         Intent::Ask(question) => ask(app, question),
     }
+}
+
+/// The question sent for a reply to one of Znga's answers.
+pub fn replying(quoted: &str, text: &str) -> String {
+    let quoted: String = quoted.chars().take(3000).collect();
+    format!("About your earlier answer:\n\"\"\"\n{quoted}\n\"\"\"\n\n{text}")
 }
 
 fn ask_which(app: &mut App, question: Question) {
@@ -479,6 +509,7 @@ fn ask(app: &mut App, question: String) {
         question: question.clone(),
         history: history.clone(),
         hits: Vec::new(),
+        refs: Vec::new(),
     });
     if let Err(error) = app.znga.submit(
         prompt::plan_search(&question, &history),
@@ -536,6 +567,42 @@ pub fn stop(app: &mut App) {
 fn open_chat(app: &mut App, chat: &str) {
     app.znga.chat_open = false;
     app.actions.push(Action::OpenChat(chat.to_owned()));
+}
+
+/// Whether an answer may link to a message of `chat`: only chats Znga may
+/// still read (REQ-ZANS-001.A5).
+pub fn may_link(app: &App, chat: &str) -> bool {
+    chat_visible(app, &active(app), chat)
+}
+
+/// A cited message: its chat opens at it, highlighted, loading older
+/// history when needed (REQ-ZANS-001.A1).
+pub fn open_message(app: &mut App, chat: &str, message: &str) {
+    if !may_link(app, chat) {
+        return;
+    }
+    app.znga.chat_open = false;
+    app.actions.push(Action::OpenMessage {
+        chat: chat.to_owned(),
+        message: message.to_owned(),
+    });
+}
+
+/// A cited message's chat, from the Sources list.
+pub fn open_cited_chat(app: &mut App, chat: &str) {
+    if may_link(app, chat) {
+        open_chat(app, chat);
+    }
+}
+
+/// Forwards Znga's text: `chat` opens with it offered above its composer,
+/// as Edit in chat does. Nothing is sent (REQ-ZANS-003.A4).
+pub fn forward(app: &mut App, chat: &str, text: &str) {
+    if !tools_for(app, chat) || text.trim().is_empty() {
+        return;
+    }
+    open_chat(app, chat);
+    offer(app, chat, text, false);
 }
 
 /// The person pressed `action` on card `index` of message `entry`. A card
@@ -1486,6 +1553,188 @@ mod tests {
         send_message(&mut failing, "Tell Ada hi");
         hooks::tick(&mut failing);
         assert!(texts(&failing).last().unwrap().contains("Ollama"));
+    }
+
+    fn cite(n: u32, chat: &str) -> super::super::answer::Ref {
+        super::super::answer::Ref::new(
+            n,
+            chat,
+            "Ada Lovelace",
+            &format!("m{n}"),
+            "Ada",
+            5,
+            "ada@example.com",
+        )
+    }
+
+    fn last_entry(app: &App) -> thread::Entry {
+        app.znga.threads[app.account().id.as_str()]
+            .entries()
+            .last()
+            .unwrap()
+            .clone()
+    }
+
+    #[test]
+    fn an_answer_keeps_links_only_to_chats_znga_may_read() {
+        let (_root, mut app) = app("x");
+        let account = app.account().id.as_str().to_owned();
+        answer_cited(
+            &mut app,
+            &account,
+            "Ada [1], Sam [2], Kim [3]",
+            vec![
+                cite(1, "ada@s.whatsapp.net"),
+                cite(2, "locked@s.whatsapp.net"),
+                cite(3, "kim@s.whatsapp.net"),
+            ],
+        );
+        let entry = last_entry(&app);
+        let chats: Vec<&str> = entry.refs.iter().map(|r| r.chat.as_str()).collect();
+        assert_eq!(chats, vec!["ada@s.whatsapp.net"]);
+    }
+
+    #[test]
+    fn a_cited_message_opens_at_it_and_hidden_chats_open_nothing() {
+        let (_root, mut app) = app("x");
+        app.znga.chat_open = true;
+        open_message(&mut app, "ada@s.whatsapp.net", "m1");
+        assert!(!app.znga.chat_open);
+        assert!(app.actions.iter().any(|a| matches!(
+            a,
+            Action::OpenMessage { chat, message } if chat == "ada@s.whatsapp.net" && message == "m1"
+        )));
+        app.actions.clear();
+        open_message(&mut app, "locked@s.whatsapp.net", "m2");
+        open_message(&mut app, "kim@s.whatsapp.net", "m3");
+        open_cited_chat(&mut app, "kim@s.whatsapp.net");
+        assert!(app.actions.is_empty());
+    }
+
+    #[test]
+    fn a_reply_asks_about_the_quoted_answer() {
+        let (_root, mut app) = app("{\"search\": []}");
+        app.znga.reply_to = Some((7, "Ada's email is ada@example.com".into()));
+        send_message(&mut app, "send it to Sam");
+        assert!(app.znga.reply_to.is_none());
+        assert_eq!(texts(&app).last().unwrap(), "send it to Sam");
+        let asked = app.znga.asking.values().next().unwrap();
+        assert!(asked.question.contains("Ada's email is ada@example.com"));
+        assert!(asked.question.ends_with("send it to Sam"));
+        assert_eq!(sends(&app), 0);
+    }
+
+    #[test]
+    fn forwarding_offers_the_text_in_the_chat_and_sends_nothing() {
+        let (_root, mut app) = app("x");
+        forward(
+            &mut app,
+            "ada@s.whatsapp.net",
+            "Ada's email is ada@example.com",
+        );
+        let offer = app.znga.offer.clone().unwrap();
+        assert_eq!(offer.chat, "ada@s.whatsapp.net");
+        assert_eq!(offer.text, "Ada's email is ada@example.com");
+        assert!(
+            app.actions
+                .iter()
+                .any(|a| matches!(a, Action::OpenChat(c) if c == "ada@s.whatsapp.net"))
+        );
+        assert_eq!(sends(&app), 0);
+        app.znga.offer = None;
+        forward(&mut app, "locked@s.whatsapp.net", "x");
+        assert!(app.znga.offer.is_none());
+    }
+
+    #[test]
+    fn translating_sends_only_the_chosen_messages_and_shows_the_popup() {
+        let (_root, mut app) = app("[1] See you tomorrow at home");
+        let seen = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+        let copy = seen.clone();
+        app.znga.runner.fake = Some(Box::new(move |prompt| {
+            *copy.lock().unwrap() = prompt.turns.iter().map(|t| t.text.clone()).collect();
+            Ok("[1] See you tomorrow at home".to_owned())
+        }));
+        let chat = "ada@s.whatsapp.net";
+        let mut spanish = super::super::archive_ask::tests_message(
+            chat,
+            "Nos vemos mañana en la casa, gracias",
+            10,
+        );
+        spanish.from_me = false;
+        let mut english =
+            super::super::archive_ask::tests_message(chat, "See you at the station tomorrow", 11);
+        english.from_me = false;
+        let mut secret = super::super::archive_ask::tests_message(
+            chat,
+            "Hola, el código secreto es para mañana",
+            12,
+        );
+        secret.from_me = false;
+        app.conversations
+            .entry(chat.to_owned())
+            .or_default()
+            .messages = vec![spanish.clone(), english, secret.clone()];
+        app.open_chat = Some(chat.to_owned());
+        let found: Vec<String> = hooks::translatable(&mut app, chat)
+            .into_iter()
+            .map(|(id, _)| id)
+            .collect();
+        assert_eq!(found, vec![spanish.id.clone(), secret.id.clone()]);
+        hooks::request_translate(&mut app, chat, std::slice::from_ref(&spanish.id));
+        assert!(app.znga.translations.popup.is_some());
+        for _ in 0..200 {
+            hooks::tick(&mut app);
+            if app
+                .znga
+                .translations
+                .translation(chat, &spanish.id)
+                .is_some()
+            {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        assert_eq!(
+            app.znga.translations.translation(chat, &spanish.id),
+            Some("See you tomorrow at home")
+        );
+        let sent = seen.lock().unwrap().clone();
+        assert!(sent.contains("Nos vemos"));
+        assert!(!sent.contains("secreto"), "only the chosen message is sent");
+        assert!(
+            app.znga
+                .audit
+                .entries()
+                .any(|e| e.action == "translate messages")
+        );
+    }
+
+    #[test]
+    fn locked_and_excluded_chats_never_translate() {
+        let (_root, mut app) = app("[1] hi");
+        for chat in ["locked@s.whatsapp.net", "kim@s.whatsapp.net"] {
+            let mut foreign = super::super::archive_ask::tests_message(
+                chat,
+                "Nos vemos mañana en la casa, gracias",
+                10,
+            );
+            foreign.from_me = false;
+            app.conversations
+                .entry(chat.to_owned())
+                .or_default()
+                .messages = vec![foreign.clone()];
+            app.open_chat = Some(chat.to_owned());
+            hooks::request_translate(&mut app, chat, &[foreign.id.clone()]);
+            assert!(app.znga.translations.popup.is_none());
+            assert!(app.znga.translations.pending.is_empty());
+        }
+        assert!(
+            app.znga
+                .audit
+                .entries()
+                .any(|e| !e.allowed && e.action.starts_with("translate messages in a locked"))
+        );
     }
 
     #[test]

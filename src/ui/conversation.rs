@@ -7425,6 +7425,8 @@ fn context_menu(
     {
         actions.push(forward_action(chat, &message.id));
     }
+    #[cfg(feature = "znga")]
+    crate::znga::chat_ui::message_menu(ui, &palette, chat, &message.id); // znga hook
     // A photo opens the viewer on its own click; a clip plays in its bubble
     // there, so this is how the album is reached from a chat that holds no
     // pictures.

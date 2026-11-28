@@ -25,6 +25,8 @@ pub struct Asking {
     /// The conversation with Znga before this question.
     pub history: Vec<super::provider::Turn>,
     pub hits: Vec<Hit>,
+    /// The numbered messages the answer may cite (REQ-ZANS-001).
+    pub refs: Vec<super::answer::Ref>,
 }
 
 /// One archive message found for a question.
@@ -32,6 +34,8 @@ pub struct Asking {
 pub struct Hit {
     pub chat: String,
     pub chat_title: String,
+    /// The message id, so the answer can link to it (REQ-ZANS-001).
+    pub message: String,
     pub sender: String,
     pub text: String,
     pub at: i64,
@@ -100,6 +104,7 @@ pub fn search(
             hits.push(Hit {
                 chat: message.chat.clone(),
                 chat_title: title.clone(),
+                message: message.id.clone(),
                 sender,
                 text: message.content.full_summary(),
                 at: message.timestamp,

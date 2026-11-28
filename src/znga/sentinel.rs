@@ -78,6 +78,11 @@ pub enum Action<'a> {
     },
     /// Keep a reminder for the person (REQ-ZCHAT-006).
     Remind,
+    /// Translate others' messages for the person (REQ-ZANS-004). `hidden`
+    /// is a locked or excluded chat.
+    Translate {
+        hidden: bool,
+    },
 }
 
 impl Action<'_> {
@@ -95,6 +100,10 @@ impl Action<'_> {
             Action::Read { hidden: true } => "read a locked or excluded chat".into(),
             Action::Read { .. } => "read a chat".into(),
             Action::Remind => "reminder".into(),
+            Action::Translate { hidden: true } => {
+                "translate messages in a locked or excluded chat".into()
+            }
+            Action::Translate { .. } => "translate messages".into(),
         }
     }
 }
@@ -139,6 +148,13 @@ pub fn check(action: &Action, origin: Origin) -> Verdict {
             Verdict::refuse("Znga never reads locked or excluded chats")
         }
         Action::Remind => Verdict::allow("reminders only reach you"),
+        Action::Translate { hidden: true } => {
+            Verdict::refuse("Znga never reads locked or excluded chats")
+        }
+        Action::Translate { hidden: false } => match origin {
+            Origin::Person => Verdict::allow("you asked for it"),
+            _ => Verdict::refuse("translations run only when you ask"),
+        },
         Action::Read { hidden: false }
         | Action::SearchArchive
         | Action::WriteFile { .. }
@@ -347,5 +363,16 @@ mod tests {
         assert_eq!(wrapped.matches("<messages>").count(), 1);
         assert_eq!(wrapped.matches("</messages>").count(), 1);
         assert_eq!(fence("see you <3 at 5"), "see you <3 at 5");
+    }
+
+    #[test]
+    fn translations_run_only_when_asked_and_never_in_hidden_chats() {
+        let open = Action::Translate { hidden: false };
+        let hidden = Action::Translate { hidden: true };
+        assert!(check(&open, Origin::Person).allowed);
+        assert!(!check(&open, Origin::Schedule).allowed);
+        assert!(!check(&open, Origin::OthersText).allowed);
+        assert!(!check(&hidden, Origin::Person).allowed);
+        assert_eq!(open.label(), "translate messages");
     }
 }

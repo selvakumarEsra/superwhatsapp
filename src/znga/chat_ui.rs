@@ -29,7 +29,18 @@ pub fn row(app: &mut App, ui: &mut Ui) {
     let palette = app.palette;
     let account = app.account().id.as_str().to_owned();
     let (unread, last) = app.znga.threads.get(&account).map_or((0, None), |t| {
-        (t.unread, t.entries().last().map(|e| (e.at, e.text.clone())))
+        (
+            t.unread,
+            t.entries().last().map(|e| {
+                // The preview reads as the answer does, without its markers.
+                let text = if e.from_person {
+                    e.text.clone()
+                } else {
+                    super::answer::plain(&e.text, &e.refs)
+                };
+                (e.at, text)
+            }),
+        )
     });
     let selected = showing(app);
     let (rect, response) = ui.allocate_exact_size(
@@ -181,8 +192,17 @@ pub fn show(app: &mut App, ui: &mut Ui) {
         .get(&account)
         .map(|t| t.entries().to_vec())
         .unwrap_or_default();
+    // A source in a chat Znga may no longer read is not shown
+    // (REQ-ZANS-001.A5).
+    let entries: Vec<Entry> = entries
+        .into_iter()
+        .map(|mut entry| {
+            entry.refs.retain(|r| chat::may_link(app, &r.chat));
+            entry
+        })
+        .collect();
     let writing = chat::writing(app);
-    let mut clicked: Option<(u64, usize, &'static str)> = None;
+    let mut clicked: Option<Click> = None;
     let mut ask: Option<&'static str> = None;
     egui::CentralPanel::default()
         .frame(egui::Frame::new().inner_margin(egui::Margin::symmetric(18, 10)))
@@ -209,12 +229,38 @@ pub fn show(app: &mut App, ui: &mut Ui) {
                     }
                 });
         });
-    if let Some((entry, index, action)) = clicked {
-        chat::card_action(app, entry, index, action);
+    match clicked {
+        Some(Click::Card(entry, index, action)) => chat::card_action(app, entry, index, action),
+        Some(Click::Open { chat: id, message }) => chat::open_message(app, &id, &message),
+        Some(Click::OpenChat(id)) => chat::open_cited_chat(app, &id),
+        Some(Click::Reply(entry, text)) => {
+            app.znga.reply_to = Some((entry, text));
+            ui.memory_mut(|m| m.request_focus(egui::Id::new("znga-composer")));
+        }
+        Some(Click::Forward(text)) => {
+            app.znga.forward_filter.clear();
+            app.znga.forwarding = Some(text);
+        }
+        None => {}
     }
     if let Some(text) = ask {
         chat::send_message(app, text);
     }
+    forward_picker(app, ui);
+}
+
+/// What a click in the Znga chat asks for.
+enum Click {
+    /// A card's button: (entry, card, action).
+    Card(u64, usize, &'static str),
+    /// A cited message (REQ-ZANS-001).
+    Open { chat: String, message: String },
+    /// A cited message's chat.
+    OpenChat(String),
+    /// Reply to this answer, quoting its text (REQ-ZANS-003).
+    Reply(u64, String),
+    /// Forward this text to a chat the person picks.
+    Forward(String),
 }
 
 /// What to ask first, on an empty Znga chat.
@@ -248,13 +294,8 @@ fn bubble_frame(fill: Color32) -> egui::Frame {
         .inner_margin(egui::Margin::symmetric(10, 7))
 }
 
-/// One message; returns the card button clicked, as (entry, card, action).
-fn bubble(
-    ui: &mut Ui,
-    palette: &theme::Palette,
-    entry: &Entry,
-    width: f32,
-) -> Option<(u64, usize, &'static str)> {
+/// One message; returns what was clicked in it.
+fn bubble(ui: &mut Ui, palette: &theme::Palette, entry: &Entry, width: f32) -> Option<Click> {
     let mut clicked = None;
     let max = (width * 0.75).clamp(240.0, 560.0);
     let layout = if entry.from_person {
@@ -262,42 +303,402 @@ fn bubble(
     } else {
         Layout::top_down(Align::Min)
     };
-    ui.with_layout(layout, |ui| {
+    let shown = ui.with_layout(layout, |ui| {
         let fill = if entry.from_person {
             palette.bubble_out
         } else {
             palette.bubble_in
         };
-        bubble_frame(fill).show(ui, |ui| {
-            ui.set_max_width(max);
-            if entry.unasked {
-                ui.label(
-                    RichText::new("✨ Znga noticed")
-                        .font(theme::semibold(12.5))
-                        .color(palette.accent),
-                );
-            }
-            if !entry.text.is_empty() {
-                ui.label(
-                    RichText::new(&entry.text)
-                        .font(theme::regular(14.0))
-                        .color(palette.text),
-                );
-            }
-            for (index, item) in entry.items.iter().enumerate() {
-                if let Some(action) = card(ui, palette, item) {
-                    clicked = Some((entry.id, index, action));
+        bubble_frame(fill)
+            .show(ui, |ui| {
+                ui.set_max_width(max);
+                if entry.unasked {
+                    ui.label(
+                        RichText::new("✨ Znga noticed")
+                            .font(theme::semibold(12.5))
+                            .color(palette.accent),
+                    );
                 }
+                if !entry.text.is_empty() {
+                    if entry.from_person {
+                        // People's words are shown as written (REQ-ZANS-002).
+                        ui.label(
+                            RichText::new(&entry.text)
+                                .font(theme::regular(14.0))
+                                .color(palette.text),
+                        );
+                    } else if let Some(link) = formatted(ui, palette, &entry.text, &entry.refs) {
+                        clicked = Some(link);
+                    }
+                }
+                if !entry.from_person
+                    && let Some(link) = sources(ui, palette, &entry.text, &entry.refs)
+                {
+                    clicked = Some(link);
+                }
+                for (index, item) in entry.items.iter().enumerate() {
+                    if let Some(action) = card(ui, palette, item) {
+                        clicked = Some(Click::Card(entry.id, index, action));
+                    }
+                }
+                ui.with_layout(Layout::top_down(Align::Max), |ui| {
+                    ui.label(
+                        RichText::new(clock(entry.at))
+                            .font(theme::regular(11.0))
+                            .color(palette.dim),
+                    );
+                });
+            })
+            .response
+            .rect
+    });
+    if !entry.text.is_empty()
+        && let Some(action) = hover_actions(ui, palette, entry, shown.inner)
+    {
+        clicked = Some(action);
+    }
+    clicked
+}
+
+/// Copy, Reply and Forward beside a message while the pointer is on it or
+/// one of them has the keyboard (REQ-ZANS-003). The person's own messages
+/// offer Copy only.
+fn hover_actions(
+    ui: &mut Ui,
+    palette: &theme::Palette,
+    entry: &Entry,
+    rect: egui::Rect,
+) -> Option<Click> {
+    let focus_id = egui::Id::new(("znga-actions", entry.id));
+    let focused = ui
+        .ctx()
+        .data(|d| d.get_temp::<bool>(focus_id))
+        .unwrap_or(false);
+    // The row floats over the bubble on a layer of its own, so the pointer
+    // is checked against the bubble without regard to layers; only the part
+    // of the bubble in view counts.
+    let visible = rect.intersect(ui.clip_rect());
+    let near = ui
+        .ctx()
+        .pointer_latest_pos()
+        .is_some_and(|pos| visible.contains(pos))
+        && visible.height() > 24.0;
+    if !near && !focused {
+        ui.ctx().data_mut(|d| d.insert_temp(focus_id, false));
+        return None;
+    }
+    let labels: &[&str] = if entry.from_person {
+        &["Copy"]
+    } else {
+        &["Copy", "Reply", "Forward"]
+    };
+    let anchor = pos2(visible.right() - 6.0, visible.top() + 6.0);
+    let mut picked = None;
+    let mut any_focus = false;
+    egui::Area::new(egui::Id::new(("znga-actions-row", entry.id)))
+        .order(egui::Order::Foreground)
+        .pivot(egui::Align2::RIGHT_TOP)
+        .fixed_pos(anchor)
+        .show(ui.ctx(), |ui| {
+            egui::Frame::new()
+                .fill(palette.panel)
+                .stroke(egui::Stroke::new(1.0, palette.outline))
+                .corner_radius(7.0)
+                .inner_margin(egui::Margin::symmetric(6, 2))
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.spacing_mut().item_spacing.x = 10.0;
+                        for label in labels {
+                            let button = egui::Button::new(
+                                RichText::new(*label)
+                                    .font(theme::medium(11.5))
+                                    .color(palette.secondary),
+                            )
+                            .frame(false)
+                            .small();
+                            let response = ui.add(button);
+                            any_focus |= response.has_focus();
+                            if response.clicked() {
+                                picked = Some(*label);
+                            }
+                        }
+                    });
+                });
+        });
+    ui.ctx().data_mut(|d| d.insert_temp(focus_id, any_focus));
+    let plain = if entry.from_person {
+        entry.text.clone()
+    } else {
+        super::answer::plain(&entry.text, &entry.refs)
+    };
+    match picked? {
+        "Copy" => {
+            ui.ctx().copy_text(plain);
+            None
+        }
+        "Reply" => Some(Click::Reply(entry.id, plain)),
+        _ => Some(Click::Forward(plain)),
+    }
+}
+
+/// Znga's answer with its headings, lists and emphasis drawn, never their
+/// markers, and its citations as links (REQ-ZANS-001, REQ-ZANS-002).
+fn formatted(
+    ui: &mut Ui,
+    palette: &theme::Palette,
+    text: &str,
+    refs: &[super::answer::Ref],
+) -> Option<Click> {
+    use super::answer::Block;
+    let mut clicked = None;
+    let blocks = super::answer::blocks(text);
+    ui.spacing_mut().item_spacing.y = 3.0;
+    for (index, block) in blocks.iter().enumerate() {
+        let found = match block {
+            Block::Heading { level, spans } => {
+                if index > 0 {
+                    ui.add_space(6.0);
+                }
+                let size = match level {
+                    1 => 17.0,
+                    2 => 15.5,
+                    _ => 14.5,
+                };
+                spans_row(ui, palette, spans, refs, theme::semibold(size))
             }
-            ui.with_layout(Layout::top_down(Align::Max), |ui| {
-                ui.label(
-                    RichText::new(clock(entry.at))
-                        .font(theme::regular(11.0))
-                        .color(palette.dim),
-                );
+            Block::Paragraph(spans) => spans_row(ui, palette, spans, refs, theme::regular(14.0)),
+            Block::Bullet { depth, spans } => list_item(ui, palette, *depth, "•", spans, refs),
+            Block::Numbered {
+                depth,
+                number,
+                spans,
+            } => list_item(ui, palette, *depth, number, spans, refs),
+            Block::Quote(spans) => {
+                let mut link = None;
+                egui::Frame::new()
+                    .inner_margin(egui::Margin {
+                        left: 8,
+                        right: 0,
+                        top: 1,
+                        bottom: 1,
+                    })
+                    .show(ui, |ui| {
+                        let rect = ui.max_rect();
+                        ui.painter().vline(
+                            rect.left() - 6.0,
+                            rect.y_range(),
+                            egui::Stroke::new(2.0, palette.outline),
+                        );
+                        link = spans_row(ui, palette, spans, refs, theme::regular(13.5));
+                    });
+                link
+            }
+            Block::Rule => {
+                ui.separator();
+                None
+            }
+            Block::Gap => {
+                ui.add_space(5.0);
+                None
+            }
+        };
+        if found.is_some() {
+            clicked = found;
+        }
+    }
+    clicked
+}
+
+fn list_item(
+    ui: &mut Ui,
+    palette: &theme::Palette,
+    depth: u8,
+    marker: &str,
+    spans: &[super::answer::Span],
+    refs: &[super::answer::Ref],
+) -> Option<Click> {
+    let mut clicked = None;
+    ui.horizontal_top(|ui| {
+        ui.add_space(4.0 + f32::from(depth) * 16.0);
+        let width = if marker.len() > 2 { 24.0 } else { 16.0 };
+        // The marker sits in a wrapped row as the text does, so the two
+        // share a baseline.
+        ui.allocate_ui_with_layout(vec2(width, 0.0), Layout::top_down(Align::Min), |ui| {
+            ui.set_width(width);
+            ui.horizontal_wrapped(|ui| {
+                let (font, color) = if marker == "•" {
+                    (theme::semibold(14.0), palette.text)
+                } else {
+                    (theme::regular(14.0), palette.secondary)
+                };
+                ui.label(RichText::new(marker).font(font).color(color));
             });
         });
+        ui.vertical(|ui| {
+            clicked = spans_row(ui, palette, spans, refs, theme::regular(14.0));
+        });
     });
+    clicked
+}
+
+/// One line of an answer: text runs wrap together, citations are links
+/// naming the chat and the date.
+fn spans_row(
+    ui: &mut Ui,
+    palette: &theme::Palette,
+    spans: &[super::answer::Span],
+    refs: &[super::answer::Ref],
+    font: egui::FontId,
+) -> Option<Click> {
+    use super::answer::Span;
+    let mut clicked = None;
+    ui.horizontal_wrapped(|ui| {
+        ui.spacing_mut().item_spacing.x = 0.0;
+        let mut last: Option<u32> = None;
+        for span in spans {
+            let text = match span {
+                Span::Text(text) => RichText::new(text).font(font.clone()).color(palette.text),
+                Span::Bold(text) => RichText::new(text)
+                    .font(egui::FontId::new(
+                        font.size,
+                        theme::semibold(font.size).family,
+                    ))
+                    .color(palette.text),
+                Span::Italic(text) => RichText::new(text)
+                    .font(font.clone())
+                    .italics()
+                    .color(palette.text),
+                Span::Code(text) => RichText::new(text)
+                    .font(egui::FontId::monospace(font.size - 1.0))
+                    .background_color(palette.surface)
+                    .color(palette.text),
+                Span::Cite(n) => {
+                    if last == Some(*n) {
+                        continue;
+                    }
+                    last = Some(*n);
+                    match refs.iter().find(|r| r.n == *n) {
+                        Some(found) => {
+                            ui.add_space(3.0);
+                            let link = ui
+                                .link(
+                                    RichText::new(format!(
+                                        "{} · {}",
+                                        found.chat_title,
+                                        super::answer::day(found.at)
+                                    ))
+                                    .font(theme::medium(font.size.min(14.0) - 1.5))
+                                    .color(palette.accent),
+                                )
+                                .on_hover_text(format!("{}: {}", found.sender, found.line));
+                            if link.clicked() {
+                                clicked = Some(Click::Open {
+                                    chat: found.chat.clone(),
+                                    message: found.message.clone(),
+                                });
+                            }
+                            ui.add_space(3.0);
+                        }
+                        None => {
+                            ui.label(
+                                RichText::new(format!("[{n}]"))
+                                    .font(font.clone())
+                                    .color(palette.dim),
+                            );
+                        }
+                    }
+                    continue;
+                }
+            };
+            last = None;
+            ui.label(text);
+        }
+    });
+    clicked
+}
+
+/// The messages an answer cites, each once: chat, sender, date and first
+/// line, each opening its message; the chat name opens the chat
+/// (REQ-ZANS-001.A3).
+fn sources(
+    ui: &mut Ui,
+    palette: &theme::Palette,
+    text: &str,
+    refs: &[super::answer::Ref],
+) -> Option<Click> {
+    let cited = super::answer::cited(text, refs);
+    if cited.is_empty() {
+        return None;
+    }
+    let mut clicked = None;
+    ui.add_space(8.0);
+    ui.label(
+        RichText::new("SOURCES")
+            .font(theme::semibold(11.0))
+            .color(palette.secondary),
+    );
+    for source in cited {
+        let frame = egui::Frame::new()
+            .fill(palette.surface)
+            .corner_radius(6.0)
+            .inner_margin(egui::Margin::symmetric(8, 5))
+            .show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                ui.horizontal_wrapped(|ui| {
+                    ui.spacing_mut().item_spacing.x = 4.0;
+                    if ui
+                        .link(
+                            RichText::new(&source.chat_title)
+                                .font(theme::semibold(12.5))
+                                .color(palette.accent),
+                        )
+                        .on_hover_text("Open the chat")
+                        .clicked()
+                    {
+                        clicked = Some(Click::OpenChat(source.chat.clone()));
+                    }
+                    // A one-to-one chat is named after its sender.
+                    let who = if source.sender == source.chat_title {
+                        String::new()
+                    } else {
+                        format!("· {} ", source.sender)
+                    };
+                    ui.label(
+                        RichText::new(format!("{who}· {}", super::answer::day(source.at)))
+                            .font(theme::regular(12.0))
+                            .color(palette.secondary),
+                    );
+                });
+                ui.label(
+                    RichText::new(&source.line)
+                        .font(theme::regular(13.0))
+                        .color(palette.text),
+                );
+            });
+        let response = ui
+            .interact(
+                frame.response.rect,
+                egui::Id::new(("znga-source", source.chat.as_str(), source.message.as_str())),
+                Sense::click(),
+            )
+            .on_hover_cursor(egui::CursorIcon::PointingHand)
+            .on_hover_text("Go to the message");
+        if response.hovered() {
+            ui.painter().rect_stroke(
+                frame.response.rect,
+                6.0,
+                egui::Stroke::new(1.0, palette.accent),
+                egui::StrokeKind::Inside,
+            );
+        }
+        if response.clicked() && clicked.is_none() {
+            clicked = Some(Click::Open {
+                chat: source.chat.clone(),
+                message: source.message.clone(),
+            });
+        }
+        ui.add_space(3.0);
+    }
     clicked
 }
 
@@ -396,11 +797,9 @@ fn writing_bubble(ui: &mut Ui, palette: &theme::Palette, partial: &str, width: f
                     ui.label(RichText::new("Znga is thinking…").color(palette.secondary));
                 });
             } else {
-                ui.label(
-                    RichText::new(partial)
-                        .font(theme::regular(14.0))
-                        .color(palette.text),
-                );
+                // Drawn as it will be once done (REQ-ZANS-002); the links
+                // come with the finished answer.
+                formatted(ui, palette, partial, &[]);
             }
             stop = ui.small_button("Stop").clicked();
         });
@@ -433,6 +832,7 @@ fn composer(app: &mut App, ui: &mut Ui) {
         .max(36.0);
     let id = egui::Id::new("znga-composer");
     let mut send = false;
+    reply_quote(app, ui);
     widgets::raised(
         ui,
         &palette,
@@ -494,6 +894,146 @@ fn composer(app: &mut App, ui: &mut Ui) {
     }
 }
 
+/// The answer being replied to, above the composer, with × to drop it
+/// (REQ-ZANS-003.A3).
+fn reply_quote(app: &mut App, ui: &mut Ui) {
+    let palette = app.palette;
+    let Some((_, text)) = app.znga.reply_to.clone() else {
+        return;
+    };
+    let mut close = false;
+    egui::Frame::new()
+        .fill(palette.surface)
+        .corner_radius(8.0)
+        .inner_margin(egui::Margin::symmetric(10, 6))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            let rect = ui.max_rect();
+            ui.painter().vline(
+                rect.left() - 5.0,
+                rect.y_range(),
+                egui::Stroke::new(3.0, palette.accent),
+            );
+            ui.horizontal(|ui| {
+                ui.vertical(|ui| {
+                    ui.set_width((ui.available_width() - 30.0).max(0.0));
+                    ui.label(
+                        RichText::new("Replying to Znga")
+                            .font(theme::semibold(12.0))
+                            .color(palette.accent),
+                    );
+                    let first: String = text
+                        .lines()
+                        .find(|l| !l.trim().is_empty())
+                        .unwrap_or("")
+                        .chars()
+                        .take(140)
+                        .collect();
+                    ui.label(
+                        RichText::new(first)
+                            .font(theme::regular(12.5))
+                            .color(palette.secondary),
+                    );
+                });
+                close = ui
+                    .small_button("×")
+                    .on_hover_text("Don't reply to this")
+                    .clicked();
+            });
+        });
+    ui.add_space(4.0);
+    if close {
+        app.znga.reply_to = None;
+    }
+}
+
+/// The chats an answer can be forwarded to, while one is being forwarded:
+/// picking one opens it with the text offered above its composer; nothing
+/// is sent (REQ-ZANS-003.A4).
+fn forward_picker(app: &mut App, ui: &mut Ui) {
+    let palette = app.palette;
+    let Some(text) = app.znga.forwarding.clone() else {
+        return;
+    };
+    let filter = app.znga.forward_filter.trim().to_lowercase();
+    let chats: Vec<(String, String)> = app
+        .account()
+        .chats
+        .iter()
+        .filter(|c| chat::tools_for(app, &c.id))
+        .map(|c| (c.id.clone(), app.chat_title(c)))
+        .filter(|(_, title)| filter.is_empty() || title.to_lowercase().contains(&filter))
+        .take(200)
+        .collect();
+    let mut open = true;
+    let mut picked: Option<String> = None;
+    egui::Window::new("Forward Znga's answer")
+        .id(egui::Id::new("znga-forward"))
+        .collapsible(false)
+        .resizable(false)
+        .open(&mut open)
+        .default_width(320.0)
+        .anchor(egui::Align2::CENTER_CENTER, vec2(0.0, 0.0))
+        .frame(egui::Frame::popup(ui.style()).fill(palette.panel))
+        .show(ui.ctx(), |ui| {
+            let preview: String = text.chars().take(120).collect();
+            ui.label(
+                RichText::new(preview)
+                    .font(theme::regular(12.5))
+                    .color(palette.secondary),
+            );
+            ui.add_space(6.0);
+            let search = ui.add(
+                egui::TextEdit::singleline(&mut app.znga.forward_filter)
+                    .hint_text("Search chats")
+                    .desired_width(f32::INFINITY),
+            );
+            if search.gained_focus() || !search.has_focus() && ui.memory(|m| m.focused().is_none())
+            {
+                search.request_focus();
+            }
+            ui.add_space(4.0);
+            egui::ScrollArea::vertical()
+                .max_height(280.0)
+                .show(ui, |ui| {
+                    if chats.is_empty() {
+                        ui.label(RichText::new("No chats match.").color(palette.dim));
+                    }
+                    for (id, title) in &chats {
+                        let row = ui.add(
+                            egui::Button::new(
+                                RichText::new(title)
+                                    .font(theme::regular(13.5))
+                                    .color(palette.text),
+                            )
+                            .frame(false)
+                            .min_size(vec2(ui.available_width(), 26.0)),
+                        );
+                        if row.clicked() {
+                            picked = Some(id.clone());
+                        }
+                    }
+                });
+            ui.add_space(4.0);
+            ui.label(
+                RichText::new(
+                    "The chat opens with the text ready. Nothing is sent until you send it.",
+                )
+                .font(theme::regular(11.5))
+                .color(palette.dim),
+            );
+        });
+    if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+        open = false;
+    }
+    if let Some(chat_id) = picked {
+        app.znga.forwarding = None;
+        chat::forward(app, &chat_id, &text);
+    } else if !open {
+        app.znga.forwarding = None;
+    }
+}
+
 // ---------------------------------------------------------------------
 // Znga in every chat's composer (REQ-ZCHAT-004).
 
@@ -539,6 +1079,7 @@ pub fn composer_menu(app: &mut App, ui: &mut Ui, chat_id: &str) {
 /// then Undo once used. Nothing is sent (REQ-ZCHAT-004.A3).
 pub fn offer_bar(app: &mut App, ui: &mut Ui, chat_id: &str) {
     let palette = app.palette;
+    translate_bar(app, ui, chat_id);
     if app
         .znga
         .composer_undo
@@ -599,6 +1140,273 @@ pub fn offer_bar(app: &mut App, ui: &mut Ui, chat_id: &str) {
                 }
             });
         });
+    }
+}
+
+// ---------------------------------------------------------------------
+// Translating others' messages (REQ-ZANS-004).
+
+const TRANSLATABLE: &str = "znga-translatable";
+const TRANSLATE_REQUEST: &str = "znga-translate-request";
+
+/// "Translate with Znga" in a message's menu, for a message Znga found in
+/// another language in a chat it may read. The click is handed to
+/// [`offer_bar`] through the frame's data, as the menu has no app.
+pub fn message_menu(ui: &mut Ui, palette: &theme::Palette, chat_id: &str, message: &str) {
+    let offered = ui
+        .ctx()
+        .data(|d| d.get_temp::<(String, Vec<String>)>(egui::Id::new(TRANSLATABLE)))
+        .is_some_and(|(chat, ids)| chat == chat_id && ids.iter().any(|id| id == message));
+    if !offered {
+        return;
+    }
+    if widgets::menu_item_enabled(ui, palette, None, "✨ Translate with Znga", true) {
+        ui.ctx().data_mut(|d| {
+            d.insert_temp(
+                egui::Id::new(TRANSLATE_REQUEST),
+                (chat_id.to_owned(), message.to_owned()),
+            )
+        });
+        ui.close();
+    }
+}
+
+/// Above the composer: an offer to translate the chat's recent messages
+/// in another language, and the translation popup.
+fn translate_bar(app: &mut App, ui: &mut Ui, chat_id: &str) {
+    let palette = app.palette;
+    let request = ui
+        .ctx()
+        .data_mut(|d| d.remove_temp::<(String, String)>(egui::Id::new(TRANSLATE_REQUEST)));
+    if app
+        .znga
+        .translations
+        .popup
+        .as_ref()
+        .is_some_and(|p| p.chat != chat_id)
+    {
+        app.znga.translations.popup = None;
+    }
+    if !chat::tools_for(app, chat_id) {
+        ui.ctx()
+            .data_mut(|d| d.remove_temp::<(String, Vec<String>)>(egui::Id::new(TRANSLATABLE)));
+        app.znga.translations.popup = None;
+        return;
+    }
+    if let Some((chat, message)) = request
+        && chat == chat_id
+    {
+        super::hooks::request_translate(app, chat_id, &[message]);
+    }
+    let found = super::hooks::translatable(app, chat_id);
+    ui.ctx().data_mut(|d| {
+        d.insert_temp(
+            egui::Id::new(TRANSLATABLE),
+            (
+                chat_id.to_owned(),
+                found.iter().map(|(id, _)| id.clone()).collect::<Vec<_>>(),
+            ),
+        )
+    });
+    translation_popup(app, ui, chat_id);
+    let waiting: Vec<(String, &'static str)> = found
+        .into_iter()
+        .filter(|(id, _)| app.znga.translations.translation(chat_id, id).is_none())
+        .collect();
+    if waiting.is_empty()
+        || app.znga.translations.declined.contains(chat_id)
+        || app.znga.translations.popup.is_some()
+        || app.znga.offer.as_ref().is_some_and(|o| o.chat == chat_id)
+    {
+        return;
+    }
+    let language = waiting
+        .last()
+        .map(|(_, l)| *l)
+        .unwrap_or("another language");
+    let mut translate = false;
+    let mut close = false;
+    bar(ui, &palette, |ui| {
+        ui.label(RichText::new("✨").color(palette.accent));
+        let said = if waiting.len() == 1 {
+            format!("A message here looks like {language}.")
+        } else {
+            format!("{} messages here look like {language}.", waiting.len())
+        };
+        ui.label(
+            RichText::new(said)
+                .font(theme::regular(13.0))
+                .color(palette.text),
+        );
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            close = ui.small_button("×").on_hover_text("Not now").clicked();
+            translate = ui
+                .small_button("Translate")
+                .on_hover_text("Znga translates them; only these messages are sent to its engine")
+                .clicked();
+        });
+    });
+    if close {
+        app.znga.translations.declined.insert(chat_id.to_owned());
+    }
+    if translate {
+        let skip = waiting.len().saturating_sub(10);
+        let ids: Vec<String> = waiting[skip..].iter().map(|(id, _)| id.clone()).collect();
+        super::hooks::request_translate(app, chat_id, &ids);
+    }
+}
+
+/// The translations over the chat, under each sender and time, with Copy
+/// and Close (REQ-ZANS-004.A3).
+fn translation_popup(app: &mut App, ui: &mut Ui, chat_id: &str) {
+    let palette = app.palette;
+    let Some(popup) = app.znga.translations.popup.clone() else {
+        return;
+    };
+    if popup.chat != chat_id {
+        return;
+    }
+    let language = if app.znga.translate_to.trim().is_empty() {
+        "English".to_owned()
+    } else {
+        app.znga.translate_to.trim().to_owned()
+    };
+    let anchor = pos2(ui.max_rect().right(), ui.max_rect().top() - 8.0);
+    let mut close = false;
+    let mut copy: Option<String> = None;
+    egui::Area::new(egui::Id::new("znga-translation"))
+        .order(egui::Order::Foreground)
+        .constrain(true)
+        .pivot(egui::Align2::RIGHT_BOTTOM)
+        .fixed_pos(anchor)
+        .show(ui.ctx(), |ui| {
+            egui::Frame::popup(ui.style())
+                .fill(palette.panel)
+                .stroke(egui::Stroke::new(1.0, palette.outline))
+                .corner_radius(10.0)
+                .inner_margin(egui::Margin::same(12))
+                .show(ui, |ui| {
+                    ui.set_width(380.0);
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            RichText::new(format!("✨ Translated into {language}"))
+                                .font(theme::semibold(13.5))
+                                .color(palette.text),
+                        );
+                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                            close = ui.small_button("Close").clicked();
+                        });
+                    });
+                    ui.add_space(6.0);
+                    let mut all: Vec<String> = Vec::new();
+                    let mut list = |ui: &mut Ui| {
+                        for shown in &popup.messages {
+                            let key = (chat_id.to_owned(), shown.message.clone());
+                            let done = app.znga.translations.done.get(&key).cloned();
+                            let pending = app.znga.translations.pending.contains(&key);
+                            egui::Frame::new()
+                                .fill(palette.surface)
+                                .corner_radius(8.0)
+                                .inner_margin(egui::Margin::symmetric(10, 7))
+                                .show(ui, |ui| {
+                                    ui.set_width(ui.available_width());
+                                    ui.horizontal(|ui| {
+                                        ui.label(
+                                            RichText::new(format!(
+                                                "{} · {}",
+                                                shown.sender,
+                                                clock(shown.at)
+                                            ))
+                                            .font(theme::semibold(12.0))
+                                            .color(palette.accent),
+                                        );
+                                        if let Some(text) = &done {
+                                            ui.with_layout(
+                                                Layout::right_to_left(Align::Center),
+                                                |ui| {
+                                                    if ui.small_button("Copy").clicked() {
+                                                        copy = Some(text.clone());
+                                                    }
+                                                },
+                                            );
+                                        }
+                                    });
+                                    let original: String =
+                                        shown.original.chars().take(240).collect();
+                                    ui.label(
+                                        RichText::new(original)
+                                            .font(theme::regular(12.0))
+                                            .color(palette.secondary),
+                                    );
+                                    ui.add_space(2.0);
+                                    match (&done, pending) {
+                                        (Some(text), _) => {
+                                            all.push(text.clone());
+                                            ui.label(
+                                                RichText::new(text)
+                                                    .font(theme::regular(14.0))
+                                                    .color(palette.text),
+                                            );
+                                        }
+                                        (None, true) => {
+                                            ui.horizontal(|ui| {
+                                                ui.add(egui::Spinner::new().size(12.0));
+                                                ui.label(
+                                                    RichText::new("Translating…")
+                                                        .color(palette.secondary),
+                                                );
+                                            });
+                                            ui.ctx().request_repaint_after(
+                                                std::time::Duration::from_millis(200),
+                                            );
+                                        }
+                                        (None, false) => {
+                                            let said = app
+                                                .znga
+                                                .translations
+                                                .error
+                                                .clone()
+                                                .map(|e| {
+                                                    super::thread::explain_error(
+                                                        &e,
+                                                        app.znga.config.engine,
+                                                    )
+                                                })
+                                                .unwrap_or_else(|| {
+                                                    "Znga could not translate this one.".into()
+                                                });
+                                            ui.label(
+                                                RichText::new(said)
+                                                    .font(theme::regular(12.5))
+                                                    .color(palette.secondary),
+                                            );
+                                        }
+                                    }
+                                });
+                            ui.add_space(4.0);
+                        }
+                    };
+                    // A few translations show whole; a long list scrolls.
+                    if popup.messages.len() > 3 {
+                        egui::ScrollArea::vertical()
+                            .id_salt("znga-translation-list")
+                            .max_height(340.0)
+                            .show(ui, list);
+                    } else {
+                        list(ui);
+                    }
+                    if all.len() > 1 && ui.small_button("Copy all").clicked() {
+                        copy = Some(all.join("\n\n"));
+                    }
+                });
+        });
+    if let Some(text) = copy {
+        ui.ctx().copy_text(text);
+    }
+    if close
+        || ui.input(|i| i.key_pressed(egui::Key::Escape)) && app.znga.translations.popup.is_some()
+    {
+        app.znga.translations.popup = None;
     }
 }
 

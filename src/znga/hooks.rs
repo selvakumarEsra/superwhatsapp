@@ -96,6 +96,7 @@ pub fn observe_incoming(app: &mut App, chat_id: &str, message: &Message) {
     let seen = Seen {
         account: account.clone(),
         chat: chat_id.to_owned(),
+        id: message.id.clone(),
         chat_title: chat_title.clone(),
         group,
         sender: message.sender.clone(),
@@ -411,6 +412,7 @@ pub fn request_ask(app: &mut App, question: String) {
         question: question.clone(),
         history: history.clone(),
         hits: Vec::new(),
+        refs: Vec::new(),
     });
     if let Err(error) = app.znga.submit(
         prompt::plan_search(&question, &history),
@@ -503,13 +505,16 @@ fn answer(app: &mut App, ask: u64) {
         AskOrigin::Panel => app.account().id.as_str().to_owned(),
     };
     let context = app.znga.activity.recent(120);
-    let prompt = prompt::answer_with_hits(
+    let (prompt, refs) = prompt::answer_with_hits(
         &your_name(app, &account),
         &context,
         &asking.hits,
         &asking.history,
         &asking.question,
     );
+    if let Some(asking) = app.znga.asking.get_mut(&ask) {
+        asking.refs = refs;
+    }
     if let Err(error) = app.znga.submit(prompt, Purpose::Answer { ask }) {
         let now = crate::util::now();
         let effects = app.znga.handle(Purpose::Answer { ask }, Err(error), now);
@@ -626,6 +631,7 @@ fn pump_self_chat(app: &mut App) {
         question: question.text.clone(),
         history: Vec::new(),
         hits: Vec::new(),
+        refs: Vec::new(),
     });
     app.znga.store.send(Job::History {
         ask,
@@ -1031,9 +1037,11 @@ fn apply(app: &mut App, effects: Vec<Effect>) {
                 pump_self_chat(app);
             }
             Effect::Search { ask, terms } => search_for(app, ask, terms),
-            Effect::Answered { account, text } => {
-                super::chat::answer(app, &account, text, Vec::new());
-            }
+            Effect::Answered {
+                account,
+                text,
+                refs,
+            } => super::chat::answer_cited(app, &account, text, refs),
         }
     }
 }
@@ -1479,5 +1487,131 @@ pub fn tick(app: &mut App) {
     {
         app.znga.last_rhythms = Some(instant);
         scan_rhythms(app);
+    }
+}
+
+// ---------------------------------------------------------------------
+// Translating others' messages (REQ-ZANS-004).
+
+/// The text of a message someone else wrote that could be translated.
+pub fn readable_text(message: &Message) -> Option<&str> {
+    if message.from_me {
+        return None;
+    }
+    let text = match &message.content {
+        Content::Text { text, .. } | Content::Interactive { text, .. } => text.as_str(),
+        Content::Image { caption, .. } | Content::Video { caption, .. } => caption.as_deref()?,
+        _ => return None,
+    };
+    (!text.trim().is_empty()).then_some(text)
+}
+
+/// The recent messages of `chat` that seem to be in another language than
+/// the person's, newest last, as (message id, language). Decided on this
+/// computer; nothing is sent (REQ-ZANS-004.A2). Kept until the chat
+/// changes.
+pub fn translatable(app: &mut App, chat: &str) -> Vec<(String, &'static str)> {
+    const RECENT: usize = 30;
+    let Some(conversation) = app.conversations.get(chat) else {
+        return Vec::new();
+    };
+    let newest = conversation
+        .messages
+        .last()
+        .map(|m| m.id.clone())
+        .unwrap_or_default();
+    let count = conversation.messages.len();
+    if let Some((known, id, n, found)) = &app.znga.translations.scanned
+        && known == chat
+        && *id == newest
+        && *n == count
+    {
+        return found.clone();
+    }
+    let language = app.znga.translate_to.clone();
+    let skip = count.saturating_sub(RECENT);
+    let found: Vec<(String, &'static str)> = conversation.messages[skip..]
+        .iter()
+        .filter_map(|message| {
+            let text = readable_text(message)?;
+            let found = super::translate::foreign(text, &language)?;
+            Some((message.id.clone(), found))
+        })
+        .collect();
+    app.znga.translations.scanned = Some((chat.to_owned(), newest, count, found.clone()));
+    found
+}
+
+/// Translates messages `ids` of the open `chat` and shows them in the
+/// popup. Only those messages are sent, and only when the Sentinel allows
+/// it; translations already made this session are reused.
+pub fn request_translate(app: &mut App, chat: &str, ids: &[String]) {
+    if ids.is_empty() || app.open_chat.as_deref() != Some(chat) {
+        return;
+    }
+    let hidden = !super::chat::tools_for(app, chat);
+    let now = crate::util::now();
+    if !app
+        .znga
+        .audit
+        .check(&Act::Translate { hidden }, Origin::Person, now)
+    {
+        return;
+    }
+    let account = app.account().id.as_str().to_owned();
+    let mut shown = Vec::new();
+    let mut lines: Vec<(String, String)> = Vec::new();
+    let mut asked: Vec<String> = Vec::new();
+    if let Some(conversation) = app.conversations.get(chat) {
+        for id in ids {
+            let Some(message) = conversation.messages.iter().find(|m| m.id == *id) else {
+                continue;
+            };
+            let Some(text) = readable_text(message) else {
+                continue;
+            };
+            let sender = app.display_name_or(&message.sender, message.sender_name.as_deref());
+            shown.push(super::translate::Shown {
+                message: id.clone(),
+                sender: sender.clone(),
+                at: message.timestamp,
+                original: text.to_owned(),
+            });
+            let key = (chat.to_owned(), id.clone());
+            if app.znga.translations.done.contains_key(&key)
+                || app.znga.translations.pending.contains(&key)
+            {
+                continue;
+            }
+            lines.push((sender, text.to_owned()));
+            asked.push(id.clone());
+        }
+    }
+    if shown.is_empty() {
+        return;
+    }
+    app.znga.translations.error = None;
+    app.znga.translations.popup = Some(super::translate::Popup {
+        account,
+        chat: chat.to_owned(),
+        messages: shown,
+    });
+    if asked.is_empty() {
+        return;
+    }
+    let language = app.znga.translate_to.clone();
+    let prompt = prompt::translate_incoming(&lines, &language);
+    for id in &asked {
+        app.znga
+            .translations
+            .pending
+            .insert((chat.to_owned(), id.clone()));
+    }
+    let purpose = Purpose::Translate {
+        chat: chat.to_owned(),
+        messages: asked.clone(),
+    };
+    if let Err(error) = app.znga.submit(prompt, purpose) {
+        app.znga.translations.failed(chat, &asked, error);
     }
 }
