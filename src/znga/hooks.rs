@@ -751,10 +751,10 @@ pub fn write_event(app: &mut App, event: &super::calendar::Event, uid: &str) -> 
             match written {
                 Ok(()) => {
                     if let Err(error) = crate::opener::open_or_reveal(&path) {
-                        log::warn!(target: "zapfast::znga", "{error}");
+                        log::warn!(target: "superwhatsapp::znga", "{error}");
                     }
                 }
-                Err(error) => log::warn!(target: "zapfast::znga", "calendar file: {error}"),
+                Err(error) => log::warn!(target: "superwhatsapp::znga", "calendar file: {error}"),
             }
         })
         .ok();
@@ -1253,7 +1253,7 @@ fn store_replies(app: &mut App) {
                 super::chat::rhythms(app, &account);
             }
             Reply::History { ask, messages } => self_chat_history(app, ask, messages),
-            Reply::Failed(error) => log::warn!(target: "zapfast::znga", "store: {error}"),
+            Reply::Failed(error) => log::warn!(target: "superwhatsapp::znga", "store: {error}"),
         }
     }
 }

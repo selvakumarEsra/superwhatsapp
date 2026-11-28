@@ -52,7 +52,7 @@
     <Property Id="REINSTALLMODE" Value="amus" />
 
     <!-- An earlier MSI install, wherever it went. -->
-    <Property Id="ZAPFASTFOLDER">
+    <Property Id="SUPERWHATSAPPFOLDER">
       <RegistrySearch Id="PreviousFolder" Root="HKCU" Key="Software\SuperWhatsapp"
         Name="InstallFolder" Type="directory" />
     </Property>
@@ -77,8 +77,8 @@
     <StandardDirectory Id="ProgramMenuFolder" />
     <StandardDirectory Id="DesktopFolder" />
     <!-- Into the copy being replaced; the updater passes INSTALLFOLDER too. -->
-    <SetDirectory Id="INSTALLFOLDER" Action="InstallIntoEarlierMsiFolder" Value="[ZAPFASTFOLDER]" Sequence="both"
-      Condition="ZAPFASTFOLDER AND NOT INNOFOLDER" />
+    <SetDirectory Id="INSTALLFOLDER" Action="InstallIntoEarlierMsiFolder" Value="[SUPERWHATSAPPFOLDER]" Sequence="both"
+      Condition="SUPERWHATSAPPFOLDER AND NOT INNOFOLDER" />
     <SetDirectory Id="INSTALLFOLDER" Action="InstallIntoInnoFolder" Value="[INNOFOLDER]" Sequence="both"
       Condition="INNOFOLDER" />
 
@@ -122,7 +122,7 @@
           Description="WhatsApp, native and fast"
           Target="[#SuperWhatsappExe]" WorkingDirectory="INSTALLFOLDER">
           <!-- Ties notifications and the taskbar to this shortcut. -->
-          <ShortcutProperty Key="System.AppUserModel.ID" Value="me.paolino.zapfast" />
+          <ShortcutProperty Key="System.AppUserModel.ID" Value="cc.superwhatsapp" />
         </Shortcut>
         <!-- The shortcuts from before the rename. -->
         <RemoveFile Id="LegacyStartMenuShortcut" Name="FastsApp.lnk" On="install" />
@@ -132,7 +132,7 @@
       <Component Id="DesktopShortcut" Guid="{2035F90C-2AC1-4A8B-8978-49E37F53C499}" Directory="DesktopFolder" Condition="DESKTOPSHORTCUT">
         <Shortcut Id="DesktopSuperWhatsappShortcut" Name="SuperWhatsapp"
           Target="[#SuperWhatsappExe]" WorkingDirectory="INSTALLFOLDER">
-          <ShortcutProperty Key="System.AppUserModel.ID" Value="me.paolino.zapfast" />
+          <ShortcutProperty Key="System.AppUserModel.ID" Value="cc.superwhatsapp" />
         </Shortcut>
         <RemoveFile Id="LegacyDesktopShortcut" Name="FastsApp.lnk" On="install" />
         <RegistryValue Root="HKCU" Key="Software\SuperWhatsapp"
@@ -151,14 +151,14 @@
       own process is a separate helper and has quit SuperWhatsapp first.
     -->
     <util:CloseApplication Id="SuperWhatsappRunning" Target="superwhatsapp.exe"
-      Property="ZAPFASTRUNNING" RebootPrompt="no" />
+      Property="SUPERWHATSAPPRUNNING" RebootPrompt="no" />
     <util:CloseApplication Id="LegacyRunning" Target="fastsapp.exe"
-      Property="ZAPFASTRUNNING" RebootPrompt="no" />
+      Property="SUPERWHATSAPPRUNNING" RebootPrompt="no" />
     <CustomAction Id="RefuseWhileRunning"
       Error="SuperWhatsapp is running. Quit SuperWhatsapp, then try again." />
     <InstallExecuteSequence>
       <Custom Action="RefuseWhileRunning" After="Wix4CloseApplications_$(sys.BUILDARCHSHORT)"
-        Condition="ZAPFASTRUNNING" />
+        Condition="SUPERWHATSAPPRUNNING" />
     </InstallExecuteSequence>
   </Package>
 </Wix>

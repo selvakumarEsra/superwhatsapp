@@ -4,7 +4,7 @@
 //! Every button is pressed with the pointer. The demo backend places no
 //! call, so what the other side does (ringing, answering, joining) arrives
 //! as the worker's updates at set times after the press that started it.
-//! With `ZAPFAST_DEMO_CALL_FEEDS` set, the video tiles play those clips (see
+//! With `SUPERWHATSAPP_DEMO_CALL_FEEDS` set, the video tiles play those clips (see
 //! `feeds`); without it they show stills.
 //!
 //! | Seconds     | What happens                                                     |
@@ -43,7 +43,7 @@ use std::time::{Duration, Instant};
 pub const DURATION: Duration = Duration::from_secs(39);
 
 /// The start of the id of every call entry the tour files.
-pub(super) const ENTRY: &str = "zapfast-call-tour-";
+pub(super) const ENTRY: &str = "superwhatsapp-call-tour-";
 
 /// When each call came up and when it was hung up, for the entries' lengths.
 const VIDEO_UP: f32 = 4.7;

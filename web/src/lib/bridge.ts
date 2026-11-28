@@ -126,13 +126,13 @@ export { state };
 
 export async function connect() {
   // Outside Tauri (a browser, for screenshots and tests), show a state
-  // dumped by `zapfast-desktop --dump-state`.
+  // dumped by `superwhatsapp-desktop --dump-state`.
   if (!("__TAURI_INTERNALS__" in window)) {
     const response = await fetch("/demo-state.json");
     if (response.ok) setState(reconcile((await response.json()) as State, { key: "id" }));
     return;
   }
-  await listen<State>("zapfast://state", (event) => setState(reconcile(event.payload, { key: "id" })));
+  await listen<State>("superwhatsapp://state", (event) => setState(reconcile(event.payload, { key: "id" })));
   await invoke("refresh");
 }
 

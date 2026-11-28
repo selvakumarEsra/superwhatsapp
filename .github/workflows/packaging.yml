@@ -39,7 +39,7 @@ permissions:
 
 jobs:
   # Builds Linux packages from a published release's files. Without a
-  # version it would test upstream ZapFast's v0.13.1 release, which this
+  # version it would test upstream's v0.13.1 release, which this
   # repository does not have, so pushes and pull requests skip it
   # (specs/superwhatsapp.md, REQ-SUPERWA-003); run it by hand with a version.
   packaging:
@@ -148,7 +148,7 @@ jobs:
           set -- dist/native-packages/packages/"$TARGET"/appimage/superwhatsapp-*-"$ARCH".AppImage
           test "$#" -eq 1
           chmod +x "$1"
-          "$1" --appimage-extract-and-run --version | grep -Ex '(superwhatsapp|zapfast|fastsapp) [0-9]+\.[0-9]+\.[0-9]+.*'
+          "$1" --appimage-extract-and-run --version | grep -Ex '(superwhatsapp|fastsapp) [0-9]+\.[0-9]+\.[0-9]+.*'
 
   user-installer:
     name: User installer

@@ -10,7 +10,7 @@ Missing, truncated, or invalid signatures fail closed. There is no unsigned
 fallback, runtime key override, or key fetched from the release being verified.
 Exact filenames bind each signed checksum to its version and platform.
 
-The `release-signing` GitHub environment holds `ZAPFAST_UPDATE_SIGNING_KEY`
+The `release-signing` GitHub environment holds `SUPERWHATSAPP_UPDATE_SIGNING_KEY`
 (an Ed25519 PKCS#8 PEM private key). It is restricted to `v*` tags and requires
 maintainer approval. Only the final signing/publishing job uses it, never PR
 builds or compilation. Approve the candidate's exact commit and build results

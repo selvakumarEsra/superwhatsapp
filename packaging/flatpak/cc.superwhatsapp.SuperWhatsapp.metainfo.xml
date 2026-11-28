@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>rocks.zapfast.ZapFast</id>
+  <id>cc.superwhatsapp.SuperWhatsapp</id>
   <name>SuperWhatsapp</name>
   <summary>A native WhatsApp client</summary>
   <developer id="io.github.selvakumaresra">
@@ -16,7 +16,7 @@
     running in the system tray. SuperWhatsapp is an independent project, not affiliated
     with WhatsApp or Meta.</p>
   </description>
-  <launchable type="desktop-id">rocks.zapfast.ZapFast.desktop</launchable>
+  <launchable type="desktop-id">cc.superwhatsapp.SuperWhatsapp.desktop</launchable>
   <url type="homepage">https://selvakumaresra.github.io/superwhatsapp/</url>
   <url type="bugtracker">https://github.com/selvakumarEsra/superwhatsapp/issues</url>
   <url type="help">https://selvakumaresra.github.io/superwhatsapp/getting-started/</url>

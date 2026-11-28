@@ -132,9 +132,10 @@ pub fn prepare(app: &mut App) {
 /// local stickers and GIFs in place of downloads.
 fn common_setup(app: &mut App) {
     assert!(app.backend.is_offline(), "a tour requires an offline app");
-    // `ZAPFAST_DEMO_FONT=inter` draws the tour in the bundled Inter, the same
+    // `SUPERWHATSAPP_DEMO_FONT=inter` draws the tour in the bundled Inter, the same
     // on every machine, instead of the platform's font.
-    if std::env::var("ZAPFAST_DEMO_FONT").is_ok_and(|font| font.eq_ignore_ascii_case("inter")) {
+    if std::env::var("SUPERWHATSAPP_DEMO_FONT").is_ok_and(|font| font.eq_ignore_ascii_case("inter"))
+    {
         app.settings.font = crate::settings::FontChoice::Inter;
     }
     app.settings.theme = ThemeChoice::Dark;

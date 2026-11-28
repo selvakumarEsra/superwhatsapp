@@ -1,6 +1,6 @@
 [package]
-name = "zapfast"
-version = "0.21.1-beta.10"
+name = "superwhatsapp"
+version = "0.21.1-beta.14"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
@@ -15,7 +15,7 @@ categories = ["gui"]
 members = ["src-tauri"]
 
 [lib]
-name = "zapfast"
+name = "superwhatsapp"
 path = "src/lib.rs"
 
 [[bin]]

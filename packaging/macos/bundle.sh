@@ -42,8 +42,8 @@ iconutil -c icns "$iconset" -o "$app/Contents/Resources/superwhatsapp.icns"
 # The notification plays SuperWhatsapp's built-in sounds from the bundle by name, so
 # Do Not Disturb and Focus silence them (src/notify/macos.rs).
 sounds="$here/../../assets/sounds"
-cp "$sounds/receive.wav" "$app/Contents/Resources/zapfast-receive.wav"
-cp "$sounds/alert.wav" "$app/Contents/Resources/zapfast-alert.wav"
+cp "$sounds/receive.wav" "$app/Contents/Resources/superwhatsapp-receive.wav"
+cp "$sounds/alert.wav" "$app/Contents/Resources/superwhatsapp-alert.wav"
 
 # Attach the microphone entitlement before native-packages preserves it when
 # replacing the ad-hoc signature with a hardened Developer ID signature.

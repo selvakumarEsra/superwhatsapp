@@ -1258,7 +1258,7 @@ fn digests(app: &mut App) {
     }
     let prompt = prompt::briefing(&hooks::your_name(app, &account), &items);
     if let Err(error) = app.znga.submit(prompt, Purpose::Digest { slot }) {
-        log::debug!(target: "zapfast::znga", "digest skipped: {}", error.len());
+        log::debug!(target: "superwhatsapp::znga", "digest skipped: {}", error.len());
     }
 }
 

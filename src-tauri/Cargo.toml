@@ -1,6 +1,6 @@
 [package]
-name = "zapfast-desktop"
-version = "0.21.1-beta.10"
+name = "superwhatsapp-desktop"
+version = "0.21.1-beta.14"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
@@ -8,18 +8,18 @@ description = "SuperWhatsapp's Tauri shell (specs/tauri-ui.md)"
 publish = false
 
 [lib]
-name = "zapfast_desktop"
+name = "superwhatsapp_desktop"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [[bin]]
-name = "zapfast-desktop"
+name = "superwhatsapp-desktop"
 path = "src/main.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-zapfast = { path = "..", features = ["demo"] }
+superwhatsapp = { path = "..", features = ["demo"] }
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }

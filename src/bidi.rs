@@ -1844,7 +1844,7 @@ mod tests {
     fn install_fonts_with(ctx: &egui::Context, primary_rtl: bool) {
         // DejaVu, Liberation, and Arial stay ahead of the extra fallbacks so the
         // font that already satisfies these tests is unchanged when it is installed.
-        // `ZAPFAST_TEST_RTL_FONT` overrides the search.
+        // `SUPERWHATSAPP_TEST_RTL_FONT` overrides the search.
         const CANDIDATES: &[&str] = &[
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
             "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
@@ -1861,7 +1861,7 @@ mod tests {
             r"C:\Windows\Fonts\arial.ttf",
             r"C:\Windows\Fonts\tahoma.ttf",
         ];
-        let path = std::env::var_os("ZAPFAST_TEST_RTL_FONT")
+        let path = std::env::var_os("SUPERWHATSAPP_TEST_RTL_FONT")
             .map(std::path::PathBuf::from)
             .filter(|path| path.is_file())
             .or_else(|| {
@@ -1872,7 +1872,7 @@ mod tests {
             })
             .or_else(find_rtl_font)
             .expect(
-                "set ZAPFAST_TEST_RTL_FONT or install a Hebrew/Arabic-capable sans \
+                "set SUPERWHATSAPP_TEST_RTL_FONT or install a Hebrew/Arabic-capable sans \
                  (DejaVu, Liberation, FreeSans, Arial) for RTL layout tests",
             );
         let path = path.to_str().expect("utf-8 font path");

@@ -8,7 +8,7 @@ mod view;
 mod znga;
 
 use tauri::{Manager, State};
-use zapfast::model::{Action, ChatFilter, Page};
+use superwhatsapp::model::{Action, ChatFilter, Page};
 
 use engine::{Engine, Input, Start};
 
@@ -19,7 +19,7 @@ fn refresh(engine: State<'_, Engine>) {
 
 #[tauri::command]
 fn open_chat(engine: State<'_, Engine>, id: String) {
-    if id == zapfast::znga::thread::ZNGA_CHAT {
+    if id == superwhatsapp::znga::thread::ZNGA_CHAT {
         engine.send(Input::Edit(Box::new(znga::open)));
         return;
     }
@@ -159,10 +159,10 @@ fn go_to_message(engine: State<'_, Engine>, chat: String, message: String) {
 /// action the egui build changes, so the value is stored the same way.
 #[tauri::command]
 fn set_setting(engine: State<'_, Engine>, key: String, value: serde_json::Value) {
-    use zapfast::settings::{NotificationSound, ThemeChoice};
+    use superwhatsapp::settings::{NotificationSound, ThemeChoice};
     let flag = value.as_bool();
     let text = value.as_str().map(str::to_owned);
-    let global: Option<fn(&mut zapfast::settings::Settings) -> &mut bool> = match key.as_str() {
+    let global: Option<fn(&mut superwhatsapp::settings::Settings) -> &mut bool> = match key.as_str() {
         "enterSends" => Some(|s| &mut s.enter_sends),
         "notificationContent" => Some(|s| &mut s.notification_content),
         "groupSounds" => Some(|s| &mut s.group_sounds),
@@ -173,7 +173,7 @@ fn set_setting(engine: State<'_, Engine>, key: String, value: serde_json::Value)
         "pauseOtherMedia" => Some(|s| &mut s.pause_other_media),
         _ => None,
     };
-    let account: Option<fn(&mut zapfast::settings::AccountSettings) -> &mut bool> =
+    let account: Option<fn(&mut superwhatsapp::settings::AccountSettings) -> &mut bool> =
         match key.as_str() {
             "notifications" => Some(|s| &mut s.notifications),
             "autoDownload" => Some(|s| &mut s.auto_download),
@@ -203,9 +203,9 @@ fn set_setting(engine: State<'_, Engine>, key: String, value: serde_json::Value)
             _ => Input::Action(Action::ResetZoom),
         },
         ("autoLock", ..) => Input::Action(Action::SetAutoLock(match text.as_deref() {
-            Some("oneMinute") => zapfast::settings::AutoLock::OneMinute,
-            Some("oneHour") => zapfast::settings::AutoLock::OneHour,
-            _ => zapfast::settings::AutoLock::FifteenMinutes,
+            Some("oneMinute") => superwhatsapp::settings::AutoLock::OneMinute,
+            Some("oneHour") => superwhatsapp::settings::AutoLock::OneHour,
+            _ => superwhatsapp::settings::AutoLock::FifteenMinutes,
         })),
         ("proxy", ..) => Input::Action(Action::SetProxy(text.unwrap_or_default())),
         ("messageSound" | "mentionSound", ..) => {
@@ -272,7 +272,7 @@ fn app_lock_form(
     new: String,
     confirm: String,
 ) {
-    use zapfast::app_lock::{Form, FormMode};
+    use superwhatsapp::app_lock::{Form, FormMode};
     let mode = match mode.as_deref() {
         Some("set") => FormMode::Set,
         Some("change") => FormMode::Change,
@@ -320,7 +320,7 @@ fn set_blocked(engine: State<'_, Engine>, chat: String, blocked: bool) {
 /// headless core does not keep in step with the page.
 #[tauri::command]
 fn set_wallpaper_color(engine: State<'_, Engine>, color: String, dark: bool) {
-    let Ok(color) = serde_json::from_value::<zapfast::settings::WallpaperColor>(
+    let Ok(color) = serde_json::from_value::<superwhatsapp::settings::WallpaperColor>(
         serde_json::Value::String(color),
     ) else {
         return;

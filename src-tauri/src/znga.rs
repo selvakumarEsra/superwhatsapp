@@ -1,13 +1,13 @@
 //! Znga in the Tauri interface (specs/znga-chat.md): the Znga chat's row
 //! and messages, the composer's offer, Settings › Znga, and the commands
-//! the page calls for them. The logic lives in `zapfast::znga::chat`.
+//! the page calls for them. The logic lives in `superwhatsapp::znga::chat`.
 
 use serde::Serialize;
 use tauri::State;
-use zapfast::app::App;
-use zapfast::znga::config::{Engine, chat_key};
-use zapfast::znga::thread::{Card, ZNGA_CHAT};
-use zapfast::znga::{chat, keys};
+use superwhatsapp::app::App;
+use superwhatsapp::znga::config::{Engine, chat_key};
+use superwhatsapp::znga::thread::{Card, ZNGA_CHAT};
+use superwhatsapp::znga::{chat, keys};
 
 use crate::engine::{Engine as Core, Input};
 use crate::view::ChatRow;
@@ -330,7 +330,7 @@ pub fn settings(app: &App) -> ZngaSettings {
                 chat_title: p.chat_title.clone(),
                 text: p.text.clone(),
                 due: p.due,
-                owes_me: p.owes == zapfast::znga::promises::Owes::Me,
+                owes_me: p.owes == superwhatsapp::znga::promises::Owes::Me,
             })
             .collect(),
         audit: app
@@ -357,7 +357,7 @@ pub fn settings(app: &App) -> ZngaSettings {
 /// Opens the Znga chat, closing any other (REQ-ZCHAT-001.A6).
 pub fn open(app: &mut App) {
     if app.open_chat.is_some() {
-        app.actions.push(zapfast::model::Action::CloseChat);
+        app.actions.push(superwhatsapp::model::Action::CloseChat);
         app.open_chat = None;
     }
     app.znga.chat_open = true;
@@ -429,14 +429,14 @@ pub fn znga_key(engine: State<'_, Core>, key: Option<String>) {
 #[tauri::command]
 pub fn znga_test(engine: State<'_, Core>) {
     engine.send(Input::Edit(Box::new(|app| {
-        use zapfast::znga::provider::{Effort, Prompt, Turn};
+        use superwhatsapp::znga::provider::{Effort, Prompt, Turn};
         let prompt = Prompt {
             system: "Reply with the single word: ready".into(),
             turns: vec![Turn::user("Are you there?")],
             max_tokens: 1000,
             effort: Effort::Low,
         };
-        match app.znga.submit(prompt, zapfast::znga::Purpose::Test) {
+        match app.znga.submit(prompt, superwhatsapp::znga::Purpose::Test) {
             Ok(()) => app.znga.set_status("Testing…", false),
             Err(error) => app.znga.set_status(error, true),
         }
@@ -473,7 +473,7 @@ pub fn znga_fact(engine: State<'_, Core>, chat: String, text: String, forget: bo
             app.znga.people.forget(&account, &chat, &text);
         } else if !text.trim().is_empty() {
             let title = app.chat_title_of(&chat);
-            let now = zapfast::util::now();
+            let now = superwhatsapp::util::now();
             app.znga
                 .people
                 .add(&account, &chat, &title, &[text.trim().to_owned()], now);
@@ -485,7 +485,7 @@ pub fn znga_fact(engine: State<'_, Core>, chat: String, text: String, forget: bo
 #[tauri::command]
 pub fn znga_promise(engine: State<'_, Core>, chat: String, text: String, done: bool) {
     engine.send(Input::Edit(Box::new(move |app| {
-        use zapfast::znga::promises::State as PromiseState;
+        use superwhatsapp::znga::promises::State as PromiseState;
         let account = app.account().id.as_str().to_owned();
         let index = app
             .znga
@@ -518,7 +518,7 @@ pub fn set(app: &mut App, key: &str, value: &serde_json::Value) {
     let config = &mut app.znga.config;
     let hhmm = |t: &Option<String>| {
         t.clone()
-            .filter(|t| zapfast::znga::thread::parse_hhmm(t).is_some())
+            .filter(|t| superwhatsapp::znga::thread::parse_hhmm(t).is_some())
     };
     match (key, flag) {
         ("enabled", Some(on)) => config.enabled = on,
@@ -534,7 +534,7 @@ pub fn set(app: &mut App, key: &str, value: &serde_json::Value) {
         ("memory", Some(on)) => config.memory = on,
         ("selfChat", Some(on)) => {
             if on && !config.self_chat {
-                config.self_chat_since = zapfast::util::now();
+                config.self_chat_since = superwhatsapp::util::now();
             }
             config.self_chat = on;
         }

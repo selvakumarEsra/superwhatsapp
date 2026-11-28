@@ -2,9 +2,9 @@
 //! step (REQ-WEBUI-002). The page never holds the state itself.
 
 use serde::Serialize;
-use zapfast::app::App;
-use zapfast::backend::LinkStatus;
-use zapfast::model::{CallStatus, Chat, ChatFilter, Content, Delivery, Message, Page};
+use superwhatsapp::app::App;
+use superwhatsapp::backend::LinkStatus;
+use superwhatsapp::model::{CallStatus, Chat, ChatFilter, Content, Delivery, Message, Page};
 
 /// The most messages of the open chat sent at once.
 const WINDOW: usize = 300;
@@ -147,7 +147,7 @@ pub struct SettingsView {
 }
 
 /// A locale's code, as settings store it (`en`, `pt-BR`, …).
-fn code(locale: zapfast::i18n::Locale) -> String {
+fn code(locale: superwhatsapp::i18n::Locale) -> String {
     serde_json::to_value(locale)
         .ok()
         .and_then(|v| v.as_str().map(str::to_owned))
@@ -164,7 +164,7 @@ fn css(color: egui::Color32) -> String {
 }
 
 /// A custom theme's palette on the page's colour tokens (tokens.css).
-fn palette(p: &zapfast::theme::Palette) -> Vec<(&'static str, String)> {
+fn palette(p: &superwhatsapp::theme::Palette) -> Vec<(&'static str, String)> {
     vec![
         ("--sidebar-bg", css(p.window)),
         ("--panel-bg", css(p.panel)),
@@ -211,7 +211,7 @@ fn snake<T: Serialize>(value: &T) -> String {
         .unwrap_or_default()
 }
 
-fn swatches(colors: &[zapfast::settings::WallpaperColor]) -> Vec<Swatch> {
+fn swatches(colors: &[superwhatsapp::settings::WallpaperColor]) -> Vec<Swatch> {
     colors
         .iter()
         .map(|color| Swatch {
@@ -224,8 +224,8 @@ fn swatches(colors: &[zapfast::settings::WallpaperColor]) -> Vec<Swatch> {
         .collect()
 }
 
-fn sound(sound: &zapfast::settings::NotificationSound) -> &'static str {
-    use zapfast::settings::NotificationSound;
+fn sound(sound: &superwhatsapp::settings::NotificationSound) -> &'static str {
+    use superwhatsapp::settings::NotificationSound;
     match sound {
         NotificationSound::Receive => "receive",
         NotificationSound::Alert => "alert",
@@ -236,8 +236,8 @@ fn sound(sound: &zapfast::settings::NotificationSound) -> &'static str {
 }
 
 fn settings(app: &mut App) -> SettingsView {
-    use zapfast::app_lock::{FormError, FormMode};
-    use zapfast::settings::{AutoLock, ThemeChoice, WallpaperColor};
+    use superwhatsapp::app_lock::{FormError, FormMode};
+    use superwhatsapp::settings::{AutoLock, ThemeChoice, WallpaperColor};
     let lock_form = app.app_lock.form.as_ref().map(|form| LockForm {
         mode: match form.mode {
             FormMode::Set => "set",
@@ -314,7 +314,7 @@ fn settings(app: &mut App) -> SettingsView {
         phone: app
             .me
             .as_deref()
-            .and_then(zapfast::model::phone_of)
+            .and_then(superwhatsapp::model::phone_of)
             .map(|digits| format!("+{digits}")),
         version: env!("CARGO_PKG_VERSION"),
         wallpaper_light: snake(&app.settings.wallpaper_color),
@@ -338,7 +338,7 @@ fn settings(app: &mut App) -> SettingsView {
         palette: custom_theme.is_some().then(|| palette(&app.palette)),
         locale: code(app.locale),
         language: app.settings.interface_language.map(code),
-        languages: zapfast::i18n::Locale::ALL
+        languages: superwhatsapp::i18n::Locale::ALL
             .iter()
             .map(|l| (code(*l), l.label()))
             .collect(),
@@ -611,7 +611,7 @@ fn message(app: &App, group: bool, message: &Message) -> Msg {
 }
 
 pub fn build(app: &mut App) -> State {
-    let now = zapfast::util::now();
+    let now = superwhatsapp::util::now();
     let link = match &app.link {
         LinkStatus::Starting => Link::Starting,
         LinkStatus::Unlinked { qr, pair_code, .. } => Link::Unlinked {
@@ -629,7 +629,7 @@ pub fn build(app: &mut App) -> State {
         },
     };
     if app.app_lock.is_locked() {
-        use zapfast::app_lock::Forgetting;
+        use superwhatsapp::app_lock::Forgetting;
         let lock = LockView {
             wrong: app.app_lock.wrong,
             wait: app.app_lock.wait_left().map(|left| left.as_secs() + 1),
@@ -690,7 +690,7 @@ pub fn build(app: &mut App) -> State {
                 )
             })
             .unwrap_or_default();
-        let znga_tools = zapfast::znga::chat::tools_for(app, &id);
+        let znga_tools = superwhatsapp::znga::chat::tools_for(app, &id);
         Some(Open {
             id,
             title,
@@ -713,7 +713,7 @@ pub fn build(app: &mut App) -> State {
         "chats"
     };
     let starred = if app.show_starred {
-        let rows: Vec<zapfast::archive::Starred> = app.starred.clone();
+        let rows: Vec<superwhatsapp::archive::Starred> = app.starred.clone();
         rows.iter()
             .map(|row| {
                 let chat = app.chat(&row.message.chat).cloned();
@@ -799,7 +799,7 @@ fn info(app: &mut App, id: &str, now: i64) -> Info {
         .unwrap_or_else(|| Chat::new(id.to_owned(), app.display_name(id)));
     let ours: Vec<String> = app.our_ids().into_iter().map(str::to_owned).collect();
     let ours_ref: Vec<&str> = ours.iter().map(String::as_str).collect();
-    let roles = zapfast::group_admin::Roles::of(&chat);
+    let roles = superwhatsapp::group_admin::Roles::of(&chat);
     let members = if chat.is_group() {
         app.participant_list(&chat)
             .into_iter()

@@ -19,7 +19,7 @@ use crate::theme::{self, Icon, Palette};
 use crate::ui::widgets;
 
 /// The area's id, so the surface keeps its place in the layer order.
-const SURFACE: &str = "zapfast-call-surface";
+const SURFACE: &str = "superwhatsapp-call-surface";
 /// Padding between the window edge and everything the surface draws.
 const PADDING: f32 = 24.0;
 /// The round controls along the bottom.
@@ -181,7 +181,7 @@ fn live(
         let texture = call_texture(
             ui,
             &mut app.call_remote_texture,
-            "zapfast-call-remote",
+            "superwhatsapp-call-remote",
             image,
         );
         egui::Image::new((texture, at.size())).paint_at(ui, at);
@@ -341,7 +341,7 @@ fn own_preview(ui: &mut egui::Ui, app: &mut App, call: &CallUpdate, palette: &Pa
         let texture = call_texture(
             ui,
             &mut app.call_local_texture,
-            "zapfast-call-local",
+            "superwhatsapp-call-local",
             &image,
         );
         egui::Image::new((texture, size))
@@ -1027,7 +1027,7 @@ fn group_live(
             {
                 Some(image) => {
                     let mut kept = app.call_member_textures.remove(&person.id);
-                    let texture = call_texture(ui, &mut kept, "zapfast-call-member", &image);
+                    let texture = call_texture(ui, &mut kept, "superwhatsapp-call-member", &image);
                     if let Some(kept) = kept {
                         app.call_member_textures.insert(person.id.clone(), kept);
                     }
@@ -1041,7 +1041,7 @@ fn group_live(
                 let texture = call_texture(
                     ui,
                     &mut app.call_local_texture,
-                    "zapfast-call-local",
+                    "superwhatsapp-call-local",
                     &image,
                 );
                 video_tile(ui, &you, texture, image_size(&image), rect);

@@ -31,7 +31,7 @@ const roundButton = {
 };
 
 /** Which headings are folded, kept on this computer. */
-const FOLDS = "zapfast.chatList.folded";
+const FOLDS = "superwhatsapp.chatList.folded";
 function readFolds(): string[] {
   try {
     const value = JSON.parse(localStorage.getItem(FOLDS) ?? "[]");
