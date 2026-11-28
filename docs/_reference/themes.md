@@ -10,9 +10,9 @@ A theme is a small JSON file in the `themes` folder beside `settings.json`:
 
 | Platform | Themes folder |
 | --- | --- |
-| Linux | `~/.config/superwhatsapp/themes/` |
-| macOS | `~/Library/Application Support/cc.superwhatsapp/themes/` |
-| Windows | `%APPDATA%\cc\superwhatsapp\config\themes\` |
+| Linux | `~/.config/zapfast/themes/` |
+| macOS | `~/Library/Application Support/me.paolino.zapfast/themes/` |
+| Windows | `%APPDATA%\paolino\zapfast\config\themes\` |
 
 The quickest way there is **Settings → Appearance → Open themes folder**,
 which creates the folder if needed. Each file shows up in the Theme picker

@@ -1,13 +1,13 @@
 //! Znga in the Tauri interface (specs/znga-chat.md): the Znga chat's row
 //! and messages, the composer's offer, Settings › Znga, and the commands
-//! the page calls for them. The logic lives in `superwhatsapp::znga::chat`.
+//! the page calls for them. The logic lives in `zapfast::znga::chat`.
 
 use serde::Serialize;
-use superwhatsapp::app::App;
-use superwhatsapp::znga::config::{Engine, chat_key};
-use superwhatsapp::znga::thread::{Card, ZNGA_CHAT};
-use superwhatsapp::znga::{chat, keys};
 use tauri::State;
+use zapfast::app::App;
+use zapfast::znga::config::{Engine, chat_key};
+use zapfast::znga::thread::{Card, ZNGA_CHAT};
+use zapfast::znga::{chat, keys};
 
 use crate::engine::{Engine as Core, Input};
 use crate::view::ChatRow;
@@ -20,28 +20,6 @@ pub struct ZngaChat {
     pub writing: Option<String>,
     /// A question waits for the person's pick.
     pub asking: bool,
-    /// The chats an answer may be forwarded to (REQ-ZANS-003.A4).
-    pub forward_to: Vec<ZLink>,
-}
-
-/// A chat an answer names or may go to: (id, title).
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct ZLink {
-    pub id: String,
-    pub title: String,
-}
-
-/// The translation popup beside one message (REQ-ZANS-004).
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ZTranslation {
-    pub chat: String,
-    pub message: String,
-    /// pending, done or failed.
-    pub state: &'static str,
-    pub text: String,
-    /// The language it came from, when Znga said.
-    pub from: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -53,8 +31,6 @@ pub struct ZEntry {
     pub text: String,
     pub unasked: bool,
     pub cards: Vec<ZCard>,
-    /// Chats the answer names by their exact title (REQ-ZANS-001.A2).
-    pub chats: Vec<ZLink>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -68,8 +44,6 @@ pub struct ZCard {
     pub actions: Vec<ZAction>,
     /// What happened once acted on; the buttons are then disabled.
     pub outcome: Option<String>,
-    /// A cited message's number in the answer, `[n]` (REQ-ZANS-001).
-    pub n: Option<usize>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -103,84 +77,6 @@ pub struct ZPromise {
     pub text: String,
     pub due: Option<i64>,
     pub owes_me: bool,
-}
-
-/// One value in a profile (REQ-ZPROF-001).
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ZValue {
-    pub text: String,
-    pub confirmed: bool,
-    pub sensitive: bool,
-}
-
-/// One field of a profile, with its values (none when unknown).
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ZField {
-    pub key: &'static str,
-    pub label: &'static str,
-    pub single: bool,
-    /// Computed on this computer; the person cannot edit it.
-    pub local: bool,
-    pub values: Vec<ZValue>,
-}
-
-/// A group member in the profile's analytics (REQ-ZPROF-004).
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ZActive {
-    pub id: String,
-    pub name: String,
-    pub count: u32,
-    pub former: bool,
-    pub mood: Option<String>,
-    /// "up", "down", "same" or "".
-    pub trend: &'static str,
-}
-
-/// "Znga knows" in the info panel (REQ-ZPROF-007).
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ZProfile {
-    pub group: bool,
-    pub fields: Vec<ZField>,
-    /// Facts from before profiles (REQ-ZPROF-001.A1).
-    pub facts: Vec<String>,
-    pub active: Vec<ZActive>,
-    pub mood_trend: &'static str,
-    /// Unix seconds of the last update; zero when never learned.
-    pub learned_at: i64,
-    pub backfilled: bool,
-    /// An update or history read for this chat is under way.
-    pub learning: bool,
-}
-
-/// A row in Settings › Znga › People.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ZPerson {
-    pub id: String,
-    pub title: String,
-    pub group: bool,
-    /// How many values are known.
-    pub known: usize,
-    pub relation: Option<String>,
-    /// Has a chat the info panel can open.
-    pub chat: bool,
-}
-
-/// The one-time history read's progress (REQ-ZPROF-002).
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ZBackfill {
-    /// "idle", "running", "paused", "waiting" or "done".
-    pub state: &'static str,
-    pub done: usize,
-    pub total: usize,
-    pub reason: Option<String>,
-    pub calls_today: u32,
-    pub daily_calls: u32,
 }
 
 /// One Sentinel decision: never message text (REQ-ZCHAT-007.A3).
@@ -227,10 +123,6 @@ pub struct ZngaSettings {
     pub include_groups: bool,
     pub promises: bool,
     pub memory: bool,
-    pub profiles: bool,
-    pub profile_questions: bool,
-    pub people: Vec<ZPerson>,
-    pub backfill: ZBackfill,
     pub checkin_days: u32,
     pub your_name: String,
     pub voice_notes: String,
@@ -274,54 +166,7 @@ fn card(card: &Card) -> ZCard {
             .map(|(id, label)| ZAction { id, label })
             .collect(),
         outcome: None,
-        n: match card {
-            Card::Cite { n, .. } => Some(*n),
-            _ => None,
-        },
     }
-}
-
-/// The chats `text` names by their whole title, longest first, so "Ada
-/// Lovelace" wins over "Ada".
-fn named_chats(text: &str, chats: &[ZLink]) -> Vec<ZLink> {
-    let bounded = |at: usize, len: usize| {
-        let before = text[..at].chars().next_back();
-        let after = text[at + len..].chars().next();
-        !before.is_some_and(char::is_alphanumeric) && !after.is_some_and(char::is_alphanumeric)
-    };
-    let mut found: Vec<ZLink> = chats
-        .iter()
-        .filter(|chat| chat.title.chars().count() >= 3)
-        .filter(|chat| {
-            text.match_indices(chat.title.as_str())
-                .any(|(at, title)| bounded(at, title.len()))
-        })
-        .cloned()
-        .collect();
-    found.sort_by_key(|chat| std::cmp::Reverse(chat.title.len()));
-    found.truncate(20);
-    found
-}
-
-/// The open translation popup, if any.
-pub fn translation_view(app: &App) -> Option<ZTranslation> {
-    use superwhatsapp::znga::translate::State;
-    let ((account, chat, message), state) = app.znga.translations.shown()?;
-    if account != app.account().id.as_str() || app.open_chat.as_deref() != Some(chat.as_str()) {
-        return None;
-    }
-    let (state, text, from) = match state {
-        State::Pending => ("pending", String::new(), String::new()),
-        State::Done { text, from } => ("done", text.clone(), from.clone()),
-        State::Failed(error) => ("failed", error.clone(), String::new()),
-    };
-    Some(ZTranslation {
-        chat: chat.clone(),
-        message: message.clone(),
-        state,
-        text,
-        from,
-    })
 }
 
 /// The Znga row at the top of the chat list, with Znga on
@@ -349,19 +194,12 @@ pub fn row(app: &App) -> Option<ChatRow> {
             from_me: last.is_some_and(|e| e.from_person),
             sender: None,
             text: last
-                // Without formatting marks (REQ-ZANS-002).
-                .map(|e| {
-                    superwhatsapp::znga::thread::plain(&e.text)
-                        .lines()
-                        .next()
-                        .unwrap_or("")
-                        .to_owned()
-                })
+                .map(|e| e.text.lines().next().unwrap_or("").to_owned())
                 .unwrap_or_else(|| "Ask me anything about your chats.".into()),
             status: "none",
         }),
         stamp: last.map_or_else(String::new, |e| {
-            superwhatsapp::util::chat_stamp(app.locale, e.at)
+            zapfast::util::chat_stamp(app.locale, e.at)
         }),
         typing: None,
         draft: None,
@@ -378,10 +216,6 @@ pub fn chat_view(app: &mut App) -> Option<ZngaChat> {
         return None;
     }
     let writing = chat::writing(app);
-    let forward_to: Vec<ZLink> = chat::forward_targets(app)
-        .into_iter()
-        .map(|(id, title)| ZLink { id, title })
-        .collect();
     let account = app.account().id.as_str().to_owned();
     let thread = app.znga.threads.entry(account).or_default();
     let entries = thread
@@ -393,11 +227,6 @@ pub fn chat_view(app: &mut App) -> Option<ZngaChat> {
             from_me: entry.from_person,
             text: entry.text.clone(),
             unasked: entry.unasked,
-            chats: if entry.from_person {
-                Vec::new()
-            } else {
-                named_chats(&entry.text, &forward_to)
-            },
             cards: entry
                 .items
                 .iter()
@@ -412,7 +241,6 @@ pub fn chat_view(app: &mut App) -> Option<ZngaChat> {
         entries,
         writing,
         asking: thread.question.is_some(),
-        forward_to,
     })
 }
 
@@ -470,10 +298,6 @@ pub fn settings(app: &App) -> ZngaSettings {
         include_groups: config.include_groups,
         promises: config.promises,
         memory: config.memory,
-        profiles: config.profiles,
-        profile_questions: config.profile_questions,
-        people: people(app, &account),
-        backfill: backfill_view(app),
         checkin_days: config.checkin_days,
         your_name: if persona.your_name.is_empty() {
             config.your_name.clone()
@@ -512,7 +336,7 @@ pub fn settings(app: &App) -> ZngaSettings {
                 chat_title: p.chat_title.clone(),
                 text: p.text.clone(),
                 due: p.due,
-                owes_me: p.owes == superwhatsapp::znga::promises::Owes::Me,
+                owes_me: p.owes == zapfast::znga::promises::Owes::Me,
             })
             .collect(),
         audit: app
@@ -533,126 +357,13 @@ pub fn settings(app: &App) -> ZngaSettings {
     }
 }
 
-fn people(app: &App, account: &str) -> Vec<ZPerson> {
-    use superwhatsapp::znga::learn;
-    app.znga
-        .profiles
-        .for_account(account)
-        .into_iter()
-        .filter(|p| learn::may_see(app, account, &p.id))
-        .map(|p| ZPerson {
-            id: p.id.clone(),
-            title: learn::title(app, account, &p.id),
-            group: p.group,
-            known: p.fields.values().map(Vec::len).sum::<usize>() + p.active.len().min(1),
-            relation: p.relation(),
-            chat: app.account().chats.iter().any(|c| c.id == p.id) || !p.group,
-        })
-        .collect()
-}
-
-fn backfill_view(app: &App) -> ZBackfill {
-    use superwhatsapp::znga::profiles::{BackfillState, DAILY_CALLS};
-    let backfill = &app.znga.backfill;
-    let (state, reason) = match &backfill.state {
-        BackfillState::Idle => ("idle", None),
-        BackfillState::Running => ("running", None),
-        BackfillState::Paused => ("paused", None),
-        BackfillState::Waiting(reason) => ("waiting", Some(reason.clone())),
-        BackfillState::Done => ("done", None),
-    };
-    ZBackfill {
-        state,
-        done: backfill.done,
-        total: backfill.total,
-        reason,
-        calls_today: app.znga.config.profile_calls,
-        daily_calls: DAILY_CALLS,
-    }
-}
-
-/// "Znga knows" for the info panel of `id`, when profiles are on and Znga
-/// may see it.
-pub fn profile_view(app: &App, id: &str) -> Option<ZProfile> {
-    use superwhatsapp::znga::learn;
-    use superwhatsapp::znga::profiles::{FIELDS, Profile};
-    if !learn::on(app) {
-        return None;
-    }
-    let account = app.account().id.as_str().to_owned();
-    if !learn::may_see(app, &account, id) {
-        return None;
-    }
-    let profile = app.znga.profiles.get(&account, id);
-    let group = app
-        .chat(id)
-        .map(|c| c.is_group())
-        .or(profile.map(|p| p.group))
-        .unwrap_or(false);
-    let empty = Profile::default();
-    let p = profile.unwrap_or(&empty);
-    let fields = FIELDS
-        .iter()
-        .filter(|f| if group { f.group } else { f.contact })
-        .map(|f| ZField {
-            key: f.key,
-            label: f.label,
-            single: f.single,
-            local: matches!(f.key, "replies" | "busy"),
-            values: p
-                .values(f.key)
-                .iter()
-                .map(|v| ZValue {
-                    text: v.text.clone(),
-                    confirmed: v.confirmed,
-                    sensitive: v.sensitive,
-                })
-                .collect(),
-        })
-        .collect();
-    let learning = app.znga.waiting_for(|purpose| {
-        matches!(purpose, superwhatsapp::znga::Purpose::Profile { account: a, chat, .. } if *a == account && chat == id)
-    }) || app
-        .znga
-        .backfill
-        .current
-        .as_ref()
-        .is_some_and(|(a, c)| *a == account && c == id);
-    Some(ZProfile {
-        group,
-        fields,
-        facts: app.znga.people.about(&account, id),
-        active: p
-            .active
-            .iter()
-            .map(|a| {
-                let mood = p.moods.get(&a.id);
-                ZActive {
-                    id: a.id.clone(),
-                    name: a.name.clone(),
-                    count: a.count,
-                    former: a.former,
-                    mood: mood.map(|m| m.now.clone()),
-                    trend: mood.map_or("", |m| Profile::trend(&m.now, &m.before)),
-                }
-            })
-            .collect(),
-        mood_trend: p
-            .first("mood")
-            .map_or("", |m| Profile::trend(&m.text, &p.mood_before)),
-        learned_at: p.learned_at,
-        backfilled: p.backfilled,
-        learning,
-    })
-}
-
 // ---------------------------------------------------------------------
 // Commands.
 
 /// Opens the Znga chat, closing any other (REQ-ZCHAT-001.A6).
 pub fn open(app: &mut App) {
     if app.open_chat.is_some() {
-        app.actions.push(superwhatsapp::model::Action::CloseChat);
+        app.actions.push(zapfast::model::Action::CloseChat);
         app.open_chat = None;
     }
     app.znga.chat_open = true;
@@ -661,29 +372,9 @@ pub fn open(app: &mut App) {
 }
 
 #[tauri::command]
-pub fn znga_send(engine: State<'_, Core>, text: String, quote: Option<String>) {
-    engine.send(Input::Edit(Box::new(move |app| match &quote {
-        Some(quote) => chat::reply_to(app, &text, quote),
-        None => chat::send_message(app, &text),
-    })));
-}
-
-/// Puts one of Znga's answers in a chat's composer (REQ-ZANS-003.A2).
-#[tauri::command]
-pub fn znga_forward(engine: State<'_, Core>, entry: u64, chat: String) {
+pub fn znga_send(engine: State<'_, Core>, text: String) {
     engine.send(Input::Edit(Box::new(move |app| {
-        chat::forward(app, entry, &chat);
-    })));
-}
-
-/// Opens, retries or closes a message's translation (REQ-ZANS-004).
-#[tauri::command]
-pub fn znga_translate(engine: State<'_, Core>, chat: String, message: String, op: String) {
-    use superwhatsapp::znga::translate;
-    engine.send(Input::Edit(Box::new(move |app| match op.as_str() {
-        "close" => translate::close(app),
-        "retry" => translate::request(app, &chat, &message, true),
-        _ => translate::request(app, &chat, &message, false),
+        chat::send_message(app, &text)
     })));
 }
 
@@ -744,14 +435,14 @@ pub fn znga_key(engine: State<'_, Core>, key: Option<String>) {
 #[tauri::command]
 pub fn znga_test(engine: State<'_, Core>) {
     engine.send(Input::Edit(Box::new(|app| {
-        use superwhatsapp::znga::provider::{Effort, Prompt, Turn};
+        use zapfast::znga::provider::{Effort, Prompt, Turn};
         let prompt = Prompt {
             system: "Reply with the single word: ready".into(),
             turns: vec![Turn::user("Are you there?")],
             max_tokens: 1000,
             effort: Effort::Low,
         };
-        match app.znga.submit(prompt, superwhatsapp::znga::Purpose::Test) {
+        match app.znga.submit(prompt, zapfast::znga::Purpose::Test) {
             Ok(()) => app.znga.set_status("Testing…", false),
             Err(error) => app.znga.set_status(error, true),
         }
@@ -788,68 +479,10 @@ pub fn znga_fact(engine: State<'_, Core>, chat: String, text: String, forget: bo
             app.znga.people.forget(&account, &chat, &text);
         } else if !text.trim().is_empty() {
             let title = app.chat_title_of(&chat);
-            let now = superwhatsapp::util::now();
+            let now = zapfast::util::now();
             app.znga
                 .people
                 .add(&account, &chat, &title, &[text.trim().to_owned()], now);
-        }
-    })));
-}
-
-/// Edits a profile from the info panel or Settings › Znga › People
-/// (REQ-ZPROF-007): `op` is "set", "confirm", "delete", "refresh",
-/// "learn" (from history), "count" (recount a group's members) or
-/// "forgetAll".
-#[tauri::command]
-pub fn znga_profile(engine: State<'_, Core>, chat: String, op: String, key: String, text: String) {
-    engine.send(Input::Edit(Box::new(move |app| {
-        profile_op(app, &chat, &op, &key, &text)
-    })));
-}
-
-pub fn profile_op(app: &mut App, chat: &str, op: &str, key: &str, text: &str) {
-    use superwhatsapp::znga::learn;
-    let account = app.account().id.as_str().to_owned();
-    if op == "forgetAll" {
-        learn::forget_all(app, &account);
-        return;
-    }
-    if !learn::on(app) || !learn::may_see(app, &account, chat) {
-        return;
-    }
-    let now = superwhatsapp::util::now();
-    let group = app.chat(chat).is_some_and(|c| c.is_group());
-    match op {
-        "set" => {
-            let title = learn::title(app, &account, chat);
-            app.znga
-                .profiles
-                .set(&account, chat, &title, group, key, text, now);
-        }
-        "confirm" => {
-            app.znga.profiles.confirm(&account, chat, key, text);
-        }
-        "delete" => {
-            app.znga.profiles.delete(&account, chat, key, text);
-        }
-        "refresh" => learn::refresh(app, &account, chat, false),
-        "learn" => learn::refresh(app, &account, chat, true),
-        "count" => learn::count_group(app, &account, chat),
-        _ => log::warn!("unknown profile operation {op}"),
-    }
-}
-
-/// The history read: "start", "pause", "resume" or "cancel".
-#[tauri::command]
-pub fn znga_backfill(engine: State<'_, Core>, op: String) {
-    engine.send(Input::Edit(Box::new(move |app| {
-        use superwhatsapp::znga::learn;
-        match op.as_str() {
-            "start" => learn::start_backfill(app),
-            "pause" => learn::pause_backfill(app, true),
-            "resume" => learn::pause_backfill(app, false),
-            "cancel" => learn::cancel_backfill(app),
-            _ => {}
         }
     })));
 }
@@ -858,7 +491,7 @@ pub fn znga_backfill(engine: State<'_, Core>, op: String) {
 #[tauri::command]
 pub fn znga_promise(engine: State<'_, Core>, chat: String, text: String, done: bool) {
     engine.send(Input::Edit(Box::new(move |app| {
-        use superwhatsapp::znga::promises::State as PromiseState;
+        use zapfast::znga::promises::State as PromiseState;
         let account = app.account().id.as_str().to_owned();
         let index = app
             .znga
@@ -891,7 +524,7 @@ pub fn set(app: &mut App, key: &str, value: &serde_json::Value) {
     let config = &mut app.znga.config;
     let hhmm = |t: &Option<String>| {
         t.clone()
-            .filter(|t| superwhatsapp::znga::thread::parse_hhmm(t).is_some())
+            .filter(|t| zapfast::znga::thread::parse_hhmm(t).is_some())
     };
     match (key, flag) {
         ("enabled", Some(on)) => config.enabled = on,
@@ -905,24 +538,9 @@ pub fn set(app: &mut App, key: &str, value: &serde_json::Value) {
         ("includeGroups", Some(on)) => config.include_groups = on,
         ("promises", Some(on)) => config.promises = on,
         ("memory", Some(on)) => config.memory = on,
-        ("profileQuestions", Some(on)) => config.profile_questions = on,
-        ("profiles", Some(on)) => {
-            let first = on && !config.profiles;
-            config.profiles = on;
-            if !on {
-                // Kept until the person forgets them (REQ-ZPROF-007).
-                app.znga.backfill.cancel();
-                app.znga.config.backfill_running = false;
-            }
-            app.znga.mark_dirty();
-            if first && !app.znga.config.backfill_running {
-                superwhatsapp::znga::learn::start_backfill(app);
-            }
-            return;
-        }
         ("selfChat", Some(on)) => {
             if on && !config.self_chat {
-                config.self_chat_since = superwhatsapp::util::now();
+                config.self_chat_since = zapfast::util::now();
             }
             config.self_chat = on;
         }

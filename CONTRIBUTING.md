@@ -27,7 +27,7 @@ Product boundaries and upstream responsibilities:
   scheduled, bulk or automatic replies. WhatsApp's terms forbid automated
   use and it bans accounts for it.
 
-The guide's [current limitations](https://selvakumaresra.github.io/superwhatsapp/what-is-superwhatsapp/#what-it-does-not-do-yet)
+The guide's [current limitations](https://zapfast.rocks/what-is-zapfast/#what-it-does-not-do-yet)
 describe what is implemented today, not permanent exclusions. Missing features,
 codec restrictions, and download limits do not by themselves make a report out
 of scope. Check the relevant code and reported version when a guide and a
@@ -114,7 +114,7 @@ cargo test --locked --all-targets --all-features
 RUSTDOCFLAGS='-D warnings' cargo doc --locked --all-features --no-deps
 ```
 
-Leave the translation template and catalogs (`superwhatsapp.pot` and the PO files)
+Leave the translation template and catalogs (`zapfast.pot` and the PO files)
 out of pull requests that add or change UI strings: the maintainer regenerates
 them on `main`, and regenerated catalogs bury the real change and conflict with
 every other pull request. Keep each translatable literal inside its own
@@ -124,7 +124,7 @@ itself edits its PO file and passes `.github/scripts/update-translations.sh
 the catalogs without gettext tools.
 
 Linux needs the development packages listed in
-[Getting started](https://selvakumaresra.github.io/superwhatsapp/getting-started/); `nix develop`
+[Getting started](https://zapfast.rocks/getting-started/); `nix develop`
 provides the complete development environment. When changing `Cargo.lock` or
 `flake.nix`, also verify `nix build` on a Nix host or wait for the Nix CI job.
 Passing CI is required, but does not replace review for correctness, product

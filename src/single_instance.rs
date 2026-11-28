@@ -83,26 +83,6 @@ fn slot(dir: &Path) -> fastframe_instance::Slot {
     fastframe_instance::Slot::at(dir, NAME)
 }
 
-/// [`acquire`], after asking any copy of an older install that still runs
-/// from its own folders (`previous`) to take `verb`. Such a copy keeps the
-/// archive open, so a new start never moves its folders away beneath it
-/// (REQ-SUPERWA-005).
-pub fn acquire_after_previous(
-    dir: &Path,
-    previous: &[std::path::PathBuf],
-    waker: &crate::backend::Waker,
-    verb: &str,
-) -> Outcome {
-    for old in previous.iter().filter(|old| old.as_path() != dir) {
-        match send(old, verb) {
-            Sent::NotRunning => {}
-            Sent::Taken => return Outcome::Surfaced,
-            Sent::Older | Sent::Failed(_) => return Outcome::Unanswered,
-        }
-    }
-    acquire(dir, waker, verb)
-}
-
 /// Becomes the running instance, or hands `verb` to the one already running.
 ///
 /// Whatever the running copy makes of `verb`, a launch that finds one never
@@ -313,7 +293,7 @@ fn listen_legacy(commands: Queue, waker: crate::backend::Waker) {
         }
     };
     let spawned = std::thread::Builder::new()
-        .name("superwhatsapp-legacy-instance".to_owned())
+        .name("zapfast-legacy-instance".to_owned())
         .spawn(move || serve_legacy(listener, &commands, &waker));
     if let Err(error) = spawned {
         log::debug!("cannot answer older launches: {error}");
@@ -600,7 +580,7 @@ mod tests {
         drop(first);
     }
 
-    /// `superwhatsapp quit` against a copy from before the verb: one that declines
+    /// `zapfast quit` against a copy from before the verb: one that declines
     /// it is left running and reported as older, and nothing new starts.
     #[test]
     fn a_copy_that_declines_quit_is_reported_as_older() {

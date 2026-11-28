@@ -2,7 +2,7 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use superwhatsapp::{app, backend, paths, settings, single_instance};
+use zapfast::{app, backend, paths, settings, single_instance};
 
 use clap::Parser;
 
@@ -41,9 +41,9 @@ struct Cli {
     demo_tour_events: Option<std::path::PathBuf>,
 
     /// Which tour to play: `launch` (41 seconds), `whats-new` (what 0.16
-    /// added, 86 seconds), `calls` (39 seconds; `SUPERWHATSAPP_DEMO_CALL_FEEDS`
+    /// added, 86 seconds), `calls` (39 seconds; `ZAPFAST_DEMO_CALL_FEEDS`
     /// puts video clips in its call tiles) or `whats-new-21` (what 0.21
-    /// added, 49 seconds). `SUPERWHATSAPP_DEMO_FONT=inter` draws any tour in the
+    /// added, 49 seconds). `ZAPFAST_DEMO_FONT=inter` draws any tour in the
     /// bundled Inter.
     #[cfg(feature = "demo")]
     #[arg(
@@ -51,7 +51,7 @@ struct Cli {
         requires = "demo_tour",
         value_name = "NAME",
         default_value = "launch",
-        value_parser = clap::builder::PossibleValuesParser::new(superwhatsapp::demo::tour::Script::NAMES),
+        value_parser = clap::builder::PossibleValuesParser::new(zapfast::demo::tour::Script::NAMES),
     )]
     demo_tour_script: String,
 
@@ -158,10 +158,25 @@ fn control(command: &Control, sent: single_instance::Sent) -> (i32, Option<Strin
     }
 }
 
-/// Default log filter, used when `RUST_LOG` is unset
-/// (shared with the Tauri build).
+/// Default log filter, used when `RUST_LOG` is unset.
+///
+/// `fastframe_fonts` logs, once at startup, which installed face draws each
+/// script Inter lacks, which is what a report of odd Arabic or CJK text
+/// needs first.
+///
+/// `arboard` warns on every clipboard open when a Wayland compositor has no
+/// data-control protocol (GNOME, mutter) and it falls back to X11, which works
+/// there. Quiet that one target so it does not fill the log file, without
+/// hiding real clipboard failures (`arboard=error`) or any other warning.
 fn default_log_filter(verbose: bool) -> &'static str {
-    superwhatsapp::diagnostics::default_log_filter(verbose)
+    if verbose {
+        "info,zapfast=debug,whatsapp_rust=debug,wacore=debug"
+    } else {
+        // env_logger treats '/' as a message-regex separator, so it cannot
+        // select the literal target Client/AppState here. Enable Client INFO;
+        // the protocol redactor reduces every such line to a fixed category.
+        "warn,zapfast=info,fastframe_fonts=info,Client=info,arboard=error"
+    }
 }
 
 /// Deletes a directory tree when dropped.
@@ -189,7 +204,7 @@ fn run() -> eframe::Result<()> {
     // First, before parsing the command line or touching any state: run the
     // update helper when asked (`--apply-update <job>`, then exit), and take
     // `--update-receipt` and `--update-error` off the command line.
-    let launch = fastframe_update::intercept(&superwhatsapp::updates::CONFIG);
+    let launch = fastframe_update::intercept(&zapfast::updates::CONFIG);
     let cli = Cli::parse_from(&launch.arguments);
     let discovered = paths::AppDirs::discover();
     // A control command only talks to the running copy: whatever the answer,
@@ -210,13 +225,13 @@ fn run() -> eframe::Result<()> {
     // A number, a `wa.me` link, or the `whatsapp://` URI the desktop entry
     // passes. Read before the single-instance guard, because it changes the
     // verb: a running copy is asked to open the chat instead of to show.
-    let target = cli.target.as_deref().and_then(superwhatsapp::target::parse);
+    let target = cli.target.as_deref().and_then(zapfast::target::parse);
     // A group invite link names a group, not a number: it opens the invite
     // dialog instead of a chat.
     let invite = cli
         .target
         .as_deref()
-        .and_then(superwhatsapp::safety::group_invite_code);
+        .and_then(zapfast::safety::group_invite_code);
     if let Some(argument) = cli.target.as_deref()
         && target.is_none()
         && invite.is_none()
@@ -240,12 +255,7 @@ fn run() -> eframe::Result<()> {
             (None, None) if cli.start_hidden => "ping".to_owned(),
             (None, None) => "show".to_owned(),
         };
-        match single_instance::acquire_after_previous(
-            &discovered.runtime,
-            &paths::AppDirs::previous_runtimes(),
-            &waker,
-            &verb,
-        ) {
+        match single_instance::acquire(&discovered.runtime, &waker, &verb) {
             single_instance::Outcome::Only(guard) => Some(guard),
             single_instance::Outcome::Surfaced
                 if cli.start_hidden && target.is_none() && invite.is_none() =>
@@ -284,7 +294,7 @@ fn run() -> eframe::Result<()> {
     // later real launch from adopting the existing FastsApp session.
     let demo_root = demo.then(|| {
         std::env::temp_dir().join(format!(
-            "superwhatsapp-demo-{}-{}",
+            "zapfast-demo-{}-{}",
             std::process::id(),
             jiff::Timestamp::now().as_millisecond(),
         ))
@@ -303,7 +313,7 @@ fn run() -> eframe::Result<()> {
     // directories have been created and secured successfully.
     dirs.ensure()
         .map_err(|error| eframe::Error::AppCreation(error.into()))?;
-    let logging = fastframe_log::Logging::new("superwhatsapp", env!("CARGO_PKG_VERSION"))
+    let logging = fastframe_log::Logging::new("zapfast", env!("CARGO_PKG_VERSION"))
         .filter(default_filter)
         .panic_log(dirs.panic_log())
         .redact(redact_protocol);
@@ -365,29 +375,27 @@ fn run() -> eframe::Result<()> {
     // The first launch owns the slot, so no verb reached a running copy and
     // the chat is opened here. The app drains its queue after the frame.
     if let Some(request) = &target {
-        app.actions.push(superwhatsapp::model::Action::StartChat {
+        app.actions.push(zapfast::model::Action::StartChat {
             name: request.display_name(),
             id: request.chat.clone(),
             dismiss_dialog: true,
         });
         if let Some(text) = &request.text {
-            app.actions
-                .push(superwhatsapp::model::Action::PrefillComposer {
-                    chat: request.chat.clone(),
-                    text: text.clone(),
-                });
+            app.actions.push(zapfast::model::Action::PrefillComposer {
+                chat: request.chat.clone(),
+                text: text.clone(),
+            });
         }
     }
     if let Some(code) = &invite {
-        app.actions
-            .push(superwhatsapp::model::Action::OpenUrl(format!(
-                "https://chat.whatsapp.com/{code}"
-            )));
+        app.actions.push(zapfast::model::Action::OpenUrl(format!(
+            "https://chat.whatsapp.com/{code}"
+        )));
     }
     #[cfg(feature = "demo")]
     if demo {
-        superwhatsapp::demo::populate(&mut app);
-        superwhatsapp::demo::apply_flags(&mut app, cli.demo_page.as_deref());
+        zapfast::demo::populate(&mut app);
+        zapfast::demo::apply_flags(&mut app, cli.demo_page.as_deref());
         if cli.demo_tour {
             tour_script(&cli.demo_tour_script).prepare(&mut app);
         }
@@ -432,12 +440,12 @@ fn run() -> eframe::Result<()> {
             // Decided as each window is made: it cannot become transparent
             // later.
             let transparent = lease.peek(|app: &app::App| {
-                superwhatsapp::backdrop::transparent_window(
+                zapfast::backdrop::transparent_window(
                     app.palette.vibrant(),
                     app.palette.window.a() < 255,
                 )
             });
-            superwhatsapp::backdrop::set_window_transparent(transparent);
+            zapfast::backdrop::set_window_transparent(transparent);
             let geometry = if demo_persistence.is_some() {
                 fastframe_shell::window::Geometry::default()
             } else {
@@ -447,13 +455,13 @@ fn run() -> eframe::Result<()> {
             let shot = shot.clone();
             #[cfg(feature = "demo")]
             let tour = cli.demo_tour.then(|| {
-                superwhatsapp::demo::tour::Tour::scripted(
+                zapfast::demo::tour::Tour::scripted(
                     tour_script(&cli.demo_tour_script),
                     cli.demo_tour_delay.map(std::time::Duration::from_millis),
                     cli.demo_tour_events.clone(),
                     cli.demo_tour_frames
                         .clone()
-                        .map(|dir| superwhatsapp::demo::tour::Capture {
+                        .map(|dir| zapfast::demo::tour::Capture {
                             dir,
                             fps: cli.demo_fps.unwrap_or(30),
                         }),
@@ -475,10 +483,10 @@ fn run() -> eframe::Result<()> {
                     // tests call too: they must never start a browser.
                     #[cfg(all(unix, not(target_os = "macos")))]
                     cc.egui_ctx
-                        .add_plugin(superwhatsapp::opener::DetachedLinks::default());
+                        .add_plugin(zapfast::opener::DetachedLinks::default());
                     #[cfg(feature = "demo")]
                     if cli.demo_macos {
-                        superwhatsapp::theme::preview_macos(&cc.egui_ctx);
+                        zapfast::theme::preview_macos(&cc.egui_ctx);
                     }
                     Ok(Box::new(Shell {
                         app,
@@ -563,12 +571,15 @@ fn startup_failure_dialog(error: &eframe::Error) {
 }
 
 /// Summarises the WhatsApp library's lines, which can quote protocol
-/// payloads, into fixed categories (shared with the Tauri build).
+/// payloads, into fixed categories.
 fn redact_protocol(
     record: &log::Record<'_>,
     message: &str,
 ) -> Option<std::borrow::Cow<'static, str>> {
-    superwhatsapp::diagnostics::redact_protocol(record, message)
+    use zapfast::diagnostics::{is_protocol_target, protocol_summary};
+    (is_protocol_target(record.target())
+        || is_protocol_target(record.module_path().unwrap_or_default()))
+    .then(|| protocol_summary(message))
 }
 
 /// Whether the first window starts in the tray.
@@ -591,8 +602,8 @@ fn demo_size_arg() -> Option<[f32; 2]> {
 
 /// The tour `--demo-tour-script` names; clap has already checked the name.
 #[cfg(feature = "demo")]
-fn tour_script(name: &str) -> superwhatsapp::demo::tour::Script {
-    superwhatsapp::demo::tour::Script::from_name(name).unwrap_or_default()
+fn tour_script(name: &str) -> zapfast::demo::tour::Script {
+    zapfast::demo::tour::Script::from_name(name).unwrap_or_default()
 }
 
 fn native_options(
@@ -609,7 +620,7 @@ fn native_options(
             "SuperWhatsapp"
         })
         .with_app_id(if demo {
-            "superwhatsapp-demo".to_owned()
+            "zapfast-demo".to_owned()
         } else {
             fastframe_desktop::desktop_entry("superwhatsapp")
         });
@@ -662,11 +673,11 @@ struct Shell {
     app: fastframe_shell::Held<app::App>,
     /// This window's unread overlay on its taskbar button.
     #[cfg(target_os = "windows")]
-    taskbar: superwhatsapp::notify::Taskbar,
+    taskbar: zapfast::notify::Taskbar,
     #[cfg(feature = "demo")]
     shot: Option<Shot>,
     #[cfg(feature = "demo")]
-    tour: Option<superwhatsapp::demo::tour::Tour>,
+    tour: Option<zapfast::demo::tour::Tour>,
     #[cfg(feature = "demo")]
     hover: Option<egui::Pos2>,
     #[cfg(feature = "demo")]
@@ -724,10 +735,10 @@ impl eframe::App for Shell {
     /// What shows where the interface paints nothing: the window colour, or
     /// nothing while the window has a material, so it shows.
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        if superwhatsapp::backdrop::active() {
+        if zapfast::backdrop::active() {
             [0.0; 4]
         } else {
-            superwhatsapp::backdrop::clear_color(self.app.palette.window).to_normalized_gamma_f32()
+            zapfast::backdrop::clear_color(self.app.palette.window).to_normalized_gamma_f32()
         }
     }
 
@@ -788,7 +799,7 @@ impl Shell {
             && let Some(at) = self.taskbar.show(
                 window,
                 count,
-                &superwhatsapp::notify::badge_description(count, app.locale),
+                &zapfast::notify::badge_description(count, app.locale),
             )
         {
             ctx.request_repaint_after(at.saturating_duration_since(std::time::Instant::now()));
@@ -796,18 +807,15 @@ impl Shell {
         // The chat header is 60 points and zooms; the linking screen keeps
         // AppKit's own 28-point strip.
         // Over the rail alone the lights have a 32-point strip of their own.
-        let title_bar = if superwhatsapp::ui::macos_title_strip(app, ctx) {
-            superwhatsapp::ui::title_strip_height(ctx)
+        let title_bar = if zapfast::ui::macos_title_strip(app, ctx) {
+            zapfast::ui::title_strip_height(ctx)
         } else if app.is_linked() && !app.app_lock.is_locked() {
-            superwhatsapp::ui::appkit_bar_height(
-                superwhatsapp::theme::TOP_BAR_HEIGHT,
-                ctx.zoom_factor(),
-            )
+            zapfast::ui::appkit_bar_height(zapfast::theme::TOP_BAR_HEIGHT, ctx.zoom_factor())
         } else {
             28.0 / ctx.zoom_factor()
         };
         fastframe_titlebar::align_traffic_lights(frame, ctx, title_bar);
-        superwhatsapp::backdrop::apply(frame, &app.palette, self.transparent);
+        zapfast::backdrop::apply(frame, &app.palette, self.transparent);
         #[cfg(feature = "demo")]
         {
             // Keep requesting the configured screenshot size until it is applied.
@@ -827,7 +835,7 @@ impl Shell {
         let app = &mut *self.app;
         #[cfg(feature = "demo")]
         if std::mem::take(&mut self.open_phone_menu) {
-            egui::Popup::open_id(ui.ctx(), superwhatsapp::demo::phone_menu_popup_id());
+            egui::Popup::open_id(ui.ctx(), zapfast::demo::phone_menu_popup_id());
         }
         app.frame_ui(ui);
         #[cfg(target_os = "macos")]
@@ -857,7 +865,7 @@ impl Shell {
             Some(tour) => tour.observe(app, ui.ctx()),
             // A demo without a tour still answers the interface's commands
             // itself, since there is no backend to answer them.
-            None => superwhatsapp::demo::tour::respond(app),
+            None => zapfast::demo::tour::respond(app),
         }
     }
 }
@@ -873,7 +881,7 @@ fn app_icon() -> egui::IconData {
     {
         const SIZE: usize = 128;
         egui::IconData {
-            rgba: superwhatsapp::util::app_icon_rgba(SIZE),
+            rgba: zapfast::util::app_icon_rgba(SIZE),
             width: SIZE as u32,
             height: SIZE as u32,
         }
@@ -893,8 +901,8 @@ mod target_cli_tests {
             "https://wa.me/20123456789",
             "+20123456789",
         ] {
-            let cli = Cli::try_parse_from(["superwhatsapp", argument]).unwrap();
-            let request = superwhatsapp::target::parse(cli.target.as_deref().unwrap()).unwrap();
+            let cli = Cli::try_parse_from(["zapfast", argument]).unwrap();
+            let request = zapfast::target::parse(cli.target.as_deref().unwrap()).unwrap();
             assert_eq!(request.chat, "20123456789@s.whatsapp.net", "{argument}");
             assert_eq!(request.text, None, "{argument}");
         }
@@ -908,11 +916,11 @@ mod target_cli_tests {
             "whatsapp://chat/?code=KqTP1zA4tFJLolS2usUzpA",
             "whatsapp://chat?code=KqTP1zA4tFJLolS2usUzpA",
         ] {
-            let cli = Cli::try_parse_from(["superwhatsapp", argument]).unwrap();
+            let cli = Cli::try_parse_from(["zapfast", argument]).unwrap();
             assert_eq!(
                 cli.target
                     .as_deref()
-                    .and_then(superwhatsapp::safety::group_invite_code),
+                    .and_then(zapfast::safety::group_invite_code),
                 Some("KqTP1zA4tFJLolS2usUzpA".into()),
                 "{argument}"
             );
@@ -924,17 +932,17 @@ mod target_cli_tests {
     #[test]
     fn a_target_argument_carries_its_template() {
         let cli = Cli::try_parse_from([
-            "superwhatsapp",
+            "zapfast",
             "whatsapp://send?phone=20123456789&text=Hi%20there",
         ])
         .unwrap();
-        let request = superwhatsapp::target::parse(cli.target.as_deref().unwrap()).unwrap();
+        let request = zapfast::target::parse(cli.target.as_deref().unwrap()).unwrap();
         assert_eq!(request.text.as_deref(), Some("Hi there"));
         // What the second launch sends is what the running copy reads back.
         let verb = request.verb();
         assert!(verb.starts_with("open 20123456789@s.whatsapp.net\t"));
         assert_eq!(
-            superwhatsapp::target::Request::from_verb(verb.strip_prefix("open ").unwrap()),
+            zapfast::target::Request::from_verb(verb.strip_prefix("open ").unwrap()),
             Some(request)
         );
     }
@@ -945,13 +953,13 @@ mod target_cli_tests {
     #[test]
     fn the_subcommand_and_the_target_stay_apart() {
         assert!(matches!(
-            Cli::try_parse_from(["superwhatsapp", "reload-themes"])
+            Cli::try_parse_from(["zapfast", "reload-themes"])
                 .unwrap()
                 .command,
             Some(Control::ReloadThemes)
         ));
-        assert!(Cli::try_parse_from(["superwhatsapp", "reload-themes", "20123456789"]).is_err());
-        let cli = Cli::try_parse_from(["superwhatsapp", "wa.me/20123456789"]).unwrap();
+        assert!(Cli::try_parse_from(["zapfast", "reload-themes", "20123456789"]).is_err());
+        let cli = Cli::try_parse_from(["zapfast", "wa.me/20123456789"]).unwrap();
         assert!(cli.command.is_none());
         assert_eq!(cli.target.as_deref(), Some("wa.me/20123456789"));
     }
@@ -959,11 +967,11 @@ mod target_cli_tests {
     /// `quit` is the subcommand, not a chat to open, and takes no chat.
     #[test]
     fn quit_is_a_subcommand() {
-        let cli = Cli::try_parse_from(["superwhatsapp", "quit"]).unwrap();
+        let cli = Cli::try_parse_from(["zapfast", "quit"]).unwrap();
         assert!(matches!(cli.command, Some(Control::Quit)));
         assert!(cli.target.is_none());
         assert_eq!(Control::Quit.verb(), "quit");
-        assert!(Cli::try_parse_from(["superwhatsapp", "quit", "20123456789"]).is_err());
+        assert!(Cli::try_parse_from(["zapfast", "quit", "20123456789"]).is_err());
     }
 
     /// Quitting succeeds when the running copy takes it and, quietly, when
@@ -986,9 +994,9 @@ mod target_cli_tests {
     /// A launch with nothing to open still works: the target is optional.
     #[test]
     fn a_launch_without_a_target_still_parses() {
-        let cli = Cli::try_parse_from(["superwhatsapp"]).unwrap();
+        let cli = Cli::try_parse_from(["zapfast"]).unwrap();
         assert!(cli.target.is_none());
-        let cli = Cli::try_parse_from(["superwhatsapp", "--start-hidden"]).unwrap();
+        let cli = Cli::try_parse_from(["zapfast", "--start-hidden"]).unwrap();
         assert!(cli.start_hidden);
         assert!(cli.target.is_none());
     }
@@ -1020,28 +1028,25 @@ mod tests {
 
     #[test]
     fn tour_cli_accepts_manual_and_delayed_starts() {
-        let cli = Cli::try_parse_from(["superwhatsapp", "--demo-tour"]).unwrap();
+        let cli = Cli::try_parse_from(["zapfast", "--demo-tour"]).unwrap();
         assert!(cli.demo_tour);
         assert!(cli.demo_tour_delay.is_none());
         let cli =
-            Cli::try_parse_from(["superwhatsapp", "--demo-tour", "--demo-tour-delay", "5000"])
-                .unwrap();
+            Cli::try_parse_from(["zapfast", "--demo-tour", "--demo-tour-delay", "5000"]).unwrap();
         assert_eq!(cli.demo_tour_delay, Some(5000));
-        assert!(Cli::try_parse_from(["superwhatsapp", "--demo-tour-delay", "5000"]).is_err());
-        assert!(
-            Cli::try_parse_from(["superwhatsapp", "--demo-tour", "--demo-page", "login",]).is_err()
-        );
+        assert!(Cli::try_parse_from(["zapfast", "--demo-tour-delay", "5000"]).is_err());
+        assert!(Cli::try_parse_from(["zapfast", "--demo-tour", "--demo-page", "login",]).is_err());
     }
 
     #[test]
     fn tour_cli_picks_a_script_and_a_frame_capture() {
-        let cli = Cli::try_parse_from(["superwhatsapp", "--demo-tour"]).unwrap();
+        let cli = Cli::try_parse_from(["zapfast", "--demo-tour"]).unwrap();
         assert_eq!(
             tour_script(&cli.demo_tour_script),
-            superwhatsapp::demo::tour::Script::Launch
+            zapfast::demo::tour::Script::Launch
         );
         let cli = Cli::try_parse_from([
-            "superwhatsapp",
+            "zapfast",
             "--demo-tour",
             "--demo-tour-script",
             "whats-new",
@@ -1053,7 +1058,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             tour_script(&cli.demo_tour_script),
-            superwhatsapp::demo::tour::Script::WhatsNew
+            zapfast::demo::tour::Script::WhatsNew
         );
         assert_eq!(
             cli.demo_tour_frames.as_deref(),
@@ -1061,19 +1066,13 @@ mod tests {
         );
         assert_eq!(cli.demo_fps, Some(60));
         assert!(
-            Cli::try_parse_from([
-                "superwhatsapp",
-                "--demo-tour",
-                "--demo-tour-script",
-                "other"
-            ])
-            .is_err()
+            Cli::try_parse_from(["zapfast", "--demo-tour", "--demo-tour-script", "other"]).is_err()
         );
-        assert!(Cli::try_parse_from(["superwhatsapp", "--demo-tour-script", "whats-new"]).is_err());
-        assert!(Cli::try_parse_from(["superwhatsapp", "--demo-tour", "--demo-fps", "30"]).is_err());
+        assert!(Cli::try_parse_from(["zapfast", "--demo-tour-script", "whats-new"]).is_err());
+        assert!(Cli::try_parse_from(["zapfast", "--demo-tour", "--demo-fps", "30"]).is_err());
         assert!(
             Cli::try_parse_from([
-                "superwhatsapp",
+                "zapfast",
                 "--demo-tour",
                 "--demo-tour-frames",
                 "frames",
@@ -1091,7 +1090,7 @@ mod startup_failure_tests {
 
     #[test]
     fn a_graphics_failure_names_the_driver_requirement_and_the_details() {
-        let log = std::path::Path::new("C:/superwhatsapp/superwhatsapp.log");
+        let log = std::path::Path::new("C:/zapfast/zapfast.log");
         let text = startup_failure_text(
             true,
             "glutin error: extension to create ES context with wgl is not present",
@@ -1108,7 +1107,7 @@ mod startup_failure_tests {
         let text = startup_failure_text(
             false,
             "The directory is not writable",
-            std::path::Path::new("superwhatsapp.log"),
+            std::path::Path::new("zapfast.log"),
         );
         assert!(text.starts_with("SuperWhatsapp could not start."));
         assert!(!text.contains("OpenGL"));
@@ -1150,7 +1149,7 @@ mod log_filter_tests {
         assert!(matches(
             filter,
             log::Level::Warn,
-            "superwhatsapp::backend::worker"
+            "zapfast::backend::worker"
         ));
     }
 

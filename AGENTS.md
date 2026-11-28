@@ -1,24 +1,24 @@
-# SuperWhatsapp agent guide
+# ZapFast agent guide
 
-SuperWhatsapp is a small native WhatsApp client: Rust, egui, and the
+ZapFast is a small native WhatsApp client: Rust, egui, and the
 [whatsapp-rust](https://github.com/oxidezap/whatsapp-rust) library for the
 protocol. These notes are for coding agents and new contributors.
 
 ## Product boundaries
 
 - Keep it a small native client. No browser engine, no telemetry, no
-  hosted backend, no SuperWhatsapp-operated account system. Features never send
+  hosted backend, no ZapFast-operated account system. Features never send
   message content to a third party.
-- WhatsApp only. SuperWhatsapp is a client for WhatsApp accounts and will not
+- WhatsApp only. ZapFast is a client for WhatsApp accounts and will not
   speak other networks or protocols (Matrix, Signal, Telegram, IRC, XMPP)
   or bridge to them.
-- No automation, ever. SuperWhatsapp is for a person reading and writing their
+- No automation, ever. ZapFast is for a person reading and writing their
   own chats by hand. It will not have bots, an MCP server, or any API,
   command-line, plugin or scripting interface that reads, exports or sends
   messages for another program, nor scheduled, bulk or automatic replies.
   WhatsApp's terms forbid automated use, and it bans accounts for it, so such
   a feature would put every user's account at risk. Opening a chat from a
-  link or `superwhatsapp <number>`, which only shows the chat to the person, is
+  link or `zapfast <number>`, which only shows the chat to the person, is
   not automation.
 - Do not copy dependency source into this repository. For a dependency fix,
   use a fork under `github.com/crmne/` pinned to a commit and contribute the
@@ -202,7 +202,7 @@ protocol. These notes are for coding agents and new contributors.
   instead, or a call answered before its media is up leaves the microphone a
   second behind and the canceller cancels nothing. One `FarEnd` per call
   links the two sides across device changes.
-  `SUPERWHATSAPP_CALL_AUDIO_DUMP=<folder>` (`call_audio/dump.rs`, never by
+  `ZAPFAST_CALL_AUDIO_DUMP=<folder>` (`call_audio/dump.rs`, never by
   default) writes each microphone stream's reference, raw microphone and
   output as 16 kHz float WAV in the canceller's 10 ms chunks, plus the order
   they were fed in; `examples/aec_replay.rs` replays one exactly (a test
@@ -210,7 +210,7 @@ protocol. These notes are for coding agents and new contributors.
   `chain::apply_setting`'s names), scores far-end-only seconds and a voice
   mixed in, and measures the true echo delay by cross-correlation. Recordings
   are real voices and never enter the repository:
-  `SUPERWHATSAPP_ECHO_RECORDING=<…-reference.wav>` runs the recorded-room test on
+  `ZAPFAST_ECHO_RECORDING=<…-reference.wav>` runs the recorded-room test on
   one, which passes untouched without it. AGC2 applies digital gain only, from 0 up to 20 dB (normalize's
   cap), never the system's microphone volume. Headphones need no setting:
   AEC3's transparent mode stops suppressing when it hears no echo. `backend/worker/calls.rs` owns at most one
@@ -308,7 +308,7 @@ protocol. These notes are for coding agents and new contributors.
   encoder's target leaves room for them. The
   call's heartbeat logs both directions' frame counts, keyframes and decode
   failures, and the peer's H.264 profile (`src/call_diag.rs`);
-  `SUPERWHATSAPP_CALL_VIDEO_DUMP=<folder>` writes both directions' access units as
+  `ZAPFAST_CALL_VIDEO_DUMP=<folder>` writes both directions' access units as
   raw H.264 for offline analysis, never by default. The camera is thinned to every nth frame of its measured rate and
   stamped from capture time, never thinned by elapsed time; the peer's access
   units decode on a thread of their own and reach the window as
@@ -341,20 +341,20 @@ protocol. These notes are for coding agents and new contributors.
 - Chat ids are canonical strings: a chat behind a privacy id (`@lid`) is
   filed under its phone number once the mapping is known. Use
   `Worker::canonical` for anything that arrives as a `Jid`.
-- Updates come from fastframe-update: `src/updates.rs` holds SuperWhatsapp's
+- Updates come from fastframe-update: `src/updates.rs` holds ZapFast's
   `UpdateConfig` (legacy `fastsapp` names, the publisher key) and the
   proxy-aware client. It downloads verified GitHub releases and hands
   installation to a helper after an explicit restart action. `main` calls
   `fastframe_update::intercept` before anything else, so `--apply-update`,
   `--update-receipt` and `--update-error` keep working with older releases'
   helpers (`tests/update_flags.rs`). Portable releases carry
-  `packaging/superwhatsapp-portable.txt`; the Windows installer has its own marker.
-- Custom themes come from fastframe-theme (`theme::Catalog`, SuperWhatsapp's
+  `packaging/zapfast-portable.txt`; the Windows installer has its own marker.
+- Custom themes come from fastframe-theme (`theme::Catalog`, ZapFast's
   `fastframe_theme::Palette` impl in `src/theme.rs`): it scans local JSON
   palettes off the UI thread, and the app caches the last usable choice in
   settings, with the palettes shared with Spotifast embedded as defaults. On Linux filesystem notifications reload the catalog and the active
   Omarchy palette without a repaint timer; following Omarchy does not require
-  packaged assets. Changing `contrib/omarchy/superwhatsapp.json.tpl` means saving the
+  packaged assets. Changing `contrib/omarchy/zapfast.json.tpl` means saving the
   old text in `contrib/omarchy/previous/` and listing it in
   `omarchy_previous_templates`, so untouched installed copies are upgraded. Native packages ship optional hooks and templates, preserving
   existing per-user files. `reload-themes` uses the single-instance channel
@@ -556,7 +556,7 @@ protocol. These notes are for coding agents and new contributors.
   player must use an explicit `Layout::left_to_right` at their own width.
   `src/ui/picker.rs` is the emoji/GIF/sticker panel. GIF search uses the
   key from Settings, else one baked in at build time from
-  `SUPERWHATSAPP_GIPHY_KEY` (`option_env!`); the repository carries none. The
+  `ZAPFAST_GIPHY_KEY` (`option_env!`); the repository carries none. The
   phone's recently used stickers arrive in `HistorySync.recent_stickers`
   when the device links and live in the archive's `stickers` table as raw
   `StickerMetadata`, fetched when the picker opens. Favourite stickers sync
@@ -583,25 +583,25 @@ protocol. These notes are for coding agents and new contributors.
   exists), and `src/macos.rs` hands its menu events to `fastframe_tray::claim_menu_event` first.
   The process Dock icon and unread badge use fastframe-dock; a Cargo run
   gets the embedded icon, while a packaged app keeps its bundle icon. The
-  unread-chat count stays in SuperWhatsapp and survives window replacement.
-  Clicking the macOS menu-bar icon opens its menu; **Show or hide SuperWhatsapp**
+  unread-chat count stays in ZapFast and survives window replacement.
+  Clicking the macOS menu-bar icon opens its menu; **Show or hide ZapFast**
   toggles the window, and clicking the Dock icon shows it. On macOS closing
-  always keeps SuperWhatsapp running, as other Mac apps do: `App::dock` (a
+  always keeps ZapFast running, as other Mac apps do: `App::dock` (a
   `fastframe_tray::Dock`) hears Dock clicks with or without a menu-bar item,
   and the setting, shown there as **Show in the menu bar**, decides only the
-  item. Elsewhere closing keeps SuperWhatsapp running only while `Tray::is_shown`: on Linux the
+  item. Elsewhere closing keeps ZapFast running only while `Tray::is_shown`: on Linux the
   item exists before a panel shows it (a start at login beats the panel, and
   GNOME's tray watcher) and registers once one appears. A hidden start with
   an item no panel shows yet waits `TRAY_WAIT` (30 s) for one in
   `App::check_tray_wait`, then shows the window (#429). A
   hidden start makes the macOS item with `Tray::create_item`, which does not
-  bring SuperWhatsapp forward; a window's `attach` makes it otherwise.
+  bring ZapFast forward; a window's `attach` makes it otherwise.
   `src/single_instance.rs` claims fastframe-instance's slot in the runtime
   directory (`Slot::at(runtime, "fastsapp")`, so requests and replies stay
   `fastsapp:show` and `fastsapp:ok` for older copies), and a second launch
   asks the first to surface over a private socket (a token-checked loopback
   port on Windows); the handler queues `ControlCommand`s and declines unknown
-  verbs. The fixed port 47119 that 0.15-era copies look for stays in SuperWhatsapp,
+  verbs. The fixed port 47119 that 0.15-era copies look for stays in ZapFast,
   answered once the slot is claimed. `src/notify.rs` sends desktop notifications
   for `Event::Incoming` (live messages from others, not history) when the
   reader is away from that chat; a click carries the chat and the message
@@ -764,7 +764,7 @@ A release is not finished when the tag is pushed. Do these in order:
    `packaging/release-notes/vX.Y.Z.md`: the release workflow publishes that
    file as the release description, and a stable tag without it fails. Link
    screenshots at the release's asset URLs
-   (`https://github.com/selvakumarEsra/superwhatsapp/releases/download/vX.Y.Z/NAME.png`).
+   (`https://github.com/crmne/zapfast/releases/download/vX.Y.Z/NAME.png`).
    Run the full checks, commit, and push `main`. Before tagging, verify the
    release commit is reachable from `origin/main` so the binaries report the
    right version and the release contains the canonical history.
@@ -773,18 +773,18 @@ A release is not finished when the tag is pushed. Do these in order:
 3. Upload the screenshots to the release as assets with the names the notes
    link, then open the published release and check the text, every image,
    and every download link. Never leave generated placeholder notes.
-4. After the release files exist, update both `superwhatsapp_version` in
+4. After the release files exist, update both `zapfast_version` in
    `docs/_config.yml` and the version menu in `docs/_data/versions.yml`.
    The menu lists only the current version, which points to `/download/`,
    and the Changelog link; do not add older versions to it. Never point the
    download page at files that do not exist yet. Set `release_asset_prefix` to
-   `superwhatsapp` and `release_app_name` to `SuperWhatsapp` only once those assets exist.
+   `zapfast` and `release_app_name` to `ZapFast` only once those assets exist.
 5. Update the AUR packages from the templates in `packaging/arch/`. The shared
    packaging workflow generates versions, hashes and `.SRCINFO` after the
    release exists, and publishes when `PUBLISH_AUR` and the required secrets
    are configured. Otherwise use `native-packages` to build, stage,
    review and publish the generated recipes; see `PACKAGING.md`. Validate
-   native builds with `makepkg -f`. A recipe-only `superwhatsapp-git` change does
+   native builds with `makepkg -f`. A recipe-only `zapfast-git` change does
    not require an application release.
 
 ## Definition of done

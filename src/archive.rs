@@ -18,9 +18,7 @@ pub mod chat_export;
 pub use calls::CALL_LOG_LIMIT;
 mod drafts;
 mod encryption;
-pub use encryption::{
-    archive_key_identity, copy_archive_key, forget_archive_key, move_archive_key,
-};
+pub use encryption::{archive_key_identity, copy_archive_key, forget_archive_key};
 mod favorites;
 pub use favorites::Favorite;
 mod labels;
@@ -861,7 +859,7 @@ impl Archive {
     fn latest_real_message_timestamp(&self, id: &str, through: i64) -> Result<Option<i64>> {
         self.connection.query_row(
             "SELECT MAX(timestamp) FROM messages
-                 WHERE chat = ?1 AND id NOT LIKE 'superwhatsapp-timer-%' AND timestamp <= ?2",
+                 WHERE chat = ?1 AND id NOT LIKE 'zapfast-timer-%' AND timestamp <= ?2",
             params![id, through],
             |row| row.get(0),
         )
@@ -873,7 +871,7 @@ impl Archive {
         self.connection.execute(
             "UPDATE chats SET read_through = MAX(COALESCE(read_through, 0), ?2),
              unread = MIN(unread, (SELECT COUNT(*) FROM messages
-                 WHERE chat = ?1 AND from_me = 0 AND id NOT LIKE 'superwhatsapp-timer-%'
+                 WHERE chat = ?1 AND from_me = 0 AND id NOT LIKE 'zapfast-timer-%'
                  AND timestamp > MAX(COALESCE(read_through, 0), ?2))) WHERE id = ?1",
             params![id, timestamp],
         )?;
@@ -889,7 +887,7 @@ impl Archive {
                  (SELECT timestamp FROM messages WHERE chat = ?1 AND id = ?2)),
              unread = MIN(unread, (SELECT COUNT(*) FROM messages m
                  JOIN messages boundary ON boundary.chat = m.chat AND boundary.id = ?2
-                 WHERE m.chat = ?1 AND m.from_me = 0 AND m.id NOT LIKE 'superwhatsapp-timer-%'
+                 WHERE m.chat = ?1 AND m.from_me = 0 AND m.id NOT LIKE 'zapfast-timer-%'
                  AND (m.timestamp > boundary.timestamp
                       OR (m.timestamp = boundary.timestamp AND
                           (COALESCE(m.history_order, 9223372036854775807), m.rowid) >
@@ -941,7 +939,7 @@ impl Archive {
         };
         let remaining: u32 = self.connection.query_row(
             "SELECT COUNT(*) FROM messages WHERE chat = ?1 AND from_me = 0
-             AND id NOT LIKE 'superwhatsapp-timer-%' AND timestamp > ?2",
+             AND id NOT LIKE 'zapfast-timer-%' AND timestamp > ?2",
             params![id, through],
             |row| row.get(0),
         )?;
@@ -1046,7 +1044,7 @@ impl Archive {
     pub fn unread_incoming(&self, chat: &str, limit: u32) -> Result<Vec<(String, String)>> {
         let mut statement = self.connection.prepare(
             "SELECT id, sender FROM messages WHERE chat = ?1 AND from_me = 0
-             AND id NOT LIKE 'superwhatsapp-call-%' AND id NOT LIKE 'superwhatsapp-timer-%'
+             AND id NOT LIKE 'zapfast-call-%' AND id NOT LIKE 'zapfast-timer-%'
              AND timestamp >= COALESCE((SELECT read_through FROM chats WHERE id = ?1), -1)
              ORDER BY timestamp DESC, COALESCE(history_order, 9223372036854775807) DESC, rowid DESC LIMIT ?2",
         )?;
@@ -2199,7 +2197,7 @@ impl Archive {
             )?;
             self.connection.execute(
                 "UPDATE chats SET unread = MIN(unread, (SELECT COUNT(*) FROM messages
-                    WHERE chat = ?1 AND from_me = 0 AND id NOT LIKE 'superwhatsapp-timer-%'
+                    WHERE chat = ?1 AND from_me = 0 AND id NOT LIKE 'zapfast-timer-%'
                     AND timestamp > COALESCE(read_through, 0))),
                     pending_read = CASE WHEN pending_read <= ?2 THEN NULL ELSE pending_read END
                  WHERE id = ?1",
@@ -2484,7 +2482,7 @@ impl Archive {
         }
         let mut statement = self.connection.prepare(
             "SELECT id, mentions FROM messages WHERE chat = ?1 AND from_me = 0
-             AND id NOT LIKE 'superwhatsapp-timer-%'
+             AND id NOT LIKE 'zapfast-timer-%'
              ORDER BY timestamp DESC, COALESCE(history_order, 9223372036854775807) DESC,
                       rowid DESC
              LIMIT ?2",
@@ -2549,7 +2547,7 @@ impl Archive {
             .connection
             .query_row(
                 "SELECT id FROM messages WHERE chat = ?1
-                 AND id NOT LIKE 'superwhatsapp-call-%' AND id NOT LIKE 'superwhatsapp-timer-%'
+                 AND id NOT LIKE 'zapfast-call-%' AND id NOT LIKE 'zapfast-timer-%'
                  ORDER BY timestamp ASC, COALESCE(history_order, 9223372036854775807) ASC, rowid ASC LIMIT 1",
                 params![chat],
                 |row| row.get(0),
@@ -4448,7 +4446,7 @@ pub(crate) mod tests {
     #[test]
     fn deleting_a_chat_removes_it_with_its_messages_and_reports_its_media() {
         let archive = Archive::in_memory().expect("opens");
-        let media = PathBuf::from("/cache/superwhatsapp/media/m2.jpg");
+        let media = PathBuf::from("/cache/zapfast/media/m2.jpg");
         let gone = furnished_chat(&archive, "1@s.whatsapp.net", &media);
         let kept = furnished_chat(&archive, "2@s.whatsapp.net", &media);
 
@@ -4559,9 +4557,7 @@ pub(crate) mod tests {
             width: None,
             height: None,
             album: None,
-            path: Some(PathBuf::from(format!(
-                "/cache/superwhatsapp/media/{name}.jpg"
-            ))),
+            path: Some(PathBuf::from(format!("/cache/zapfast/media/{name}.jpg"))),
             state: Default::default(),
         };
         let card = |image: crate::model::Media| crate::model::InteractiveCard {
@@ -4615,7 +4611,7 @@ pub(crate) mod tests {
     #[test]
     fn clearing_a_chat_keeps_it_but_empties_its_messages_and_unread_count() {
         let archive = Archive::in_memory().expect("opens");
-        let media = PathBuf::from("/cache/superwhatsapp/media/m2.jpg");
+        let media = PathBuf::from("/cache/zapfast/media/m2.jpg");
         let chat = furnished_chat(&archive, "1@s.whatsapp.net", &media);
 
         let removed = archive.clear_chat(&chat).expect("clear");
@@ -5698,8 +5694,7 @@ pub(crate) mod tests {
 
     #[test]
     fn read_positions_and_pending_sync_survive_reopening_the_archive() {
-        let dir =
-            std::env::temp_dir().join(format!("superwhatsapp-read-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("zapfast-read-test-{}", std::process::id()));
         let path = dir.join("archive.db");
         let _ = std::fs::remove_dir_all(&dir);
         let chat = "1@s.whatsapp.net";

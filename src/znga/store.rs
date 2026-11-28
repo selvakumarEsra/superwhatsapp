@@ -15,7 +15,6 @@ use super::archive_ask::{self, Hit, Visible};
 use super::coach::{self, Rhythm};
 use super::memory::Fact;
 use super::proactive::Seen;
-use super::profiles::Profile;
 use super::promises::{Owes, Promise, State};
 use super::provider::Turn;
 use super::sentinel::{Entry, Origin};
@@ -52,10 +51,6 @@ CREATE TABLE IF NOT EXISTS thread (
     items TEXT NOT NULL,
     unasked INTEGER NOT NULL
 );
-CREATE TABLE IF NOT EXISTS profiles (
-    id TEXT PRIMARY KEY,
-    body TEXT NOT NULL
-);
 CREATE TABLE IF NOT EXISTS audit (
     at INTEGER NOT NULL,
     action TEXT NOT NULL,
@@ -81,8 +76,6 @@ pub struct Loaded {
     pub audit: Vec<Entry>,
     /// The Znga chat (REQ-ZCHAT-001).
     pub thread: Vec<thread::Entry>,
-    /// Profiles of contacts, groups and members (REQ-ZPROF-001).
-    pub profiles: Vec<Profile>,
 }
 
 impl Db {
@@ -175,24 +168,12 @@ impl Db {
                 })
             })?
             .collect::<rusqlite::Result<_>>()?;
-        let profiles = c
-            .prepare("SELECT body FROM profiles")?
-            .query_map([], |row| row.get::<_, String>(0))?
-            .collect::<rusqlite::Result<Vec<String>>>()?
-            .into_iter()
-            .filter_map(|body| serde_json::from_str::<Profile>(&body).ok())
-            .map(|mut profile| {
-                profile.account = account.to_owned();
-                profile
-            })
-            .collect();
         Ok(Loaded {
             ask,
             facts,
             promises,
             audit,
             thread,
-            profiles,
         })
     }
 
@@ -238,19 +219,6 @@ impl Db {
             tx.execute(
                 "INSERT INTO facts (chat, chat_title, text, at, forgotten) VALUES (?1, ?2, ?3, ?4, ?5)",
                 params![fact.chat, fact.chat_title, fact.text, fact.at, fact.forgotten],
-            )?;
-        }
-        tx.commit()
-    }
-
-    pub fn save_profiles(&mut self, profiles: &[Profile]) -> rusqlite::Result<()> {
-        let tx = self.connection.transaction()?;
-        tx.execute("DELETE FROM profiles", [])?;
-        for profile in profiles {
-            let body = serde_json::to_string(profile).unwrap_or_else(|_| "{}".into());
-            tx.execute(
-                "INSERT OR REPLACE INTO profiles (id, body) VALUES (?1, ?2)",
-                params![profile.id, body],
             )?;
         }
         tx.commit()
@@ -341,27 +309,6 @@ pub enum Job {
         chats: Vec<(String, String)>,
         now: i64,
     },
-    SaveProfiles {
-        archive: PathBuf,
-        profiles: Vec<Profile>,
-    },
-    /// Who wrote in each group since `since`, for its active members
-    /// (REQ-ZPROF-004): sender and time only, no text.
-    GroupActivity {
-        account: String,
-        archive: PathBuf,
-        groups: Vec<String>,
-        since: i64,
-    },
-    /// One chat's history for the one-time profile read (REQ-ZPROF-002).
-    ProfileHistory {
-        account: String,
-        archive: PathBuf,
-        chat: String,
-        since: i64,
-        limit: usize,
-        backfill: bool,
-    },
     /// The own chat's recent messages, for the self-chat thread.
     History {
         ask: u64,
@@ -369,9 +316,6 @@ pub enum Job {
         chat: String,
     },
 }
-
-/// Who wrote in a group: (sender, sender name, time).
-pub type Senders = Vec<(String, Option<String>, i64)>;
 
 pub enum Reply {
     Loaded {
@@ -394,18 +338,6 @@ pub enum Reply {
     History {
         ask: u64,
         messages: Vec<(bool, String)>,
-    },
-    /// Per group: (sender, sender name, time).
-    GroupActivity {
-        account: String,
-        groups: Vec<(String, Senders)>,
-    },
-    /// Oldest first; empty when the archive could not be read.
-    ProfileHistory {
-        account: String,
-        chat: String,
-        backfill: bool,
-        messages: Vec<crate::model::Message>,
     },
     Failed(String),
 }
@@ -525,58 +457,6 @@ fn run(dbs: &mut HashMap<PathBuf, Db>, job: Job) -> Option<Reply> {
             let result =
                 db(dbs, &archive).and_then(|db| db.save_facts(&facts).map_err(|e| e.to_string()));
             result.err().and_then(failed)
-        }
-        Job::SaveProfiles { archive, profiles } => {
-            let result = db(dbs, &archive)
-                .and_then(|db| db.save_profiles(&profiles).map_err(|e| e.to_string()));
-            result.err().and_then(failed)
-        }
-        Job::GroupActivity {
-            account,
-            archive,
-            groups,
-            since,
-        } => match reader(&archive) {
-            Ok(reader) => {
-                let groups = groups
-                    .into_iter()
-                    .map(|group| {
-                        let senders = reader
-                            .messages(&group, None, 5000)
-                            .unwrap_or_default()
-                            .into_iter()
-                            .filter(|m| m.timestamp >= since && !m.from_me)
-                            .filter(|m| !matches!(m.content, crate::model::Content::Call { .. }))
-                            .map(|m| (m.sender, m.sender_name, m.timestamp))
-                            .collect();
-                        (group, senders)
-                    })
-                    .collect();
-                Some(Reply::GroupActivity { account, groups })
-            }
-            Err(error) => failed(error),
-        },
-        Job::ProfileHistory {
-            account,
-            archive,
-            chat,
-            since,
-            limit,
-            backfill,
-        } => {
-            let mut messages: Vec<crate::model::Message> = reader(&archive)
-                .and_then(|r| r.messages(&chat, None, limit).map_err(|e| e.to_string()))
-                .unwrap_or_default()
-                .into_iter()
-                .filter(|m| m.timestamp >= since)
-                .collect();
-            messages.sort_by_key(|m| m.timestamp);
-            Some(Reply::ProfileHistory {
-                account,
-                chat,
-                backfill,
-                messages,
-            })
         }
         Job::SavePromises { archive, items } => {
             let result = db(dbs, &archive)
@@ -709,35 +589,6 @@ mod tests {
         let turns = vec![Turn::user("when does Ravi land?"), Turn::assistant("At 9.")];
         db.save_ask(&turns).unwrap();
         assert_eq!(db.load("1").unwrap().ask, turns);
-    }
-
-    #[test]
-    fn profiles_survive_a_reload_with_their_sources() {
-        use super::super::profiles::Profiles;
-        let mut db = db();
-        let mut profiles = Profiles::default();
-        profiles.set("1", "ada", "Ada", false, "relationship", "friend", 1);
-        profiles.set_active(
-            "1",
-            "g",
-            "School",
-            vec![super::super::profiles::Active {
-                id: "ben".into(),
-                name: "Ben".into(),
-                count: 3,
-                former: false,
-            }],
-        );
-        db.save_profiles(profiles.all()).unwrap();
-        let loaded = db.load("1").unwrap().profiles;
-        assert_eq!(loaded.len(), 2);
-        let ada = loaded.iter().find(|p| p.id == "ada").unwrap();
-        assert_eq!(ada.account, "1");
-        assert!(ada.first("relationship").unwrap().confirmed);
-        assert_eq!(
-            loaded.iter().find(|p| p.id == "g").unwrap().active[0].count,
-            3
-        );
     }
 
     #[test]

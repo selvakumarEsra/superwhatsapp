@@ -935,16 +935,16 @@ pub enum Content {
 /// The id prefix of the call entries SuperWhatsapp files from call records: the
 /// calls it handled and the phone's call log. They are local, so no receipt,
 /// reaction or deletion is ever sent for them.
-pub const CALL_ENTRY_PREFIX: &str = "superwhatsapp-call-";
+pub const CALL_ENTRY_PREFIX: &str = "zapfast-call-";
 
 /// The chat id the entries of calls joined through a call link are filed
 /// under. No chat has it: such a call belongs to none, so its entries show on
 /// the Calls page alone, never in the chat list.
-pub const CALL_LINK_CHAT: &str = "superwhatsapp-call-link";
+pub const CALL_LINK_CHAT: &str = "zapfast-call-link";
 
 /// The id prefix of the disappearing-timer notices SuperWhatsapp files from live
 /// setting changes. They are local system rows, never sent anywhere.
-pub const TIMER_NOTICE_PREFIX: &str = "superwhatsapp-timer-";
+pub const TIMER_NOTICE_PREFIX: &str = "zapfast-timer-";
 
 /// Whether `id` is one SuperWhatsapp made up for a row of its own, which no server
 /// ever issued: a call entry, or a disappearing-timer notice. Nothing sent to

@@ -18,33 +18,25 @@ pub struct AppDirs {
     pub runtime: PathBuf,
 }
 
-/// The folder names older installs used, newest first: SuperWhatsapp, then
-/// FastsApp and FastWhatsApp. Only read, to move their data over
-/// (REQ-SUPERWA-005); nothing is ever created under them.
-const PREVIOUS_NAMES: [&str; 3] = ["zapfast", "fastsapp", "fastwhatsapp"];
-
 impl AppDirs {
-    /// SuperWhatsapp's own folders: `cc.superwhatsapp` on macOS,
-    /// `superwhatsapp` on Linux, `cc\superwhatsapp` on Windows
-    /// (REQ-SUPERWA-006).
     pub fn discover() -> Self {
-        match Self::of(ProjectDirs::from("", "cc", "superwhatsapp")) {
+        match Self::of("zapfast") {
             Some(dirs) => dirs,
             None => {
                 let fallback = std::env::current_dir().unwrap_or_default();
                 Self {
-                    config: fallback.join("superwhatsapp-config"),
-                    state: fallback.join("superwhatsapp-state"),
-                    cache: fallback.join("superwhatsapp-cache"),
-                    runtime: fallback.join("superwhatsapp-run"),
+                    config: fallback.join("zapfast-config"),
+                    state: fallback.join("zapfast-state"),
+                    cache: fallback.join("zapfast-cache"),
+                    runtime: fallback.join("zapfast-run"),
                 }
             }
         }
     }
 
-    /// Standard platform directories for a project.
-    fn of(project: Option<ProjectDirs>) -> Option<Self> {
-        let project = project?;
+    /// Standard platform directories for the app.
+    fn of(name: &str) -> Option<Self> {
+        let project = ProjectDirs::from("me", "paolino", name)?;
         let state = project
             .state_dir()
             .map(|path| path.to_path_buf())
@@ -57,65 +49,31 @@ impl AppDirs {
         })
     }
 
-    /// The folders of older installs, newest first.
-    fn previous() -> impl Iterator<Item = Self> {
-        PREVIOUS_NAMES
-            .into_iter()
-            .filter_map(|name| Self::of(ProjectDirs::from("me", "paolino", name)))
-    }
-
-    /// Where a copy of an older install that is still running answers, so
-    /// a new start can hand over to it instead of moving its folders away
-    /// while it runs (REQ-SUPERWA-005).
-    pub fn previous_runtimes() -> Vec<PathBuf> {
-        Self::previous().map(|dirs| dirs.runtime).collect()
-    }
-
     /// Adopts earlier names, newest first, without replacing existing data.
-    /// Each encrypted archive's key moves with its folder (REQ-SUPERWA-005).
     /// Call only after acquiring the instance guard, and never for demo runs.
     pub fn adopt_previous_names(&self) -> std::io::Result<()> {
-        let mut move_key = |old_identity: &str, archive: &Path| {
-            crate::archive::move_archive_key(old_identity, archive)
-                .map_err(|error| std::io::Error::other(format!("{error:#}")))
-        };
-        for old in Self::previous() {
-            self.adopt_moving_keys(&old, &mut move_key)?;
-        }
-        if let Some(to) = eframe::storage_dir("superwhatsapp") {
-            for name in PREVIOUS_NAMES {
-                if let Some(from) = eframe::storage_dir(name) {
-                    adopt_directory(&from, &to)?;
-                }
+        for name in ["fastsapp", "fastwhatsapp"] {
+            if let Some(old) = Self::of(name) {
+                self.adopt(&old)?;
+            }
+            if let (Some(from), Some(to)) =
+                (eframe::storage_dir(name), eframe::storage_dir("zapfast"))
+            {
+                adopt_directory(&from, &to)?;
             }
         }
-        move_file(&self.state.join("zapfast.log"), &self.log_file())
+        Ok(())
     }
 
-    /// Moves an older install's folders here like [`Self::adopt`], and each
-    /// encrypted archive's keyring key with them. When a key cannot be
-    /// moved, its folder goes back and nothing after it moves.
-    fn adopt_moving_keys(
-        &self,
-        old: &Self,
-        move_key: &mut dyn FnMut(&str, &Path) -> std::io::Result<()>,
-    ) -> std::io::Result<()> {
-        // macOS keeps configuration and state in one folder; whichever pair
-        // moves it first carries its archives.
+    fn adopt(&self, old: &Self) -> std::io::Result<()> {
         for (from, to) in [
             (&old.config, &self.config),
             (&old.state, &self.state),
             (&old.cache, &self.cache),
         ] {
-            adopt_directory_with_keys(from, to, move_key)?;
+            adopt_directory(from, to)?;
         }
         Ok(())
-    }
-
-    /// [`Self::adopt_moving_keys`] for archives with no key to move.
-    #[cfg(test)]
-    fn adopt(&self, old: &Self) -> std::io::Result<()> {
-        self.adopt_moving_keys(old, &mut |_, _| Ok(()))
     }
 
     /// Places all data under one directory for tests and temporary runs.
@@ -284,7 +242,7 @@ impl AppDirs {
 
     /// Current-run log, replaced at startup.
     pub fn log_file(&self) -> PathBuf {
-        self.state.join("superwhatsapp.log")
+        self.state.join("zapfast.log")
     }
 
     /// Panic log written before process exit.
@@ -457,66 +415,6 @@ fn runtime_dir(project: &ProjectDirs, state: &Path) -> PathBuf {
     state.with_file_name(name)
 }
 
-/// The encrypted-archive candidates in a state folder, relative to it: the
-/// single-account archive at its root and each account's.
-fn archives_in(dir: &Path) -> Vec<PathBuf> {
-    let mut found = Vec::new();
-    if dir.join("archive.db").is_file() {
-        found.push(PathBuf::from("archive.db"));
-    }
-    if let Ok(accounts) = std::fs::read_dir(dir.join("accounts")) {
-        for account in accounts.flatten() {
-            let relative = Path::new("accounts")
-                .join(account.file_name())
-                .join("archive.db");
-            if dir.join(&relative).is_file() {
-                found.push(relative);
-            }
-        }
-    }
-    found.sort();
-    found
-}
-
-/// [`adopt_directory`] for a folder that may hold encrypted archives: each
-/// archive's key identity is taken before the move, and its key is copied to
-/// the folder's new identity after it. If a key cannot be copied the folder
-/// is moved back, so the older install still opens, and the error stops the
-/// start.
-fn adopt_directory_with_keys(
-    from: &Path,
-    to: &Path,
-    move_key: &mut dyn FnMut(&str, &Path) -> std::io::Result<()>,
-) -> std::io::Result<()> {
-    if !from.is_dir() {
-        return Ok(());
-    }
-    if to.try_exists()? {
-        log::warn!("an older install's folder is left alone: SuperWhatsapp already has its own");
-        return Ok(());
-    }
-    let identities = archives_in(from)
-        .into_iter()
-        .map(|relative| {
-            crate::archive::archive_key_identity(&from.join(&relative))
-                .map(|identity| (relative, identity))
-                .map_err(|error| std::io::Error::other(format!("{error:#}")))
-        })
-        .collect::<std::io::Result<Vec<_>>>()?;
-    adopt_directory(from, to)?;
-    for (relative, identity) in &identities {
-        if let Err(error) = move_key(identity, &to.join(relative)) {
-            if let Err(back) = std::fs::rename(to, from) {
-                log::error!("could not move an older install's folder back: {back}");
-            }
-            return Err(std::io::Error::other(format!(
-                "could not move an archive key to the SuperWhatsapp folder: {error}"
-            )));
-        }
-    }
-    Ok(())
-}
-
 /// Rename whole directories so SQLite databases travel with their WAL files.
 /// A failed move stops startup before empty replacement directories are made.
 fn adopt_directory(from: &Path, to: &Path) -> std::io::Result<()> {
@@ -535,7 +433,7 @@ mod tests {
 
     fn root(name: &str) -> PathBuf {
         let root =
-            std::env::temp_dir().join(format!("superwhatsapp-paths-{name}-{}", std::process::id()));
+            std::env::temp_dir().join(format!("zapfast-paths-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(&root).unwrap();
         root
@@ -597,7 +495,7 @@ mod tests {
         for name in ["fastsapp", "fastwhatsapp"] {
             let root = root(name);
             let old = AppDirs::under(&root.join(name));
-            let new = AppDirs::under(&root.join("superwhatsapp"));
+            let new = AppDirs::under(&root.join("zapfast"));
             old.ensure().unwrap();
             for path in [
                 old.settings_file(),
@@ -634,7 +532,7 @@ mod tests {
     #[test]
     fn newest_data_wins_without_merging_archives() {
         let root = root("precedence");
-        let new = AppDirs::under(&root.join("superwhatsapp"));
+        let new = AppDirs::under(&root.join("zapfast"));
         let recent = AppDirs::under(&root.join("fastsapp"));
         let oldest = AppDirs::under(&root.join("fastwhatsapp"));
         recent.ensure().unwrap();
@@ -855,119 +753,5 @@ mod tests {
         );
         assert!(!account.session_db().exists());
         std::fs::remove_dir_all(root).unwrap();
-    }
-
-    fn write(path: &Path, bytes: &[u8]) {
-        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-        std::fs::write(path, bytes).unwrap();
-    }
-
-    #[test]
-    fn an_older_install_moves_with_its_archive_keys() {
-        let root = root("keys");
-        let old = AppDirs::under(&root.join("me.paolino.zapfast"));
-        let new = AppDirs::under(&root.join("cc.superwhatsapp"));
-        let archive = old.account(&AccountId::first()).archive_db();
-        write(&archive, b"encrypted pages");
-        write(&old.archive_db(), b"single account");
-        write(&old.media_cache_dir().join("photo.jpg"), b"photo");
-        let expected = [
-            crate::archive::archive_key_identity(&old.archive_db()).unwrap(),
-            crate::archive::archive_key_identity(&archive).unwrap(),
-        ];
-        let mut moved = Vec::new();
-        new.adopt_moving_keys(&old, &mut |identity, path| {
-            assert!(path.is_file(), "the key moves after its archive");
-            moved.push((identity.to_owned(), path.to_path_buf()));
-            Ok(())
-        })
-        .unwrap();
-        assert_eq!(
-            moved,
-            vec![
-                (
-                    expected[1].clone(),
-                    new.account(&AccountId::first()).archive_db()
-                ),
-                (expected[0].clone(), new.state.join("archive.db")),
-            ]
-        );
-        assert_eq!(
-            std::fs::read(new.account(&AccountId::first()).archive_db()).unwrap(),
-            b"encrypted pages"
-        );
-        assert_eq!(
-            std::fs::read(new.media_cache_dir().join("photo.jpg")).unwrap(),
-            b"photo"
-        );
-        assert!(!old.state.exists() && !old.cache.exists());
-        std::fs::remove_dir_all(root).unwrap();
-    }
-
-    #[test]
-    fn a_missing_key_moves_nothing() {
-        let root = root("missing-key");
-        let old = AppDirs::under(&root.join("me.paolino.zapfast"));
-        let new = AppDirs::under(&root.join("cc.superwhatsapp"));
-        let archive = old.account(&AccountId::first()).archive_db();
-        write(&archive, b"encrypted pages");
-        write(&old.media_cache_dir().join("photo.jpg"), b"photo");
-        let error = new
-            .adopt_moving_keys(&old, &mut |_, _| Err(std::io::Error::other("no key")))
-            .unwrap_err();
-        assert!(error.to_string().contains("no key"));
-        // The folder went back, and the start stopped before the cache moved.
-        assert_eq!(std::fs::read(&archive).unwrap(), b"encrypted pages");
-        assert!(!new.state.exists());
-        assert!(old.media_cache_dir().join("photo.jpg").exists());
-        assert!(!new.cache.exists());
-        std::fs::remove_dir_all(root).unwrap();
-    }
-
-    #[test]
-    fn the_new_folders_win_over_old_ones() {
-        let root = root("new-wins");
-        let old = AppDirs::under(&root.join("me.paolino.zapfast"));
-        let new = AppDirs::under(&root.join("cc.superwhatsapp"));
-        write(
-            &old.account(&AccountId::first()).archive_db(),
-            b"old archive",
-        );
-        write(
-            &new.account(&AccountId::first()).archive_db(),
-            b"new archive",
-        );
-        new.adopt_moving_keys(&old, &mut |_, _| panic!("no key moves"))
-            .unwrap();
-        assert_eq!(
-            std::fs::read(new.account(&AccountId::first()).archive_db()).unwrap(),
-            b"new archive"
-        );
-        assert_eq!(
-            std::fs::read(old.account(&AccountId::first()).archive_db()).unwrap(),
-            b"old archive"
-        );
-        std::fs::remove_dir_all(root).unwrap();
-    }
-
-    #[test]
-    fn a_new_install_uses_only_superwhatsapp_folders() {
-        let dirs = AppDirs::discover();
-        for path in [&dirs.config, &dirs.state, &dirs.cache, &dirs.runtime] {
-            let path = path.to_string_lossy().to_lowercase();
-            assert!(path.contains("superwhatsapp"), "{path}");
-            for old in ["zapfast", "paolino", "fastsapp", "fastwhatsapp"] {
-                assert!(!path.contains(old), "{path}");
-            }
-        }
-        assert!(dirs.log_file().ends_with("superwhatsapp.log"));
-        #[cfg(target_os = "macos")]
-        assert!(
-            dirs.state
-                .ends_with("Library/Application Support/cc.superwhatsapp")
-        );
-        for old in AppDirs::previous_runtimes() {
-            assert!(!old.to_string_lossy().contains("superwhatsapp"));
-        }
     }
 }

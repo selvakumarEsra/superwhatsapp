@@ -36,8 +36,6 @@ export interface CallView {
   failed: boolean; muted: boolean; cameraOn: boolean; camera: boolean; connected: boolean; hidden: boolean;
   microphones: [string, string][]; speakers: [string, string][]; cameras: [string, string][];
   microphone: string | null; speaker: string | null; cameraDevice: string | null;
-  /** zapframe addresses of the latest peer and own-camera frames. */
-  remoteFrame: string | null; localFrame: string | null;
 }
 export interface Quote { author: string; text: string; hue: number; mine: boolean }
 export interface Msg {
@@ -46,47 +44,25 @@ export interface Msg {
   quoted: Quote | null; reactions: [string, number][]; reacted: boolean;
   /** The time as egui writes it in a bubble. */
   clock: string; starred: boolean; media: MediaView | null; preview: PreviewView | null;
-  /** Looks like another language: Translate is offered (REQ-ZANS-004). */
-  translatable: boolean;
 }
 export interface Open {
   id: string; title: string; avatar: string | null; group: boolean; complete: boolean; messages: Msg[];
   /** The composer offers Znga's tools here (REQ-ZCHAT-004). */
   zngaTools: boolean;
   subtitle: string; subtitleAccent: boolean;
-  /** A message to scroll to and flash (egui's jump_highlight). */
-  jump: string | null;
 }
 /** The Znga chat's id; it never names a WhatsApp chat (REQ-ZCHAT-001). */
 export const ZNGA_CHAT = "znga@superwhatsapp.local";
 export interface ZAction { id: string; label: string }
 export interface ZCard {
-  kind: "needsYou" | "briefing" | "draft" | "catchUp" | "plan" | "voice" | "promise" | "drift" | "link" | "cite";
+  kind: "needsYou" | "briefing" | "draft" | "catchUp" | "plan" | "voice" | "promise" | "drift" | "link";
   title: string; body: string; meta: string; actions: ZAction[]; outcome: string | null;
-  /** A cited message's number, `[n]` in the answer (REQ-ZANS-001). */
-  n: number | null;
 }
-export interface ZLink { id: string; title: string }
-export interface ZEntry { id: number; at: number; fromMe: boolean; text: string; unasked: boolean; cards: ZCard[]; chats: ZLink[] }
-export interface ZngaChat { entries: ZEntry[]; writing: string | null; asking: boolean; forwardTo: ZLink[] }
-/** The translation popup beside a message (REQ-ZANS-004). */
-export interface ZTranslation { chat: string; message: string; state: "pending" | "done" | "failed"; text: string; from: string }
+export interface ZEntry { id: number; at: number; fromMe: boolean; text: string; unasked: boolean; cards: ZCard[] }
+export interface ZngaChat { entries: ZEntry[]; writing: string | null; asking: boolean }
 export interface OfferView { id: number; chat: string; text: string; rewrite: boolean }
 export interface ZFact { chat: string; chatTitle: string; text: string }
 export interface ZPromise { chat: string; chatTitle: string; text: string; due: number | null; owesMe: boolean }
-export interface ZValue { text: string; confirmed: boolean; sensitive: boolean }
-export interface ZField { key: string; label: string; single: boolean; local: boolean; values: ZValue[] }
-export interface ZActive { id: string; name: string; count: number; former: boolean; mood: string | null; trend: string }
-/** "Znga knows" in the info panel (REQ-ZPROF-007). */
-export interface ZProfile {
-  group: boolean; fields: ZField[]; facts: string[]; active: ZActive[]; moodTrend: string;
-  learnedAt: number; backfilled: boolean; learning: boolean;
-}
-export interface ZPerson { id: string; title: string; group: boolean; known: number; relation: string | null; chat: boolean }
-export interface ZBackfill {
-  state: "idle" | "running" | "paused" | "waiting" | "done"; done: number; total: number;
-  reason: string | null; callsToday: number; dailyCalls: number;
-}
 export interface ZAudit { at: number; action: string; origin: string; allowed: boolean; reason: string }
 export interface ZngaSettings {
   enabled: boolean; engine: string; engines: [string, string][]; model: string; endpoint: string;
@@ -95,8 +71,7 @@ export interface ZngaSettings {
   briefingMinMessages: number; briefingIntervalMinutes: number; digests: boolean;
   digestMorning: string; digestEvening: string; reminders: boolean; quietHours: boolean;
   quietFrom: string; quietTo: string; selfNotes: boolean; selfChat: boolean; includeGroups: boolean;
-  promises: boolean; memory: boolean; profiles: boolean; profileQuestions: boolean;
-  people: ZPerson[]; backfill: ZBackfill; checkinDays: number; yourName: string; voiceNotes: string;
+  promises: boolean; memory: boolean; checkinDays: number; yourName: string; voiceNotes: string;
   tone: string; voiceEndpoint: string; voiceModel: string; twin: [string, string][];
   excluded: [string, string][]; facts: ZFact[]; openPromises: ZPromise[]; audit: ZAudit[];
   status: [string, boolean] | null;
@@ -108,10 +83,6 @@ export interface CallRow {
   outgoing: boolean; missed: boolean; video: boolean; duration: number;
 }
 export interface Member { id: string; name: string; avatar: string | null; admin: boolean }
-/** A document (target: its message) or link (target: the address). */
-export interface Person { id: string; name: string; phone: string | null; avatar: string | null }
-export interface NewCall { search: string; frequent: Person[]; contacts: Person[] }
-export interface ItemRow { target: string; title: string; detail: string }
 export interface MediaCell { id: string; src: string | null; video: boolean; seconds: number | null }
 export interface Info {
   id: string; title: string; avatar: string | null; group: boolean; channel: boolean;
@@ -121,12 +92,6 @@ export interface Info {
   phoneDisplay: string | null; status: string | null; blockable: boolean; blocked: boolean; blockEditable: boolean;
   contactEditable: boolean; known: boolean; editorNames: [string, string];
   mediaCount: string | null; media: MediaCell[];
-  /** "overview", or the media view's tab. */
-  page: "overview" | "media" | "docs" | "links";
-  mediaPending: boolean; mediaFailed: boolean;
-  tabCounts: [number, number, number]; tabTruncated: boolean;
-  gallery: MediaCell[]; docs: ItemRow[]; links: ItemRow[];
-  znga: ZProfile | null;
 }
 export interface Swatch { id: string; label: string; color: string | null }
 export interface Blocked { id: string; title: string; avatar: string | null }
@@ -153,11 +118,8 @@ export interface SettingsView {
 }
 export interface State {
   link: Link; call: CallView | null; me: string | null; meAvatar: string | null; filters: FilterChip[]; filter: string; search: string; chats: ChatRow[]; unreadChats: number; open: Open | null;
-  zngaRow: ChatRow | null; znga: ZngaChat | null; offer: OfferView | null; translation: ZTranslation | null;
-  section: Section; starred: StarredRow[]; calls: CallRow[]; callFilter: "all" | "missed"; callsSearch: string;
-  /** The Calls tab's "New call" list, while open. */
-  newCall: NewCall | null;
-  info: Info | null; settings: SettingsView;
+  zngaRow: ChatRow | null; znga: ZngaChat | null; offer: OfferView | null;
+  section: Section; starred: StarredRow[]; calls: CallRow[]; callFilter: "all" | "missed"; callsSearch: string; info: Info | null; settings: SettingsView;
   lock: LockView | null;
   /** The locked-chats folder behind the rail's Lock plate. */
   locked: { offered: boolean; open: boolean; prompt: { setup: boolean; error: boolean } | null };
@@ -165,8 +127,8 @@ export interface State {
 
 const empty: State = {
   link: { state: "starting" }, call: null, me: null, meAvatar: null, filters: [], filter: "all", search: "", chats: [], unreadChats: 0, open: null,
-  zngaRow: null, znga: null, offer: null, translation: null,
-  section: "chats", starred: [], calls: [], callFilter: "all", callsSearch: "", newCall: null, info: null,
+  zngaRow: null, znga: null, offer: null,
+  section: "chats", starred: [], calls: [], callFilter: "all", callsSearch: "", info: null,
   settings: {
     theme: "system", zoom: 1, showWallpaper: true, enterSends: true, showShortcutHints: true, font: "system", autoDownload: true, historyPrefetch: true,
     keepChatsArchived: true, pauseOtherMedia: true, notifications: true, notificationContent: true, groupSounds: true,
@@ -181,8 +143,7 @@ const empty: State = {
       needsKey: false, keySource: null, cloud: false, cloudConsent: false, alerts: true, briefings: true,
       briefingMinMessages: 5, briefingIntervalMinutes: 30, digests: false, digestMorning: "08:00",
       digestEvening: "20:00", reminders: true, quietHours: false, quietFrom: "22:00", quietTo: "07:00",
-      selfNotes: false, selfChat: false, includeGroups: true, promises: true, memory: true, profiles: false, profileQuestions: true, people: [],
-      backfill: { state: "idle", done: 0, total: 0, reason: null, callsToday: 0, dailyCalls: 200 }, checkinDays: 7,
+      selfNotes: false, selfChat: false, includeGroups: true, promises: true, memory: true, checkinDays: 7,
       yourName: "", voiceNotes: "", tone: "", voiceEndpoint: "", voiceModel: "", twin: [], excluded: [],
       facts: [], openPromises: [], audit: [], status: null,
     },
@@ -195,13 +156,13 @@ export { state };
 
 export async function connect() {
   // Outside Tauri (a browser, for screenshots and tests), show a state
-  // dumped by `superwhatsapp-desktop --dump-state`.
+  // dumped by `zapfast-desktop --dump-state`.
   if (!("__TAURI_INTERNALS__" in window)) {
     const response = await fetch("/demo-state.json");
     if (response.ok) setState(reconcile((await response.json()) as State, { key: "id" }));
     return;
   }
-  await listen<State>("superwhatsapp://state", (event) => setState(reconcile(event.payload, { key: "id" })));
+  await listen<State>("zapfast://state", (event) => setState(reconcile(event.payload, { key: "id" })));
   await invoke("refresh");
 }
 
@@ -221,11 +182,6 @@ export const commands = {
   clearChat: (chat: string) => invoke("clear_chat", { chat }),
   openInfo: (chat: string) => invoke("open_info", { chat }),
   closeInfo: () => invoke("close_info"),
-  infoPage: (page: Info["page"]) => invoke("info_page", { page }),
-  showNewCall: (open: boolean) => invoke("show_new_call", { open }),
-  searchNewCall: (text: string) => invoke("search_new_call", { text }),
-  retryInfoMedia: () => invoke("retry_info_media"),
-  jumped: () => invoke("jumped"),
   leaveGroup: (chat: string) => invoke("leave_group", { chat }),
   setStar: (chat: string, message: string, starred: boolean) => invoke("set_star", { chat, message, starred }),
   goToMessage: (chat: string, message: string) => invoke("go_to_message", { chat, message }),
@@ -259,9 +215,7 @@ export const commands = {
   wallpaperImage: (pick: boolean) => invoke("wallpaper_image", { pick }),
   setLanguage: (code: string | null) => invoke("set_language", { code }),
   // Znga (specs/znga-chat.md).
-  zngaSend: (text: string, quote: string | null = null) => invoke("znga_send", { text, quote }),
-  zngaForward: (entry: number, chat: string) => invoke("znga_forward", { entry, chat }),
-  zngaTranslate: (chat: string, message: string, op: "open" | "retry" | "close") => invoke("znga_translate", { chat, message, op }),
+  zngaSend: (text: string) => invoke("znga_send", { text }),
   zngaStop: () => invoke("znga_stop"),
   zngaCard: (entry: number, index: number, action: string) => invoke("znga_card", { entry, index, action }),
   zngaTool: (chat: string, tool: string, text = "", language = "") => invoke("znga_tool", { chat, tool, text, language }),
@@ -272,6 +226,4 @@ export const commands = {
   zngaFact: (chat: string, text: string, forget: boolean) => invoke("znga_fact", { chat, text, forget }),
   zngaPromise: (chat: string, text: string, done: boolean) => invoke("znga_promise", { chat, text, done }),
   zngaSet: (key: string, value: unknown) => invoke("znga_set", { key, value }),
-  zngaProfile: (chat: string, op: string, key: string, text: string) => invoke("znga_profile", { chat, op, key, text }),
-  zngaBackfill: (op: "start" | "pause" | "resume" | "cancel") => invoke("znga_backfill", { op }),
 };

@@ -12,19 +12,19 @@
 #[cfg(target_os = "macos")]
 fn main() {
     use objc2_app_kit::NSApplication;
-    use superwhatsapp::model::Page;
+    use zapfast::model::Page;
 
     let mtm = objc2::MainThreadMarker::new().expect("a harness-less test runs on the main thread");
     let root = tempfile::tempdir().expect("a temporary directory");
-    let dirs = superwhatsapp::paths::AppDirs::under(root.path());
-    let settings = superwhatsapp::settings::Settings::default();
+    let dirs = zapfast::paths::AppDirs::under(root.path());
+    let settings = zapfast::settings::Settings::default();
     // The backend waits for the first drawn frame before it starts, so it
     // never links or opens an archive here.
-    let mut app = superwhatsapp::app::App::new(
-        &superwhatsapp::backend::Waker::default(),
+    let mut app = zapfast::app::App::new(
+        &zapfast::backend::Waker::default(),
         dirs,
         settings,
-        superwhatsapp::app::AppOptions { tray: true },
+        zapfast::app::AppOptions { tray: true },
     )
     .expect("a fresh app over an empty folder");
     let ctx = egui::Context::default();

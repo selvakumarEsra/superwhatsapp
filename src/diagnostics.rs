@@ -183,7 +183,7 @@ fn leading_number(text: &str) -> Option<(u64, &str)> {
 /// [`crate::transport`] put in the error chain (`Failed to connect: {err:#}`).
 ///
 /// A fresh install must first fetch the WhatsApp Web version, so a device that
-/// cannot reach web.whatsapp.com stays at "Connecting" (upstream issue #271).
+/// cannot reach web.whatsapp.com stays at "Connecting" (crmne/zapfast#271).
 fn connect_summary(lower: &str) -> Option<Cow<'static, str>> {
     if lower.contains("version fetch timed out") {
         return Some("timed out fetching the WhatsApp Web version".into());
@@ -277,30 +277,6 @@ fn status_after(lower: &str, marker: &str) -> Option<u16> {
     (100..600).contains(&status).then_some(status)
 }
 
-/// The log filter used when `RUST_LOG` is unset, for every build.
-///
-/// `fastframe_fonts` logs, once at startup, which installed face draws each
-/// script Inter lacks. `arboard` warns on every clipboard open under some
-/// Wayland compositors; quiet that target without hiding its errors.
-/// env_logger treats '/' as a message-regex separator, so it cannot select
-/// the literal target Client/AppState: enable Client INFO, and the protocol
-/// redactor reduces every such line to a fixed category.
-pub fn default_log_filter(verbose: bool) -> &'static str {
-    if verbose {
-        "info,superwhatsapp=debug,superwhatsapp_desktop=debug,whatsapp_rust=debug,wacore=debug"
-    } else {
-        "warn,superwhatsapp=info,superwhatsapp_desktop=info,fastframe_fonts=info,Client=info,arboard=error"
-    }
-}
-
-/// Summarises the WhatsApp library's lines, which can quote protocol
-/// payloads, into fixed categories.
-pub fn redact_protocol(record: &log::Record<'_>, message: &str) -> Option<Cow<'static, str>> {
-    (is_protocol_target(record.target())
-        || is_protocol_target(record.module_path().unwrap_or_default()))
-    .then(|| protocol_summary(message))
-}
-
 pub fn is_protocol_target(target: &str) -> bool {
     let module = target.split("::").next().unwrap_or_default();
     module == "whatsapp_rust"
@@ -357,7 +333,7 @@ mod tests {
         assert!(is_protocol_target("wacore::appstate"));
         assert!(is_protocol_target("wacore_noise::handshake"));
         assert!(is_protocol_target("whatsapp_rust_sqlite_storage::store"));
-        assert!(!is_protocol_target("superwhatsapp::backend::worker"));
+        assert!(!is_protocol_target("zapfast::backend::worker"));
     }
 
     #[test]

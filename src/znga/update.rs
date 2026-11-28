@@ -1,5 +1,5 @@
 //! Self-update for Znga builds: releases come from this fork, signed with
-//! the fork's own key, so an update never swaps Znga for the upstream app.
+//! the fork's own key, so an update never swaps Znga for upstream ZapFast.
 //! Replaces `updates::CONFIG` when the `znga` feature is on.
 
 use fastframe_update::{MacConfig, Prereleases, UpdateConfig};
@@ -13,10 +13,7 @@ pub const REPOSITORY: &str = "selvakumarEsra/superwhatsapp";
 pub const CONFIG: UpdateConfig = UpdateConfig {
     legacy_names: &["zapfast", "fastsapp"],
     macos: MacConfig {
-        // The bundle ID moves to cc.superwhatsapp over two releases: this one
-        // keeps the old ID and accepts the new one, so it can update in place
-        // to the release that switches (REQ-SUPERWA-008).
-        bundle_ids: &["me.paolino.fastsapp", "cc.superwhatsapp"],
+        bundle_ids: &["me.paolino.fastsapp"],
         executable_names: &["superwhatsapp", "zapfast"],
         legacy_bundle_names: &["ZapFast.app", "FastsApp.app"],
     },
@@ -48,11 +45,5 @@ mod tests {
             Some(include_str!("../../assets/update-public-key.hex")),
             "never upstream's key"
         );
-    }
-
-    #[test]
-    fn updates_accept_the_next_bundle_id() {
-        assert!(CONFIG.macos.bundle_ids.contains(&"me.paolino.fastsapp"));
-        assert!(CONFIG.macos.bundle_ids.contains(&"cc.superwhatsapp"));
     }
 }

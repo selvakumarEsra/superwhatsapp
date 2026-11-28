@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Write the winget manifests for a published SuperWhatsapp release.
+"""Write the winget manifests for a published ZapFast release.
 
     python3 packaging/winget/manifests.py v1.2.3 OUTPUT_DIR
 
 Fills the templates beside this script with the version, the release date and
 the MSI hashes from the release's checksums.txt, and writes them to
-OUTPUT_DIR/manifests/c/crmne/SuperWhatsapp/1.2.3, the layout of microsoft/winget-pkgs.
+OUTPUT_DIR/manifests/c/crmne/ZapFast/1.2.3, the layout of microsoft/winget-pkgs.
 Nothing is submitted: see PACKAGING.md. --checksums and --release-date use local
 values instead of asking GitHub, for a release that is not published yet.
 """
@@ -17,12 +17,12 @@ import sys
 import urllib.request
 from pathlib import Path
 
-REPOSITORY = "selvakumarEsra/superwhatsapp"
+REPOSITORY = "crmne/zapfast"
 HERE = Path(__file__).resolve().parent
 TEMPLATES = sorted(HERE.glob("*.yaml.in"))
 INSTALLERS = {
-    "X64_SHA256": "superwhatsapp-{tag}-x86_64-pc-windows-msvc.msi",
-    "ARM64_SHA256": "superwhatsapp-{tag}-aarch64-pc-windows-msvc.msi",
+    "X64_SHA256": "zapfast-{tag}-x86_64-pc-windows-msvc.msi",
+    "ARM64_SHA256": "zapfast-{tag}-aarch64-pc-windows-msvc.msi",
 }
 
 
@@ -83,7 +83,7 @@ def main():
         sys.exit(f"invalid release date: {date}")
     values["RELEASE_DATE"] = date
 
-    destination = args.output / "manifests/c/crmne/SuperWhatsapp" / version
+    destination = args.output / "manifests/c/crmne/ZapFast" / version
     destination.mkdir(parents=True, exist_ok=True)
     for template in TEMPLATES:
         path = destination / template.name.removesuffix(".in")

@@ -1,6 +1,6 @@
 [package]
-name = "superwhatsapp-desktop"
-version = "0.21.1-beta.13"
+name = "zapfast-desktop"
+version = "0.21.1-beta.11"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
@@ -8,18 +8,18 @@ description = "SuperWhatsapp's Tauri shell (specs/tauri-ui.md)"
 publish = false
 
 [lib]
-name = "superwhatsapp_desktop"
+name = "zapfast_desktop"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [[bin]]
-name = "superwhatsapp-desktop"
+name = "zapfast-desktop"
 path = "src/main.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-superwhatsapp = { path = "..", features = ["demo"] }
+zapfast = { path = "..", features = ["demo"] }
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }
@@ -30,17 +30,14 @@ base64 = "0.23"
 # The core still steps its state with an egui context until its state
 # leaves src/app.rs (REQ-WEBUI-001); nothing is drawn with it.
 egui = "0.36.2"
-image = { version = "0.25", default-features = false, features = ["jpeg"] }
 log = "0.4"
-# The accounts' startup permits (superwhatsapp::backend::Backend::take_startup).
+# The accounts' startup permits (zapfast::backend::Backend::take_startup).
 tokio = { version = "1", features = ["sync"] }
 anyhow = "1"
 # Installs updates and confirms a relaunch, as the egui build does.
 fastframe-update = { git = "https://github.com/crmne/fastframe", tag = "v0.15.4" }
 fastframe-i18n = { git = "https://github.com/crmne/fastframe", tag = "v0.15.4" }
 fastframe-theme = { git = "https://github.com/crmne/fastframe", tag = "v0.15.4" }
-# The log file, panic log and protocol redaction, as the egui build has.
-fastframe-log = { git = "https://github.com/crmne/fastframe", tag = "v0.15.4" }
 
 # The taskbar's unread overlay, drawn as the egui build draws it.
 [target.'cfg(windows)'.dependencies]

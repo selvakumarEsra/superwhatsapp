@@ -141,7 +141,7 @@ fn pausable_player(bus_name: &str) -> bool {
     // going through it too would pause one of them twice. SuperWhatsapp does not
     // publish MPRIS today, but must never pause itself if it starts to.
     let app = player.split('.').next().unwrap_or_default();
-    !player.is_empty() && app != "playerctld" && app != "superwhatsapp"
+    !player.is_empty() && app != "playerctld" && app != "zapfast"
 }
 
 #[cfg(target_os = "linux")]
@@ -405,9 +405,9 @@ mod tests {
         ));
         assert!(pausable_player("org.mpris.MediaPlayer2.playerctldish"));
         assert!(!pausable_player("org.mpris.MediaPlayer2.playerctld"));
-        assert!(!pausable_player("org.mpris.MediaPlayer2.superwhatsapp"));
+        assert!(!pausable_player("org.mpris.MediaPlayer2.zapfast"));
         assert!(!pausable_player(
-            "org.mpris.MediaPlayer2.superwhatsapp.instance42"
+            "org.mpris.MediaPlayer2.zapfast.instance42"
         ));
         assert!(!pausable_player("org.mpris.MediaPlayer2."));
         assert!(!pausable_player("org.freedesktop.Notifications"));

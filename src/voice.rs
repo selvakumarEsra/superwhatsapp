@@ -431,12 +431,12 @@ mod tests {
         assert!(decode(&[]).is_err());
     }
 
-    /// Decodes the file in `SUPERWHATSAPP_OGG_PROBE`:
-    /// `SUPERWHATSAPP_OGG_PROBE=note.ogg cargo test voice::tests::probe -- --ignored --nocapture`.
+    /// Decodes the file in `ZAPFAST_OGG_PROBE`:
+    /// `ZAPFAST_OGG_PROBE=note.ogg cargo test voice::tests::probe -- --ignored --nocapture`.
     #[test]
     #[ignore = "needs a file to look at"]
     fn probe() {
-        let Some(path) = std::env::var_os("SUPERWHATSAPP_OGG_PROBE") else {
+        let Some(path) = std::env::var_os("ZAPFAST_OGG_PROBE") else {
             return;
         };
         let bytes = std::fs::read(path).expect("readable");

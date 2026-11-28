@@ -74,42 +74,15 @@ function Picker(p: { label: string; kind: "microphone" | "speaker" | "camera"; l
 function Screen(p: { call: CallView }) {
   const [devices, setDevices] = createSignal(false);
   const [full, setFull] = createSignal(false);
-  const ringing = () => p.call.phase === "incoming";
   const statusColor = () => (p.call.failed ? "var(--danger)" : p.call.phase === "live" ? "var(--accent-text)" : "var(--text-secondary)");
   return (
     <div
       role="dialog"
       aria-label={t(p.call.video ? "Video call" : "Voice call")}
       class="fixed inset-0 z-40 flex flex-col items-center"
-      style={{ background: p.call.remoteFrame ? "#000" : "var(--window-bg)", padding: "24px", top: "28px" }}
+      style={{ background: "var(--window-bg)", padding: "24px", top: "28px" }}
       onKeyDown={(e) => e.key === "Escape" && p.call.phase !== "incoming" && commands.callControl("hide")}
     >
-      {/* call.rs:screen: the peer's picture fills the window, fitted
-          inside it, and everything else is drawn over it. */}
-      <Show when={p.call.remoteFrame}>
-        <img src={p.call.remoteFrame!} alt="" class="absolute inset-0 h-full w-full" style={{ "object-fit": "contain" }} />
-      </Show>
-      {/* call.rs:own_preview: our camera in the top-right corner, at its own
-          shape within 24% of the screen, 48 down, rounded 12, outlined. */}
-      <Show when={p.call.localFrame}>
-        <img
-          src={p.call.localFrame!}
-          alt={t("Your camera")}
-          class="absolute"
-          style={{ top: "72px", right: "24px", "max-width": "calc((100% - 48px) * 0.24)", "max-height": "calc((100% - 48px) * 0.24)", "border-radius": "12px", outline: "1px solid var(--chip-border)" }}
-        />
-      </Show>
-      {/* Over a picture, the name (semibold 15) and the length (medium 13)
-          sit on a dark plate of their own, as wide as they are. */}
-      <Show when={p.call.remoteFrame}>
-        <div
-          class="absolute flex flex-col items-center"
-          style={{ top: "28px", left: "50%", transform: "translateX(-50%)", padding: "6px 14px", "border-radius": "14px", background: "rgba(0,0,0,0.59)", color: "#fff", "line-height": "18px" }}
-        >
-          <span style={{ "font-size": "15px", "font-weight": 600 }}>{p.call.name}</span>
-          <span style={{ "font-size": "13px", "font-weight": 500 }}><Status call={p.call} /></span>
-        </div>
-      </Show>
       <div data-tauri-drag-region class="absolute inset-x-0 top-0" style={{ height: "40px" }} />
       <Show when={p.call.phase !== "incoming"}>
         <button
@@ -118,7 +91,7 @@ function Screen(p: { call: CallView }) {
           aria-label={t("Hide the call screen")}
           onClick={() => commands.callControl("hide")}
           class="icon-button absolute flex items-center justify-center rounded-full"
-          style={{ top: "26px", left: "24px", width: "32px", height: "32px", color: p.call.remoteFrame ? "rgba(255,255,255,0.78)" : "var(--text-secondary)" }}
+          style={{ top: "26px", left: "24px", width: "32px", height: "32px", color: "var(--text-secondary)" }}
         >
           <BackIcon size={20} />
         </button>
@@ -128,10 +101,9 @@ function Screen(p: { call: CallView }) {
           aria-label={t(full() ? "Exit full screen" : "Full screen")}
           onClick={async () => setFull(await commands.callFullscreen())}
           class="icon-button absolute flex items-center justify-center rounded-full"
-          style={{ top: "26px", right: "24px", width: "32px", height: "32px", color: p.call.remoteFrame ? "rgba(255,255,255,0.78)" : "var(--text-secondary)" }}
+          style={{ top: "26px", right: "24px", width: "32px", height: "32px", color: "var(--text-secondary)" }}
         >
-          {/* call.rs:corner_buttons: white over a picture, the secondary ink otherwise. */}
-          <Show when={full()} fallback={<MaximizeIcon size={18} />}><MinimizeIcon size={18} /></Show>
+          <Show when={full()} fallback={<MaximizeIcon size={20} />}><MinimizeIcon size={20} /></Show>
         </button>
       </Show>
       <Show when={devices() && p.call.phase === "live"}>
@@ -143,10 +115,9 @@ function Screen(p: { call: CallView }) {
           </Show>
         </div>
       </Show>
-      {/* call.rs: live() at 16% of the area inside the padding, ringing() at 18%. */}
-      <div class="relative flex flex-col items-center text-center" style={{ "margin-top": `calc(${ringing() ? 0.18 : 0.16} * (100vh - 76px))`, visibility: p.call.remoteFrame ? "hidden" : undefined }}>
-        <Avatar src={p.call.avatar} size={Math.round(Math.min(ringing() ? 160 : 168, Math.max(96, (window.innerHeight - 76) * (ringing() ? 0.24 : 0.26))))} seed={p.call.chat} />
-        <h2 class="selectable" style={{ margin: "20px 0 0", "font-size": "26px", "font-weight": 700, color: "var(--text-primary)" }}>{p.call.name}</h2>
+      <div class="flex flex-col items-center text-center" style={{ "margin-top": "16vh" }}>
+        <Avatar src={p.call.avatar} size={Math.round(Math.min(168, Math.max(96, window.innerHeight * 0.26)))} seed={p.call.chat} />
+        <h2 class="selectable" style={{ margin: "18px 0 0", "font-size": "26px", "font-weight": 700, color: "var(--text-primary)" }}>{p.call.name}</h2>
         <p aria-live="polite" style={{ margin: "6px 0 0", "font-size": "15px", "font-weight": 500, color: statusColor() }}><Status call={p.call} /></p>
       </div>
       <div class="absolute flex justify-center" style={{ bottom: "24px", left: 0, right: 0, gap: "16px" }}>
@@ -189,13 +160,13 @@ function Screen(p: { call: CallView }) {
           }
         >
           {/* ringing(): the two answers, each named under its button. */}
-          <div class="flex flex-col items-center" style={{ width: "56px", gap: "6px", "margin-bottom": "1px" }}>
+          <div class="flex flex-col items-center" style={{ gap: "6px", "margin-bottom": "4px" }}>
             <Control label="Decline" fill="var(--danger)" tint="#fff" onClick={() => commands.callControl("decline")}>
               <PhoneOffIcon size={24} />
             </Control>
             <span style={{ "font-size": "13px", "font-weight": 500, color: "var(--text-secondary)" }}>{t("Decline")}</span>
           </div>
-          <div class="flex flex-col items-center" style={{ width: "56px", gap: "6px", "margin-left": "56px", "margin-bottom": "1px" }}>
+          <div class="flex flex-col items-center" style={{ gap: "6px", "margin-left": "52px", "margin-bottom": "4px" }}>
             <Control label="Accept" fill="var(--accent)" tint="#fff" onClick={() => commands.callControl("answer")}>
               <Show when={p.call.video} fallback={<CallsIcon size={24} />}><VideoIcon size={24} /></Show>
             </Control>

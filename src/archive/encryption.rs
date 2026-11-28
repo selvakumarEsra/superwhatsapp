@@ -10,13 +10,6 @@ use zeroize::Zeroizing;
 
 const HEADER: &[u8; 16] = b"SQLite format 3\0";
 
-/// The keychain service SuperWhatsapp keeps archive keys under
-/// (REQ-SUPERWA-006).
-pub const SERVICE: &str = "cc.superwhatsapp";
-/// The service of installs from before the rename. Keys are only read from
-/// it, to be copied to [`SERVICE`] (REQ-SUPERWA-005); never written.
-const LEGACY_SERVICE: &str = "rocks.zapfast.ZapFast";
-
 fn plaintext(path: &Path) -> Result<bool> {
     let mut file = match fs::File::open(path) {
         Ok(file) => file,
@@ -35,113 +28,11 @@ pub(super) fn key_for(path: &Path) -> Result<Zeroizing<[u8; 32]>> {
     let parent = path.parent().context("Archive has no parent directory")?;
     fs::create_dir_all(parent)?;
     let store = platform_store()?;
-    let identity = identity_for(parent)?;
-    adopt_legacy_key(&*store, &identity)?;
     let entry = store
-        .build(SERVICE, &identity, None)
+        .build("rocks.zapfast.ZapFast", &identity_for(parent)?, None)
         .map_err(keyring_error)
         .context("The OS keyring could not open SuperWhatsapp's archive key")?;
     key_from_entry(path, &entry)
-}
-
-/// Reads the 32-byte key of `identity` under `service`, `None` when there
-/// is none.
-fn read_key(
-    store: &dyn CredentialStoreApi,
-    service: &str,
-    identity: &str,
-) -> Result<Option<Zeroizing<[u8; 32]>>> {
-    let entry = store
-        .build(service, identity, None)
-        .map_err(keyring_error)
-        .context("The OS keyring could not open SuperWhatsapp's archive key")?;
-    match entry.get_secret() {
-        Ok(secret) => {
-            let secret = Zeroizing::new(secret);
-            ensure!(
-                secret.len() == 32,
-                "The archive key in the OS keyring is invalid"
-            );
-            let mut key = Zeroizing::new([0; 32]);
-            key.copy_from_slice(&secret);
-            Ok(Some(key))
-        }
-        Err(keyring_core::Error::NoEntry) => Ok(None),
-        Err(error) => {
-            Err(keyring_error(error)).context("Unlock your OS keyring and restart SuperWhatsapp")
-        }
-    }
-}
-
-/// Saves `key` for `identity` under [`SERVICE`] and reads it back before
-/// anything relies on it.
-fn write_key(store: &dyn CredentialStoreApi, identity: &str, key: &[u8; 32]) -> Result<()> {
-    let entry = store
-        .build(SERVICE, identity, None)
-        .map_err(keyring_error)
-        .context("The OS keyring could not open SuperWhatsapp's archive key")?;
-    entry
-        .set_secret(key.as_ref())
-        .map_err(keyring_error)
-        .context("Could not save the archive key in the OS keyring")?;
-    let saved = Zeroizing::new(
-        entry
-            .get_secret()
-            .map_err(keyring_error)
-            .context("Could not verify the copied archive key")?,
-    );
-    ensure!(
-        saved.as_slice() == key.as_ref(),
-        "The OS keyring did not retain the copied archive key"
-    );
-    Ok(())
-}
-
-/// The key of `identity` under the current name, or else under the old
-/// one, for copying.
-fn any_key(store: &dyn CredentialStoreApi, identity: &str) -> Result<Option<Zeroizing<[u8; 32]>>> {
-    match read_key(store, SERVICE, identity)? {
-        Some(key) => Ok(Some(key)),
-        None => read_key(store, LEGACY_SERVICE, identity),
-    }
-}
-
-/// A key saved only under the old service name is copied to the new one,
-/// for the same folder (REQ-SUPERWA-005). The old entry stays.
-fn adopt_legacy_key(store: &dyn CredentialStoreApi, identity: &str) -> Result<()> {
-    if read_key(store, SERVICE, identity)?.is_some() {
-        return Ok(());
-    }
-    if let Some(key) = read_key(store, LEGACY_SERVICE, identity)? {
-        write_key(store, identity, &key)?;
-    }
-    Ok(())
-}
-
-/// Copies the key an archive had in its old folder (`old_identity`, taken
-/// before the folder moved) to the folder it is in now (REQ-SUPERWA-005).
-/// A plain archive needs none; an encrypted one with no key is an error, and
-/// the caller moves the folder back.
-pub fn move_archive_key(old_identity: &str, new_archive: &Path) -> Result<()> {
-    if plaintext(new_archive)? {
-        return Ok(());
-    }
-    move_archive_key_in(old_identity, new_archive, &*platform_store()?)
-}
-
-fn move_archive_key_in(
-    old_identity: &str,
-    new_archive: &Path,
-    store: &dyn CredentialStoreApi,
-) -> Result<()> {
-    let new_identity = archive_key_identity(new_archive)?;
-    if read_key(store, SERVICE, &new_identity)?.is_some() {
-        return Ok(());
-    }
-    let key = any_key(store, old_identity)?.context(
-        "The archive is encrypted but its OS keyring key is missing. Restore the original keyring; the archive has not been changed",
-    )?;
-    write_key(store, &new_identity, &key)
 }
 
 /// Copies the keyring entry when an archive moves to another folder.
@@ -170,34 +61,64 @@ fn copy_archive_key_in(
     if old_parent.canonicalize()? == new_parent.canonicalize()? {
         return Ok(());
     }
-    let key = match any_key(store, &identity_for(old_parent)?)? {
-        Some(key) => key,
-        None => {
+    let old_entry = store
+        .build("rocks.zapfast.ZapFast", &identity_for(old_parent)?, None)
+        .map_err(keyring_error)
+        .context("The OS keyring could not open SuperWhatsapp's archive key")?;
+    let key = match old_entry.get_secret() {
+        Ok(secret) => {
+            ensure!(
+                secret.len() == 32,
+                "The archive key in the OS keyring is invalid"
+            );
+            let mut key = Zeroizing::new([0; 32]);
+            key.copy_from_slice(&secret);
+            key
+        }
+        Err(keyring_core::Error::NoEntry) => {
             ensure!(
                 plaintext(old_archive)?,
                 "The archive is encrypted but its OS keyring key is missing. Restore the original keyring; the archive has not been changed"
             );
             return Ok(());
         }
+        Err(error) => {
+            return Err(keyring_error(error))
+                .context("Unlock your OS keyring and restart SuperWhatsapp");
+        }
     };
+    let new_entry = store
+        .build("rocks.zapfast.ZapFast", &identity_for(new_parent)?, None)
+        .map_err(keyring_error)
+        .context("The OS keyring could not open SuperWhatsapp's archive key")?;
+    new_entry
+        .set_secret(key.as_ref())
+        .map_err(keyring_error)
+        .context("Could not save the archive key in the OS keyring")?;
     // Read back before the only copy of the history moves under this key.
-    write_key(store, &identity_for(new_parent)?, &key)
+    let saved = Zeroizing::new(
+        new_entry
+            .get_secret()
+            .map_err(keyring_error)
+            .context("Could not verify the copied archive key")?,
+    );
+    ensure!(
+        saved.as_slice() == key.as_ref(),
+        "The OS keyring did not retain the copied archive key"
+    );
+    Ok(())
 }
 
 /// Deletes the keyring entry of an archive folder that is gone for good,
 /// such as a removed account's. Never call it while the archive exists.
 pub fn forget_archive_key(identity: &str) -> Result<()> {
-    let store = platform_store()?;
-    for service in [SERVICE, LEGACY_SERVICE] {
-        let entry = store
-            .build(service, identity, None)
-            .map_err(keyring_error)?;
-        match entry.delete_credential() {
-            Ok(()) | Err(keyring_core::Error::NoEntry) => {}
-            Err(error) => return Err(keyring_error(error)),
-        }
+    let entry = platform_store()?
+        .build("rocks.zapfast.ZapFast", identity, None)
+        .map_err(keyring_error)?;
+    match entry.delete_credential() {
+        Ok(()) | Err(keyring_core::Error::NoEntry) => Ok(()),
+        Err(error) => Err(keyring_error(error)),
     }
-    Ok(())
 }
 
 /// The keyring identity of the archive at `path`, while its folder exists.
@@ -447,7 +368,7 @@ mod tests {
         let directory = directory();
         let path = directory.path().join("archive.db");
         let store = keyring_core::mock::Store::new().unwrap();
-        let entry = store.build("superwhatsapp-test", "archive", None).unwrap();
+        let entry = store.build("zapfast-test", "archive", None).unwrap();
         let key = key_from_entry(&path, &entry).unwrap();
         assert_eq!(*key, *key_from_entry(&path, &entry).unwrap());
         let connection = open(&path, &key).unwrap();
@@ -542,7 +463,7 @@ mod tests {
             let path = directory.path().join("archive.db");
             let kept = directory.path().join("archive-unreadable.db");
             let store = keyring_core::mock::Store::new().unwrap();
-            let entry = store.build("superwhatsapp-test", "archive", None).unwrap();
+            let entry = store.build("zapfast-test", "archive", None).unwrap();
             let original_key = key_from_entry(&path, &entry).unwrap();
             let connection = open(&path, &original_key).unwrap();
             connection
@@ -573,7 +494,7 @@ mod tests {
         let directory = directory();
         let path = directory.path().join("archive.db");
         let store = keyring_core::mock::Store::new().unwrap();
-        let entry = store.build("superwhatsapp-test", "archive", None).unwrap();
+        let entry = store.build("zapfast-test", "archive", None).unwrap();
         entry.set_secret(&[]).unwrap();
         for contents in [b"".as_slice(), HEADER.as_slice()] {
             fs::write(&path, contents).unwrap();
@@ -676,57 +597,5 @@ mod tests {
         assert_eq!(read_secret(&Connection::open(&path).unwrap()), "keep me");
         fs::remove_dir(path.with_extension("db.encrypting")).unwrap();
         assert_eq!(read_secret(&open(&path, &[9; 32]).unwrap()), "keep me");
-    }
-
-    #[test]
-    fn a_key_under_the_old_name_is_copied_to_the_new_one() {
-        let store = keyring_core::mock::Store::new().unwrap();
-        let key = [7u8; 32];
-        store
-            .build(LEGACY_SERVICE, "archive-old", None)
-            .unwrap()
-            .set_secret(&key)
-            .unwrap();
-        // The same folder: copied under the new name, the old entry kept.
-        adopt_legacy_key(&*store, "archive-old").unwrap();
-        assert_eq!(
-            *read_key(&*store, SERVICE, "archive-old").unwrap().unwrap(),
-            key
-        );
-        assert!(
-            read_key(&*store, LEGACY_SERVICE, "archive-old")
-                .unwrap()
-                .is_some()
-        );
-        // A moved folder: the key follows it to the new folder's identity.
-        let directory = directory();
-        let archive = directory.path().join("archive.db");
-        fs::write(&archive, b"encrypted pages").unwrap();
-        move_archive_key_in("archive-old", &archive, &*store).unwrap();
-        let identity = archive_key_identity(&archive).unwrap();
-        assert_eq!(
-            *read_key(&*store, SERVICE, &identity).unwrap().unwrap(),
-            key
-        );
-        // A folder whose key is gone is refused, and nothing is written.
-        let other = tempfile::tempdir().unwrap();
-        let lost = other.path().join("archive.db");
-        fs::write(&lost, b"encrypted pages").unwrap();
-        assert!(
-            move_archive_key_in("archive-missing", &lost, &*store)
-                .unwrap_err()
-                .to_string()
-                .contains("missing")
-        );
-        let identity = archive_key_identity(&lost).unwrap();
-        assert!(read_key(&*store, SERVICE, &identity).unwrap().is_none());
-        // A new install reads the old name but never writes it.
-        adopt_legacy_key(&*store, "archive-new").unwrap();
-        assert!(
-            read_key(&*store, LEGACY_SERVICE, "archive-new")
-                .unwrap()
-                .is_none()
-        );
-        assert!(read_key(&*store, SERVICE, "archive-new").unwrap().is_none());
     }
 }

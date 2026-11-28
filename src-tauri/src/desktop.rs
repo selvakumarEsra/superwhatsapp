@@ -101,7 +101,7 @@ pub fn on_window_event<R: Runtime>(window: &tauri::Window<R>, event: &WindowEven
 /// Puts the unread chat count on the Dock tile (macOS), the launcher
 /// (Linux, where the core also publishes it) or the taskbar button
 /// (Windows), on the main thread as AppKit and the taskbar require.
-pub fn set_badge<R: Runtime>(app: &AppHandle<R>, count: u32, locale: superwhatsapp::i18n::Locale) {
+pub fn set_badge<R: Runtime>(app: &AppHandle<R>, count: u32, locale: zapfast::i18n::Locale) {
     let handle = app.clone();
     let _ = app.run_on_main_thread(move || {
         let Some(window) = main_window(&handle) else {
@@ -114,7 +114,7 @@ pub fn set_badge<R: Runtime>(app: &AppHandle<R>, count: u32, locale: superwhatsa
                 static TASKBAR: std::cell::RefCell<Option<fastframe_dock::Taskbar>> =
                     const { std::cell::RefCell::new(None) };
             }
-            let description = superwhatsapp::notify::badge_description(count, locale);
+            let description = zapfast::notify::badge_description(count, locale);
             TASKBAR.with_borrow_mut(|taskbar| {
                 let taskbar = taskbar.get_or_insert_with(fastframe_dock::Taskbar::default);
                 let _ = taskbar.show(&window, count, &description);

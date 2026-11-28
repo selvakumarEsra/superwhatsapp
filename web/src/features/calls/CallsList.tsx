@@ -5,7 +5,7 @@
 // and what it carried on the right. Alike calls fold into one row with a
 // count. Clicking a call opens its chat.
 import { For, Show } from "solid-js";
-import { commands, state, type CallRow, type Person } from "../../lib/bridge";
+import { commands, state, type CallRow } from "../../lib/bridge";
 import Avatar from "../../components/Avatar";
 import { CallsIcon, PhoneIncomingIcon, PhoneMissedIcon, PhoneOutgoingIcon, VideoIcon } from "../../components/Icons";
 import { t } from "../../lib/i18n";
@@ -33,7 +33,7 @@ function Row(p: { call: CallRow }) {
           </span>
           <span class="shrink-0" style={{ "font-size": "var(--fs-meta)", color: "var(--text-meta)" }}>{p.call.stamp}</span>
         </div>
-        <div class="flex items-center" style={{ gap: "6px", height: "18px", "margin-top": "5px", "font-size": "13px", color: "var(--text-secondary)" }}>
+        <div class="flex items-center" style={{ gap: "6px", height: "18px", "margin-top": "4px", "font-size": "13px", color: "var(--text-secondary)" }}>
           <span class="flex shrink-0" style={{ color: p.call.bad ? "var(--danger)" : "var(--accent)" }}><Glyph /></span>
           <span class="truncate">{p.call.summary}</span>
         </div>
@@ -52,70 +52,6 @@ function Row(p: { call: CallRow }) {
         </Show>
       </button>
     </div>
-  );
-}
-
-/** calls::person: a 68-point row, the 48-point picture centred 38 in, the
- *  name medium 14.5 at 14 and the number regular 13 at 38, and on the
- *  right the voice then the video button. Either starts the call and
- *  closes the list. */
-function PersonRow(p: { person: Person }) {
-  const call = (video: boolean) => {
-    void commands.startCall(p.person.id, video);
-    void commands.showNewCall(false);
-  };
-  return (
-    <div class="chat-row relative flex items-center" style={{ height: "var(--row-h)" }}>
-      <div class="row-card absolute" style={{ inset: "2px var(--row-inset)", "border-radius": "var(--row-radius)" }} />
-      <div class="relative flex shrink-0 items-center justify-center" style={{ width: "76px" }}>
-        <Avatar src={p.person.avatar} size={48} seed={p.person.id} />
-      </div>
-      {/* The text stops 8 before the buttons' 92-point slot. */}
-      <div class="relative flex h-full min-w-0 flex-1 flex-col" style={{ "padding-top": "15px", "padding-right": "12px" }}>
-        <span class="truncate" style={{ "font-size": "14.5px", "font-weight": 500, "line-height": "17px", color: "var(--text-primary)" }}>{p.person.name}</span>
-        <Show when={p.person.phone}>
-          <span class="truncate" style={{ "margin-top": "7px", "font-size": "13px", "line-height": "15px", color: "var(--text-meta)" }}>{p.person.phone}</span>
-        </Show>
-      </div>
-      <div class="relative flex shrink-0 items-center" style={{ gap: "6px", "margin-right": "7px", color: "var(--text-secondary)" }}>
-        <button type="button" aria-label={t("Voice call {name}").replace("{name}", p.person.name)} onClick={() => call(false)} class="icon-button flex items-center justify-center rounded-full" style={{ width: "36px", height: "36px" }}>
-          <CallsIcon size={18} />
-        </button>
-        <button type="button" aria-label={t("Video call {name}").replace("{name}", p.person.name)} onClick={() => call(true)} class="icon-button flex items-center justify-center rounded-full" style={{ width: "36px", height: "36px" }}>
-          <VideoIcon size={18} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/** calls::section: 10 down, then the label medium 13 in the accent. */
-function Section(p: { label: string }) {
-  return <div style={{ padding: "16px 14px 6px 16px", "font-size": "13px", "line-height": "15px", "font-weight": 500, color: "var(--accent)" }}>{t(p.label)}</div>;
-}
-
-/** calls::new_call_list: "Frequently contacted" (not while searching),
- *  then "All contacts", or "No matching contacts". */
-export function NewCallList() {
-  return (
-    <Show when={state.newCall}>
-      {(list) => (
-        <div>
-          <Show when={list().frequent.length > 0}>
-            <Section label="Frequently contacted" />
-            <For each={list().frequent}>{(person) => <PersonRow person={person} />}</For>
-          </Show>
-          <Show
-            when={list().contacts.length > 0}
-            fallback={<p class="text-center" style={{ margin: "12px 0 0", "font-size": "13px", color: "var(--text-secondary)" }}>{t("No matching contacts")}</p>}
-          >
-            <Section label="All contacts" />
-            <For each={list().contacts}>{(person) => <PersonRow person={person} />}</For>
-          </Show>
-          <div style={{ height: "12px" }} />
-        </div>
-      )}
-    </Show>
   );
 }
 
@@ -139,7 +75,7 @@ export default function CallsList() {
         </div>
       }
     >
-      <div role="listbox" aria-label="Calls" style={{ "padding-top": "2px" }}>
+      <div role="listbox" aria-label="Calls">
         <For each={state.calls}>{(call) => <Row call={call} />}</For>
       </div>
     </Show>

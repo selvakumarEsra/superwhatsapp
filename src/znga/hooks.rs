@@ -50,10 +50,6 @@ pub fn observe_incoming(app: &mut App, chat_id: &str, message: &Message) {
     if !visible(&app.znga.config, ChatFacts::of(&account, chat)) {
         return;
     }
-    super::learn::observe(app, &account, &chat.clone()); // profiles count new messages
-    let Some(chat) = app.chat(chat_id) else {
-        return;
-    };
     let muted = chat.muted(now);
     let group = chat.is_group();
     let chat_title = app.chat_title(chat);
@@ -195,7 +191,7 @@ pub(super) fn notify(
 
 /// The chat's recent lines: the loaded conversation when there is one,
 /// else what Znga has seen.
-pub(super) fn lines_of(app: &App, account: &str, chat: &str) -> Vec<Line> {
+fn lines_of(app: &App, account: &str, chat: &str) -> Vec<Line> {
     lines_n(app, account, chat, 30)
 }
 
@@ -243,7 +239,7 @@ pub(super) fn your_name(app: &App, account: &str) -> String {
         .unwrap_or_default()
 }
 
-pub(super) fn title_of(app: &App, account: &str, chat: &str) -> String {
+fn title_of(app: &App, account: &str, chat: &str) -> String {
     app.accounts
         .iter()
         .find(|known| known.id.as_str() == account)
@@ -273,7 +269,6 @@ pub(super) fn twin_for(app: &App, account: &str, chat: &str) -> Twin {
         } else {
             app.znga.people.about(account, chat)
         },
-        profile: super::learn::lines_for(app, account, chat),
     }
 }
 
@@ -427,7 +422,7 @@ pub fn request_ask(app: &mut App, question: String) {
 }
 
 /// The archive and the chats Znga may read on `account`.
-pub(super) fn archive_of(app: &App, account: &str) -> Option<PathBuf> {
+fn archive_of(app: &App, account: &str) -> Option<PathBuf> {
     app.accounts
         .iter()
         .find(|known| known.id.as_str() == account)
@@ -514,7 +509,6 @@ fn answer(app: &mut App, ask: u64) {
         &asking.hits,
         &asking.history,
         &asking.question,
-        &super::learn::named_in(app, &account, &asking.question),
     );
     if let Err(error) = app.znga.submit(prompt, Purpose::Answer { ask }) {
         let now = crate::util::now();
@@ -757,10 +751,10 @@ pub fn write_event(app: &mut App, event: &super::calendar::Event, uid: &str) -> 
             match written {
                 Ok(()) => {
                     if let Err(error) = crate::opener::open_or_reveal(&path) {
-                        log::warn!(target: "superwhatsapp::znga", "{error}");
+                        log::warn!(target: "zapfast::znga", "{error}");
                     }
                 }
-                Err(error) => log::warn!(target: "superwhatsapp::znga", "calendar file: {error}"),
+                Err(error) => log::warn!(target: "zapfast::znga", "calendar file: {error}"),
             }
         })
         .ok();
@@ -1037,12 +1031,8 @@ fn apply(app: &mut App, effects: Vec<Effect>) {
                 pump_self_chat(app);
             }
             Effect::Search { ask, terms } => search_for(app, ask, terms),
-            Effect::Answered {
-                account,
-                text,
-                cites,
-            } => {
-                super::chat::answer(app, &account, text, cites);
+            Effect::Answered { account, text } => {
+                super::chat::answer(app, &account, text, Vec::new());
             }
             Effect::Browsed {
                 account,
@@ -1180,7 +1170,6 @@ fn save_memory(app: &mut App) {
     if app.znga.ask_dirty {
         save_ask(app);
     }
-    super::learn::save(app);
     let facts = app.znga.people.take_dirty();
     let promises = app.znga.promises.take_dirty();
     if facts || promises {
@@ -1248,8 +1237,6 @@ fn store_replies(app: &mut App) {
                 if first {
                     super::chat::loaded(app, &account, loaded.thread, &loaded.ask);
                     app.znga.people.restore(loaded.facts);
-                    app.znga.profiles.restore(loaded.profiles);
-                    app.znga.profiles.mark_dirty();
                     app.znga.promises.restore(loaded.promises);
                     app.znga.people.mark_dirty();
                     app.znga.promises.mark_dirty();
@@ -1271,16 +1258,7 @@ fn store_replies(app: &mut App) {
                 super::chat::rhythms(app, &account);
             }
             Reply::History { ask, messages } => self_chat_history(app, ask, messages),
-            Reply::GroupActivity { account, groups } => {
-                super::learn::activity(app, &account, groups)
-            }
-            Reply::ProfileHistory {
-                account,
-                chat,
-                backfill,
-                messages,
-            } => super::learn::history(app, &account, &chat, backfill, messages),
-            Reply::Failed(error) => log::warn!(target: "superwhatsapp::znga", "store: {error}"),
+            Reply::Failed(error) => log::warn!(target: "zapfast::znga", "store: {error}"),
         }
     }
 }
@@ -1435,7 +1413,6 @@ fn forget_hidden(app: &mut App) {
     };
     app.znga.people.retain(|f| keep(&f.account, &f.chat));
     app.znga.promises.retain(|p| keep(&p.account, &p.chat));
-    app.znga.profiles.retain_visible(keep);
 }
 
 /// Once a frame, after the app handled its events.
@@ -1476,7 +1453,6 @@ pub fn tick(app: &mut App) {
         app.znga.last_promise_check = Some(instant);
         check_promises(app);
     }
-    super::learn::tick(app);
     if app.znga.blocked().is_some() {
         return;
     }

@@ -196,7 +196,7 @@ impl Audit {
     /// Logs a decision.
     pub fn log(&mut self, entry: Entry) {
         if !entry.allowed {
-            log::info!(target: "superwhatsapp::znga", "sentinel refused: {}", entry.action);
+            log::info!(target: "zapfast::znga", "sentinel refused: {}", entry.action);
         }
         self.unsaved.push(entry.clone());
         self.entries.push_back(entry);

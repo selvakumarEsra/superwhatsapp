@@ -11,7 +11,6 @@ import Conversation from "./features/conversation/Conversation";
 import InfoPanel from "./features/info/InfoPanel";
 import CallScreen from "./features/calls/CallScreen";
 import EmptyPane from "./features/EmptyPane";
-import StartCall from "./features/calls/StartCall";
 import Settings from "./features/settings/Settings";
 import Link from "./features/Link";
 import LockScreen from "./features/LockScreen";
@@ -107,7 +106,7 @@ export default function App() {
                 <Pending name="Insights" />
               </Show>
               <Show when={state.znga} fallback={
-                <Show when={state.open} fallback={state.section === "calls" ? <StartCall /> : <EmptyPane />}>
+                <Show when={state.open} fallback={<EmptyPane />}>
                   <Conversation chat={state.open!} />
                 </Show>
               }>

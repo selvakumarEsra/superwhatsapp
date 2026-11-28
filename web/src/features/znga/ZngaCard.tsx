@@ -14,7 +14,6 @@ const LABELS: Record<ZCard["kind"], string> = {
   promise: "Promise",
   drift: "Stay close",
   link: "Web page",
-  cite: "Message",
 };
 
 export default function ZngaCard(p: { card: ZCard; entry: number; index: number }) {

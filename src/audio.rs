@@ -1494,7 +1494,7 @@ mod tests {
     #[ignore = "makes a sound on this machine"]
     fn plays_a_clip_on_this_machine() {
         let dir = std::env::temp_dir();
-        let path = dir.join("superwhatsapp-audio-test.ogg");
+        let path = dir.join("zapfast-audio-test.ogg");
         let tone: Vec<f32> = (0..voice::RATE)
             .map(|i| (i as f32 * 330.0 * std::f32::consts::TAU / voice::RATE as f32).sin() * 0.3)
             .collect();
@@ -1529,7 +1529,7 @@ mod tests {
     #[ignore = "makes a sound on this machine"]
     fn doubles_the_position_rate_on_this_machine() {
         let dir = std::env::temp_dir();
-        let path = dir.join("superwhatsapp-audio-speed-test.ogg");
+        let path = dir.join("zapfast-audio-speed-test.ogg");
         let tone: Vec<f32> = (0..voice::RATE * 2)
             .map(|i| (i as f32 * 330.0 * std::f32::consts::TAU / voice::RATE as f32).sin() * 0.3)
             .collect();

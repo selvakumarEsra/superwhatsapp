@@ -6,32 +6,32 @@ self:
   ...
 }:
 let
-  cfg = config.programs.superwhatsapp;
+  cfg = config.programs.zapfast;
   json = pkgs.formats.json { };
-  # paths.rs: ProjectDirs::from("me", "paolino", "superwhatsapp").
+  # paths.rs: ProjectDirs::from("me", "paolino", "zapfast").
   configDir =
     if pkgs.stdenv.hostPlatform.isDarwin then
-      "${config.home.homeDirectory}/Library/Application Support/cc.superwhatsapp"
+      "${config.home.homeDirectory}/Library/Application Support/me.paolino.zapfast"
     else
-      "${config.xdg.configHome}/superwhatsapp";
-  declared = json.generate "superwhatsapp-settings.json" cfg.settings;
+      "${config.xdg.configHome}/zapfast";
+  declared = json.generate "zapfast-settings.json" cfg.settings;
   jq = lib.getExe pkgs.jq;
   readSecret = key: path: ''
     if [[ -r ${lib.escapeShellArg path} ]]; then
-      superwhatsappSecrets+=(--rawfile ${lib.escapeShellArg key} ${lib.escapeShellArg path})
+      zapfastSecrets+=(--rawfile ${lib.escapeShellArg key} ${lib.escapeShellArg path})
     else
       warnEcho ${lib.escapeShellArg "SuperWhatsapp: cannot read ${path}, keeping the current ${key}"}
     fi
   '';
 in
 {
-  options.programs.superwhatsapp = {
+  options.programs.zapfast = {
     enable = lib.mkEnableOption "SuperWhatsapp, a native WhatsApp client";
 
     package = lib.mkOption {
       type = lib.types.package;
       default = self.packages.${pkgs.stdenv.hostPlatform.system}.default;
-      defaultText = lib.literalExpression "superwhatsapp.packages.\${pkgs.stdenv.hostPlatform.system}.default";
+      defaultText = lib.literalExpression "zapfast.packages.\${pkgs.stdenv.hostPlatform.system}.default";
       description = "The SuperWhatsapp package to install.";
     };
 
@@ -57,7 +57,7 @@ in
 
         Values are copied to the Nix store, which every local user can read.
         Give secrets, such as proxy credentials or `giphy_key`, through
-        {option}`programs.superwhatsapp.secretFiles` instead.
+        {option}`programs.zapfast.secretFiles` instead.
       '';
     };
 
@@ -66,7 +66,7 @@ in
       default = { };
       example = lib.literalExpression ''
         {
-          proxy = config.sops.secrets.superwhatsapp-proxy.path;
+          proxy = config.sops.secrets.zapfast-proxy.path;
         }
       '';
       description = ''
@@ -85,7 +85,7 @@ in
     assertions = [
       {
         assertion = builtins.all (key: !(cfg.settings ? ${key})) (builtins.attrNames cfg.secretFiles);
-        message = "programs.superwhatsapp: a key cannot be in both settings and secretFiles.";
+        message = "programs.zapfast: a key cannot be in both settings and secretFiles.";
       }
     ];
 
@@ -93,36 +93,36 @@ in
 
     # settings.json cannot be a store symlink: the app replaces it whole on
     # every change and keeps its own state in it.
-    home.activation.superwhatsappSettings = lib.mkIf (cfg.settings != { } || cfg.secretFiles != { }) (
+    home.activation.zapfastSettings = lib.mkIf (cfg.settings != { } || cfg.secretFiles != { }) (
       lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        superwhatsappDir=${lib.escapeShellArg configDir}
-        superwhatsappFile="$superwhatsappDir/settings.json"
-        run mkdir -p -m 700 "$superwhatsappDir"
-        if [[ ! -e "$superwhatsappFile" ]]; then
+        zapfastDir=${lib.escapeShellArg configDir}
+        zapfastFile="$zapfastDir/settings.json"
+        run mkdir -p -m 700 "$zapfastDir"
+        if [[ ! -e "$zapfastFile" ]]; then
           # A file without a version is migrated as one from older releases,
           # which would replace an explicit beige or black wallpaper.
-          superwhatsappBase='{"version":1}'
-        elif superwhatsappBase=$(${jq} -ce objects "$superwhatsappFile" 2>/dev/null); then
+          zapfastBase='{"version":1}'
+        elif zapfastBase=$(${jq} -ce objects "$zapfastFile" 2>/dev/null); then
           :
         else
-          warnEcho "SuperWhatsapp: $superwhatsappFile is not a JSON object, leaving it unchanged"
-          superwhatsappBase=
+          warnEcho "SuperWhatsapp: $zapfastFile is not a JSON object, leaving it unchanged"
+          zapfastBase=
         fi
-        if [[ -z "$superwhatsappBase" ]]; then
+        if [[ -z "$zapfastBase" ]]; then
           :
         elif [[ -v DRY_RUN ]]; then
-          echo "Would merge ${declared} into $superwhatsappFile"
+          echo "Would merge ${declared} into $zapfastFile"
         else
-          superwhatsappSecrets=()
+          zapfastSecrets=()
           ${lib.concatStrings (lib.mapAttrsToList readSecret cfg.secretFiles)}
-          superwhatsappTmp=$(mktemp "$superwhatsappDir/.settings.json.XXXXXX")
-          ${jq} --slurpfile __superwhatsappDeclared ${declared} "''${superwhatsappSecrets[@]}" \
-            '. * $__superwhatsappDeclared[0] * ($ARGS.named | del(.__superwhatsappDeclared) | map_values(rtrimstr("\n")))' \
-            <<< "$superwhatsappBase" > "$superwhatsappTmp"
-          chmod 600 "$superwhatsappTmp"
-          mv "$superwhatsappTmp" "$superwhatsappFile"
+          zapfastTmp=$(mktemp "$zapfastDir/.settings.json.XXXXXX")
+          ${jq} --slurpfile __zapfastDeclared ${declared} "''${zapfastSecrets[@]}" \
+            '. * $__zapfastDeclared[0] * ($ARGS.named | del(.__zapfastDeclared) | map_values(rtrimstr("\n")))' \
+            <<< "$zapfastBase" > "$zapfastTmp"
+          chmod 600 "$zapfastTmp"
+          mv "$zapfastTmp" "$zapfastFile"
         fi
-        unset superwhatsappDir superwhatsappFile superwhatsappBase superwhatsappSecrets superwhatsappTmp
+        unset zapfastDir zapfastFile zapfastBase zapfastSecrets zapfastTmp
       ''
     );
   };

@@ -603,7 +603,7 @@ impl CameraCapture {
         let stopping = Arc::clone(&running);
         let forced = Arc::clone(&keyframe);
         std::thread::Builder::new()
-            .name("superwhatsapp-camera".to_owned())
+            .name("zapfast-camera".to_owned())
             .spawn(move || {
                 let _alive = alive;
                 let controls = CaptureControls {
@@ -1298,7 +1298,7 @@ fn decode_remote(
     diag: Arc<crate::call_diag::CallVideo>,
 ) {
     let spawned = std::thread::Builder::new()
-        .name("superwhatsapp-remote-video".to_owned())
+        .name("zapfast-remote-video".to_owned())
         .spawn(move || {
             use openh264::formats::YUVSource as _;
 

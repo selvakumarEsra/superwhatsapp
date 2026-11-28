@@ -1,19 +1,19 @@
 ---
 id: ZNGA-DOC
-title: Znga — the on-device AI companion for SuperWhatsapp
+title: Znga — the on-device AI companion for ZapFast
 owner: selvakumarEsra
 priority: high
 version: 1
 ---
 
 <!-- id: ZNGA-DOC -->
-# Znga — the on-device AI companion for SuperWhatsapp
+# Znga — the on-device AI companion for ZapFast
 
-Znga is an opt-in AI layer inside SuperWhatsapp. It reads the chats the person
+Znga is an opt-in AI layer inside ZapFast. It reads the chats the person
 already sees, tells them what happened and what needs them, and writes in
 their voice so keeping up with friends and family takes one click. It is
 built as a fork-only, self-contained module (`src/znga/`, Cargo feature
-`znga`) so upstream merges stay conflict-light.
+`znga`) so upstream ZapFast merges stay conflict-light.
 
 **Product stance (decided, PM review).** Znga is a *proactive assistant
 and a drafting twin*, not an autonomous bot:
@@ -32,8 +32,8 @@ and a drafting twin*, not an autonomous bot:
 **Non-goals.** No autonomous sending to other people, no auto-replies,
 no bulk or scheduled messages, no MCP/bot/API surface for other programs
 (all of which WhatsApp bans accounts for), no hosted Znga backend, no
-storage of message text outside SuperWhatsapp's encrypted archive, and no
-handling of Claude Code login tokens by SuperWhatsapp itself.
+storage of message text outside ZapFast's encrypted archive, and no
+handling of Claude Code login tokens by ZapFast itself.
 
 This fork deliberately relaxes upstream's "features never send message
 content to a third party" boundary **only** when the person picks a cloud
@@ -44,7 +44,7 @@ the machine.
 ## Znga MUST be opt-in, disclosed, and isolated from upstream state
 
 Znga is disabled by default. Its configuration lives in its own file
-(`znga.json` in SuperWhatsapp's config folder), never inside SuperWhatsapp's
+(`znga.json` in ZapFast's config folder), never inside ZapFast's
 `Settings` or `AccountSettings`. API keys live in the OS keyring (or in
 the provider's standard environment variable), never in a file.
 
@@ -65,7 +65,7 @@ verifies:
   draft is produced until the person turns it on.
 <!-- id: REQ-ZNGA-001.A2 -->
 - A missing or unreadable `znga.json` loads defaults without touching
-  SuperWhatsapp's own settings file.
+  ZapFast's own settings file.
 <!-- id: REQ-ZNGA-001.A3 -->
 - Saved configuration never contains an API key.
 <!-- id: REQ-ZNGA-001.A4 -->
@@ -78,7 +78,7 @@ verifies:
 Engines: **Local** (Ollama-compatible `/api/chat`, default
 `http://127.0.0.1:11434`), **Claude Code on this computer** (the person's
 installed `claude` CLI run headless with no tools, MCP servers, settings
-or session history; it signs in by itself, so SuperWhatsapp never reads or
+or session history; it signs in by itself, so ZapFast never reads or
 stores the token; preselected on first run when the CLI is found),
 **Claude** (Anthropic Messages API, API key),
 **Gemini** (Google Generative Language API, API key), and **OpenAI-
@@ -327,7 +327,7 @@ implementations:
 
 ## Acceptance
 <!-- id: REQ-ZNGA-010.A1 -->
-- `cargo build --no-default-features` builds SuperWhatsapp without Znga.
+- `cargo build --no-default-features` builds ZapFast without Znga.
 <!-- id: REQ-ZNGA-010.A2 -->
 - Every change outside `src/znga/`, `specs/` and docs carries a
   `znga hook` marker.
@@ -336,7 +336,7 @@ implementations:
 ## Znga builds MUST update only from the fork
 
 A build with Znga checks this fork's releases for updates, never
-upstream's, so an update cannot replace Znga with the upstream app. Fork
+upstream's, so an update cannot replace Znga with upstream ZapFast. Fork
 releases are signed with the fork's own update key, and a build trusts
 only that key. Fork versions are pre-releases of the upstream version
 they are based on (`0.21.1-beta.1`), so a fork build moves to any newer
@@ -350,7 +350,7 @@ verifies:
 
 ## Acceptance
 <!-- id: REQ-ZNGA-011.A1 -->
-- The update repository is `selvakumarEsra/superwhatsapp`.
+- The update repository is `selvakumarEsra/zapfast`.
 <!-- id: REQ-ZNGA-011.A2 -->
 - The trusted publisher key is the fork's, and upstream's key is not trusted.
 <!-- id: REQ-ZNGA-011.A3 -->
@@ -361,7 +361,7 @@ verifies:
 
 Off by default (a new switch, "Chat with Znga in Message yourself").
 When on, every text message the person sends to their own number's
-chat, from the phone or from SuperWhatsapp, is a request to Znga. Znga
+chat, from the phone or from ZapFast, is a request to Znga. Znga
 answers it with the configured engine (local, bring-your-own-key, or
 Claude Code) and sends the answer back to that same chat, on the same
 account, so the person can chat with Znga from their phone.
@@ -396,7 +396,7 @@ verifies:
 - With the switch on, a text sent to the own chat from the phone gets
   exactly one answer in that same chat, on the account it was sent on.
 <!-- id: REQ-ZNGA-012.A3 -->
-- A text the person sends to their own chat from SuperWhatsapp itself is
+- A text the person sends to their own chat from ZapFast itself is
   answered the same way.
 <!-- id: REQ-ZNGA-012.A4 -->
 - Each answer starts with the Znga marker.
@@ -416,7 +416,7 @@ verifies:
 ## Znga MUST keep the self-chat conversation's context across turns and restarts
 
 The self-chat is a multi-turn conversation. Znga rebuilds the thread
-from the own chat's recent history in SuperWhatsapp's archive: the person's
+from the own chat's recent history in ZapFast's archive: the person's
 messages are user turns and messages that start with the Znga marker
 are Znga's turns. Nothing new is stored, so context survives restarts
 without keeping message text outside the encrypted archive (the
@@ -436,7 +436,7 @@ verifies:
 - A follow-up question ("and what about her sister?") is answered with
   the earlier turns of the self-chat in the prompt.
 <!-- id: REQ-ZNGA-013.A2 -->
-- After SuperWhatsapp restarts, the next answer still has the earlier turns
+- After ZapFast restarts, the next answer still has the earlier turns
   in its prompt.
 <!-- id: REQ-ZNGA-013.A3 -->
 - Znga briefings copied to the own chat (REQ-ZNGA-006) show up as Znga
@@ -473,7 +473,7 @@ verifies:
   answered.
 <!-- id: REQ-ZNGA-014.A3 -->
 - A message sent before the switch was turned on, or more than 5 minutes
-  before SuperWhatsapp received it, is not answered.
+  before ZapFast received it, is not answered.
 <!-- id: REQ-ZNGA-014.A4 -->
 - The same message is answered at most once, even when it arrives again
   (status updates, re-sync).

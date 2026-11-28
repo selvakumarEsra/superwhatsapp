@@ -8,15 +8,11 @@ export function Row(p: { title: string; description?: string; top?: boolean; chi
   // widgets::setting_row: the words take all but 260 points, the control
   // sits on the right, and each row ends with a 10-point gap.
   return (
-    <div class="flex justify-between" style={{ "align-items": p.top ? "flex-start" : "center", "padding-bottom": p.description ? "15.5px" : "18px", gap: "12px" }}>
-      {/* egui lays the words out from the top of the row and centres only
-          the control in it. */}
-      <div class="min-w-0 shrink-0 self-start" style={{ width: "max(120px, calc(100% - 260px))" }}>
+    <div class="flex justify-between" style={{ "align-items": p.top ? "flex-start" : "center", "padding-bottom": "18px", gap: "12px" }}>
+      <div class="min-w-0 shrink-0" style={{ width: "max(120px, calc(100% - 260px))" }}>
         <div style={{ "font-size": "14px", "line-height": "18px", "font-weight": 500, color: "var(--text-primary)" }}>{t(p.title)}</div>
         <Show when={p.description}>
-          {/* egui's word wrap counts the space after a line's last word, so
-              a line wraps about one space sooner than CSS's. */}
-          <div style={{ "margin-top": "5px", "padding-right": "3px", "font-size": "12.5px", "line-height": "14.5px", color: "var(--text-secondary)" }}>{t(p.description!)}</div>
+          <div style={{ "margin-top": "2px", "font-size": "12.5px", "line-height": "15px", color: "var(--text-secondary)" }}>{t(p.description!)}</div>
         </Show>
       </div>
       <div class="flex shrink-0 flex-col items-end" style={{ gap: "6px" }}>{p.children}</div>

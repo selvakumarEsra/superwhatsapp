@@ -7,13 +7,12 @@
 // contact's groups in common follow. Clearing or deleting the chat lives
 // in the chat menu, as in egui.
 import { createSignal, For, type JSX, Show } from "solid-js";
-import { commands, state, type Info, type ItemRow, type MediaCell } from "../../lib/bridge";
+import { commands, state, type Info } from "../../lib/bridge";
 import { ask } from "../../lib/ui";
 import { t } from "../../lib/i18n";
 import Avatar from "../../components/Avatar";
-import ZngaKnows from "./ZngaKnows";
 import {
-  ArchiveIcon, BanIcon, BellIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, ExternalLinkIcon, FileTextIcon, ImageIcon, UserIcon, BellOffIcon, ChatsIcon, CloseIcon, CopyIcon, PinIcon, PinOffIcon, TimerIcon,
+  ArchiveIcon, BanIcon, BellIcon, CheckIcon, ChevronRightIcon, UserIcon, BellOffIcon, ChatsIcon, CloseIcon, CopyIcon, PinIcon, PinOffIcon, TimerIcon,
 } from "../../components/Icons";
 
 const timerLabel = (seconds: number) =>
@@ -104,162 +103,20 @@ function NameEditor(p: { info: Info; onDone: () => void }) {
   );
 }
 
-/** A picture or video cell: the preview cropped to fill, a play disc and
- *  the length on a video (info::media_cell). A cell goes to its message. */
-function Cell(p: { chat: string; cell: MediaCell; size: string }) {
-  const length = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-  return (
-    <button
-      type="button"
-      aria-label={t(p.cell.video ? "Video" : "Photo")}
-      onClick={() => commands.goToMessage(p.chat, p.cell.id)}
-      class="relative shrink-0 overflow-hidden"
-      style={{ width: p.size, height: p.size, "border-radius": "6px", background: "var(--surface)", color: "var(--text-meta)" }}
-    >
-      <Show when={p.cell.src} fallback={<span class="absolute inset-0 flex items-center justify-center"><ImageIcon size={22} /></span>}>
-        <img src={p.cell.src!} alt="" loading="lazy" class="absolute inset-0 h-full w-full object-cover" />
-      </Show>
-      <Show when={p.cell.video}>
-        <span class="absolute left-1/2 top-1/2 flex items-center justify-center rounded-full" style={{ width: "30px", height: "30px", transform: "translate(-50%, -50%)", background: "rgba(0,0,0,0.45)" }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M7 4v16l13-8z" /></svg>
-        </span>
-        <Show when={p.cell.seconds !== null}>
-          <span class="absolute" style={{ right: "4px", bottom: "4px", padding: "0 4px", "border-radius": "3px", background: "rgba(0,0,0,0.55)", color: "#fff", "font-size": "11px", "line-height": "16px" }}>
-            {length(p.cell.seconds!)}
-          </span>
-        </Show>
-      </Show>
-    </button>
-  );
-}
-
-/** widgets::empty_state: 48 down, a 40-point icon, the title semibold 16,
- *  the line regular 13.5. */
-function Empty(p: { icon: JSX.Element; title: string; body: string }) {
-  return (
-    <div class="flex flex-col items-center text-center" style={{ "padding-top": "48px", gap: "2px", color: "var(--text-meta)" }}>
-      {p.icon}
-      <span style={{ "margin-top": "6px", "font-size": "16px", "font-weight": 600, color: "var(--text-primary)" }}>{p.title}</span>
-      <span style={{ "font-size": "13.5px", color: "var(--text-secondary)", padding: "0 14px" }}>{p.body}</span>
-    </div>
-  );
-}
-
-/** info::item_row: a 60-point row, a 40-point tile with the icon, the
- *  title medium 13.5 and the detail regular 12, a rule under the text. */
-function Item(p: { icon: JSX.Element; row: ItemRow; onClick: () => void }) {
-  return (
-    <button type="button" onClick={p.onClick} class="menu-item relative flex w-full items-center text-left" style={{ height: "60px", padding: "0 14px" }}>
-      <span class="flex shrink-0 items-center justify-center" style={{ width: "40px", height: "40px", "border-radius": "8px", background: "var(--surface)", color: "var(--text-secondary)" }}>
-        {p.icon}
-      </span>
-      <span class="flex min-w-0 flex-1 flex-col" style={{ "margin-left": "12px", gap: "4px" }}>
-        <span class="truncate" style={{ "font-size": "13.5px", "font-weight": 500, color: "var(--text-primary)" }}>{p.row.title}</span>
-        <span class="truncate" style={{ "font-size": "12px", color: "var(--text-meta)" }}>{p.row.detail}</span>
-      </span>
-      <span class="absolute bottom-0" style={{ left: "66px", right: "14px", height: "1px", background: "var(--panel-border)" }} />
-    </button>
-  );
-}
-
-/** info::media_view: the Media, Docs and Links chips with their counts
- *  under a rule, then the open tab: a grid of four (three when narrow),
- *  or rows of documents or links. A document goes to its message; a link
- *  opens in the browser. */
-function MediaView(p: { info: Info }) {
-  const tabs = [["media", "Media"], ["docs", "Docs"], ["links", "Links"]] as const;
-  const cell = "calc((380px - 28px - 12px) / 4)";
-  return (
-    <div class="flex min-h-0 flex-1 flex-col">
-      <div class="flex shrink-0" style={{ padding: "16px 14px", gap: "6px", "border-bottom": "1px solid var(--panel-border)" }}>
-        <For each={tabs}>
-          {([page, label], index) => {
-            const on = () => p.info.page === page;
-            return (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={on()}
-                onClick={() => commands.infoPage(page)}
-                class="chip flex items-center"
-                classList={{ on: on() }}
-                style={{
-                  height: "var(--chip-h)", padding: "0 9px", gap: "5px", "border-radius": "calc(var(--chip-h) / 2)",
-                  border: `1px solid ${on() ? "transparent" : "var(--chip-border)"}`,
-                  background: on() ? "var(--chip-on-bg)" : "var(--chip-bg)",
-                  color: on() ? "var(--chip-on-fg)" : "var(--text-secondary)",
-                  "font-size": "var(--fs-chip)", "font-weight": 500,
-                }}
-              >
-                {t(label)}
-                <Show when={p.info.tabCounts[index()] > 0}>
-                  <span style={{ "font-size": "var(--fs-meta)", "font-weight": 400 }}>{p.info.tabCounts[index()]}</span>
-                </Show>
-              </button>
-            );
-          }}
-        </For>
-      </div>
-      <div class="scroll min-h-0 flex-1">
-        <Show when={p.info.tabTruncated}>
-          <p style={{ margin: "8px 14px 4px", "font-size": "12px", color: "var(--text-meta)" }}>{t("Only the newest items are listed.")}</p>
-        </Show>
-        <Show when={p.info.mediaFailed}>
-          <div class="flex flex-wrap items-center" style={{ margin: "24px 14px", gap: "8px", "font-size": "12.5px", color: "var(--text-meta)" }}>
-            {t("Could not list the media.")}
-            <button type="button" onClick={() => commands.retryInfoMedia()} class="soft-pill" style={{ padding: "7px 12px", "border-radius": "999px", background: "var(--surface)", "font-size": "13px", "font-weight": 500, color: "var(--text-primary)" }}>
-              {t("Try again")}
-            </button>
-          </div>
-        </Show>
-        <Show when={p.info.mediaPending && !p.info.mediaFailed}>
-          <div class="flex justify-center" style={{ "padding-top": "32px", color: "var(--text-secondary)" }}>
-            <span class="spinner" style={{ width: "22px", height: "22px" }} />
-          </div>
-        </Show>
-        <Show when={!p.info.mediaPending && !p.info.mediaFailed}>
-          <Show when={p.info.page === "media"}>
-            <Show when={p.info.gallery.length > 0} fallback={<Empty icon={<ImageIcon size={40} />} title={t("No media")} body={t("Photos and videos shared in this chat will show here.")} />}>
-              <div class="flex flex-wrap" style={{ padding: "6px 14px", gap: "4px" }}>
-                <For each={p.info.gallery}>{(c) => <Cell chat={p.info.id} cell={c} size={cell} />}</For>
-              </div>
-            </Show>
-          </Show>
-          <Show when={p.info.page === "docs"}>
-            <Show when={p.info.docs.length > 0} fallback={<Empty icon={<FileTextIcon size={40} />} title={t("No documents")} body={t("Files shared in this chat will show here.")} />}>
-              <For each={p.info.docs}>{(row) => <Item icon={<FileTextIcon size={20} />} row={row} onClick={() => commands.goToMessage(p.info.id, row.target)} />}</For>
-            </Show>
-          </Show>
-          <Show when={p.info.page === "links"}>
-            <Show when={p.info.links.length > 0} fallback={<Empty icon={<ExternalLinkIcon size={40} />} title={t("No links")} body={t("Links shared in this chat will show here.")} />}>
-              <For each={p.info.links}>{(row) => <Item icon={<ExternalLinkIcon size={20} />} row={row} onClick={() => commands.openUrl(row.target)} />}</For>
-            </Show>
-          </Show>
-        </Show>
-      </div>
-    </div>
-  );
-}
-
 /** info::media_row: the title with the count and a chevron, then the
  *  three newest pictures in 4-point-apart squares of up to 110. A video
  *  shows a play disc and its length. A picture opens its chat. */
 function MediaStrip(p: { info: Info }) {
   const length = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   return (
-    <div style={{ "margin-top": "8px" }}>
-      <button
-        type="button"
-        onClick={() => commands.infoPage("media")}
-        class="menu-item flex w-full items-center justify-between text-left"
-        style={{ height: "50px", margin: "0 -6px", padding: "0 6px", width: "calc(100% + 12px)", "border-radius": "6px" }}
-      >
+    <div style={{ "margin-top": "20px" }}>
+      <div class="menu-item flex items-center justify-between" style={{ height: "36px", margin: "0 -6px", padding: "0 6px", "border-radius": "6px" }}>
         <span style={{ "font-size": "13.5px", color: "var(--text-secondary)" }}>{t("Media, links and docs")}</span>
         <span class="flex items-center" style={{ gap: "2px", "font-size": "13px", color: "var(--text-meta)" }}>
           {p.info.mediaCount ?? ""}
           <ChevronRightIcon size={18} />
         </span>
-      </button>
+      </div>
       <Show when={p.info.media.length > 0}>
         <div class="flex" style={{ gap: "4px" }}>
           <For each={p.info.media}>
@@ -267,7 +124,7 @@ function MediaStrip(p: { info: Info }) {
               <button
                 type="button"
                 aria-label={t(cell.video ? "Video" : "Photo")}
-                onClick={() => commands.goToMessage(p.info.id, cell.id)}
+                onClick={() => commands.openChat(p.info.id)}
                 class="relative overflow-hidden"
                 style={{ width: "min(110px, calc((100% - 8px) / 3))", "aspect-ratio": "1", "border-radius": "6px", background: "var(--surface)" }}
               >
@@ -322,10 +179,10 @@ function Body(p: { info: Info }) {
           </p>
         </Show>
         <Show when={contact() && i().phoneDisplay}>
-          <p class="selectable" style={{ margin: "4px 0 0", "font-size": "14px", color: "var(--text-secondary)" }}>{i().phoneDisplay}</p>
+          <p class="selectable" style={{ margin: "6px 0 0", "font-size": "14px", color: "var(--text-secondary)" }}>{i().phoneDisplay}</p>
         </Show>
         <Show when={i().status}>
-          <p style={{ margin: "5px 0 0", "font-size": "12.5px", color: "var(--text-meta)" }}>{i().status}</p>
+          <p style={{ margin: "6px 0 0", "font-size": "12.5px", color: "var(--text-meta)" }}>{i().status}</p>
         </Show>
         <Show when={!i().channel && !i().left}>
           <p class="flex items-center" style={{ margin: "10px 0 0", gap: "5px", "font-size": "12.5px", color: "var(--text-secondary)" }}>
@@ -338,7 +195,7 @@ function Body(p: { info: Info }) {
             {i().description}
           </p>
         </Show>
-        <div class="flex flex-wrap justify-center" style={{ gap: "8px", "margin-top": "16px" }}>
+        <div class="flex flex-wrap justify-center" style={{ gap: "8px", "margin-top": "14px" }}>
           <Show when={contact()}>
             <Pill icon={<ChatsIcon size={15} />} label="Message" onClick={() => { void commands.openChat(i().id); void commands.closeInfo(); }} />
           </Show>
@@ -365,7 +222,7 @@ function Body(p: { info: Info }) {
           />
         </div>
         {/* blocking::button: on a row of its own under the others. */}
-        <div class="flex justify-center" style={{ "margin-top": "6px" }}>
+        <div class="flex justify-center" style={{ "margin-top": "8px" }}>
             <Show when={contact() && i().blockable}>
               <Pill
                 icon={<BanIcon size={15} />}
@@ -388,7 +245,6 @@ function Body(p: { info: Info }) {
       <Show when={!i().channel}>
         <MediaStrip info={i()} />
       </Show>
-      <Show when={i().znga}>{(profile) => <ZngaKnows chat={i().id} profile={profile()} />}</Show>
       <Show when={i().group && i().members.length > 0}>
         <Heading>{t("Members")} ({i().members.length})</Heading>
         <For each={i().members}>
@@ -439,39 +295,22 @@ export default function InfoPanel() {
           <header
             data-tauri-drag-region
             class="flex shrink-0 items-center"
-            style={{ height: "var(--list-header-h)", padding: "0 14px", gap: "12px", "border-bottom": "var(--hairline) solid var(--conversation-header-border)" }}
+            style={{ height: "var(--conv-header-h)", padding: "0 14px", gap: "12px", "border-bottom": "var(--hairline) solid var(--conversation-header-border)" }}
           >
-            <Show
-              when={info().page !== "overview"}
-              fallback={
-                <button
-                  type="button"
-                  aria-label={t("Close")}
-                  onClick={() => commands.closeInfo()}
-                  class="icon-button flex items-center justify-center rounded-full"
-                  style={{ width: "30px", height: "30px", color: "var(--icon)" }}
-                >
-                  <CloseIcon size={20} />
-                </button>
-              }
+            <button
+              type="button"
+              aria-label={t("Close")}
+              onClick={() => commands.closeInfo()}
+              class="icon-button flex items-center justify-center rounded-full"
+              style={{ width: "30px", height: "30px", color: "var(--icon)" }}
             >
-              <button
-                type="button"
-                aria-label={t("Back")}
-                onClick={() => commands.infoPage("overview")}
-                class="icon-button flex items-center justify-center rounded-full"
-                style={{ width: "30px", height: "30px", color: "var(--icon)" }}
-              >
-                <ChevronLeftIcon size={20} />
-              </button>
-            </Show>
+              <CloseIcon size={20} />
+            </button>
             <h1 data-tauri-drag-region style={{ margin: 0, "font-size": "16px", "font-weight": 600, color: "var(--text-primary)" }}>
-              {t(info().page !== "overview" ? "Media, links and docs" : info().group ? "Group info" : info().channel ? "Channel info" : "Contact info")}
+              {t(info().group ? "Group info" : info().channel ? "Channel info" : "Contact info")}
             </h1>
           </header>
-          <Show when={info().page !== "overview"} fallback={<Body info={info()} />}>
-            <MediaView info={info()} />
-          </Show>
+          <Body info={info()} />
         </aside>
       )}
     </Show>

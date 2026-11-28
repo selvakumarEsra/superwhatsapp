@@ -5038,7 +5038,7 @@ impl SelectionLeash {
 
 impl egui::plugin::Plugin for SelectionLeash {
     fn debug_name(&self) -> &'static str {
-        "superwhatsapp-selection-leash"
+        "zapfast-selection-leash"
     }
 
     fn input_hook(&mut self, ctx: &egui::Context, input: &mut egui::RawInput) {
@@ -12289,11 +12289,11 @@ mod tests {
         let rows = vec![
             incoming("old", Content::text("old")),
             incoming(
-                "superwhatsapp-timer-1",
+                "zapfast-timer-1",
                 Content::DisappearingTimer { seconds: 86_400 },
             ),
             incoming(
-                "superwhatsapp-call-1",
+                "zapfast-call-1",
                 Content::Call {
                     video: false,
                     status: crate::model::CallStatus::Missed,
@@ -13508,7 +13508,7 @@ mod reaction_tests {
 
     #[test]
     fn every_message_menu_label_can_be_translated() {
-        const TEMPLATE: &str = include_str!("../../assets/i18n/superwhatsapp.pot");
+        const TEMPLATE: &str = include_str!("../../assets/i18n/zapfast.pot");
         // Line by line: a Windows checkout may end the template's lines in CRLF.
         let translatable = |text: &str| {
             let msgid = format!("msgid \"{text}\"");

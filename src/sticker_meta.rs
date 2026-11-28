@@ -256,7 +256,7 @@ mod tests {
 
     fn info() -> StickerInfo {
         StickerInfo {
-            pack_id: "superwhatsapp.test".into(),
+            pack_id: "zapfast.test".into(),
             pack_name: "Ducks".into(),
             publisher: String::new(),
             emojis: vec!["🦆".into(), "😂".into()],

@@ -1327,7 +1327,7 @@ fn tray_action(event: fastframe_tray::Event, window_hidden: bool) -> Option<Acti
 fn tray_config(lockable: bool) -> fastframe_tray::Config {
     use fastframe_tray::MenuItem;
     fastframe_tray::Config {
-        id: "superwhatsapp",
+        id: "zapfast",
         title: "SuperWhatsapp".into(),
         icon: crate::util::app_icon_rgba,
         template_icon: Some(crate::util::tray_template_rgba),
@@ -12760,7 +12760,7 @@ mod tests {
     }
 
     fn app() -> App {
-        let root = std::env::temp_dir().join(format!("superwhatsapp-app-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("zapfast-app-{}", std::process::id()));
         App::headless(AppDirs::under(&root), Settings::default()).0
     }
 
@@ -15196,7 +15196,7 @@ mod tests {
         );
     }
 
-    /// `superwhatsapp quit` takes the tray's Quit path, and does even behind the
+    /// `zapfast quit` takes the tray's Quit path, and does even behind the
     /// app lock, since quitting reveals nothing.
     #[test]
     fn a_quit_request_quits_even_behind_the_lock() {
@@ -17504,7 +17504,7 @@ mod tests {
 
     #[test]
     fn an_album_answer_for_another_chat_is_dropped() {
-        let root = std::env::temp_dir().join(format!("superwhatsapp-album-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("zapfast-album-{}", std::process::id()));
         let (mut app, events) = App::headless(AppDirs::under(&root), Settings::default());
         app.viewer_media_chat = Some("1@s.whatsapp.net".into());
         // An album for a chat the viewer has already left arrives too late.
@@ -18852,8 +18852,7 @@ mod tests {
 
     #[test]
     fn a_gone_label_leaves_the_list_showing_all_chats() {
-        let root =
-            std::env::temp_dir().join(format!("superwhatsapp-labels-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("zapfast-labels-{}", std::process::id()));
         let (mut app, events) = App::headless(AppDirs::under(&root), Settings::default());
         let ctx = egui::Context::default();
         app.labels = vec![label("label-1", "Work"), label("label-2", "Home")];
@@ -19064,7 +19063,7 @@ mod tests {
         app.maybe_download_update();
         assert!(matches!(app.update_download, DownloadState::Idle));
         let installation = Installation {
-            executable: PathBuf::from("/fixture/superwhatsapp"),
+            executable: PathBuf::from("/fixture/zapfast"),
             kind: Kind::Portable,
         };
         app.update_support = Some(Ok(installation.clone()));
@@ -19109,7 +19108,7 @@ mod tests {
 
     #[test]
     fn losing_focus_takes_effect_before_processing_an_incoming_chat_update() {
-        let root = std::env::temp_dir().join("superwhatsapp-focus-test");
+        let root = std::env::temp_dir().join("zapfast-focus-test");
         let (mut app, events) = App::headless(AppDirs::under(&root), Settings::default());
         let mut chat = Chat::new("peer@s.whatsapp.net".into(), "Peer".into());
         chat.unread = 1;
@@ -21238,7 +21237,7 @@ mod tests {
             .unwrap();
         app.handle_events();
         assert_eq!(states(&app), [MediaState::Idle, MediaState::Downloading]);
-        let path = PathBuf::from("/cache/superwhatsapp/media/carousel-card-1.jpg");
+        let path = PathBuf::from("/cache/zapfast/media/carousel-card-1.jpg");
         events
             .send(Event::Media {
                 card: Some(1),
@@ -25718,7 +25717,7 @@ mod tests {
 
     #[test]
     fn a_saved_speed_between_choices_snaps_to_one() {
-        let root = std::env::temp_dir().join(format!("superwhatsapp-speed-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("zapfast-speed-{}", std::process::id()));
         let settings = Settings {
             voice_speed: 1.3,
             ..Settings::default()
@@ -26116,7 +26115,7 @@ mod name_tests {
     use crate::model::{Contact, Content, Delivery, MentionRef};
 
     fn app() -> App {
-        let root = std::env::temp_dir().join(format!("superwhatsapp-names-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("zapfast-names-{}", std::process::id()));
         let (mut app, _events) = App::headless(AppDirs::under(&root), Settings::default());
         app.me = Some("15550001111@s.whatsapp.net".into());
         app.me_name = Some("Carmine".into());
@@ -26436,7 +26435,7 @@ mod app_lock_tests {
 
     fn app_with(settings: Settings) -> App {
         let root = std::env::temp_dir().join(format!(
-            "superwhatsapp-app-lock-{}-{:?}",
+            "zapfast-app-lock-{}-{:?}",
             std::process::id(),
             std::thread::current().id()
         ));

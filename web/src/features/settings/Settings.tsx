@@ -501,7 +501,7 @@ function Body(p: { page: Page | "wallpaper"; onWallpaper?: () => void }) {
         <Toggle title="Chat wallpaper doodles" description="The pattern behind messages." key="showWallpaper" />
       </Show>
       <Show when={p.page === "chats"}>
-        <Toggle title="Enter sends" description="When off, ⌘+Enter sends." key="enterSends" />
+        <Toggle title="Enter sends" description="When off, Enter starts a new line and ⌘+Enter sends." key="enterSends" />
         <Toggle title="Download files automatically" description="Files up to 64 MiB download as they come into view." key="autoDownload" />
         <Toggle title="Fetch older history" description="Asks your phone in the background for older messages in the open, pinned and ten most recent chats." key="historyPrefetch" />
         <Toggle title="Keep chats archived" description="When off, a new message brings an archived chat back to the list." key="keepChatsArchived" />
@@ -629,11 +629,9 @@ export default function Settings(p: { onClose: () => void }) {
             {t("No settings match “{query}”.").replace("{query}", query().trim())}
           </p>
         }>
-          {([id, label], i) => (
-            // Measured against egui: a heading after a card sits 2 lower
-            // and 2 nearer its own card than the first one does.
-            <section aria-label={t(label)} style={{ margin: i() === 0 ? "24px 0 0" : "26px 0 0" }}>
-              <h2 style={{ margin: i() === 0 ? "0 0 14px" : "0 0 12px", "font-size": "18px", "line-height": "22px", "font-weight": 700, color: "var(--text-primary)" }}>{t(label)}</h2>
+          {([id, label]) => (
+            <section aria-label={t(label)} style={{ margin: "24px 0 0" }}>
+              <h2 style={{ margin: "0 0 14px", "font-size": "18px", "line-height": "22px", "font-weight": 700, color: "var(--text-primary)" }}>{t(label)}</h2>
               <div style={{ background: "var(--card-bg)", border: "1px solid var(--panel-border)", "border-radius": "10px", padding: "16px 20px 6px" }}>
                 <Body page={id} onWallpaper={() => setWallpaper(true)} />
               </div>

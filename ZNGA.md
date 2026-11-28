@@ -1,6 +1,6 @@
 # Znga, SuperWhatsapp's AI agent
 
-Znga is the opt-in AI agent of SuperWhatsapp, which is built on SuperWhatsapp. Click the ✨ on the left
+Znga is the opt-in AI agent of SuperWhatsapp, which is built on ZapFast. Click the ✨ on the left
 rail (under Calls) to open it. The contract is [`specs/znga.md`](specs/znga.md).
 
 ## What it does
@@ -105,7 +105,7 @@ git grep -n -e "znga hook" -e "extras hook"
 | `.github/workflows/release.yml` | signs with `src/znga/update-public-key.hex`; skips notarization checks without Apple credentials |
 | `Cargo.toml` `version` | `<upstream>-beta.<n>` |
 
-If a merge from upstream conflicts on one of those lines, keep
+If a merge from upstream ZapFast conflicts on one of those lines, keep
 upstream's change and put the hook back. The rail button lives in its own layer, so it does not touch
 `src/ui/rail.rs`.
 
@@ -120,7 +120,7 @@ Fork versions are pre-releases of the upstream version they build on:
    and write `packaging/release-notes/v<version>.md`.
 2. Commit on `main`, push, then `git tag v<version> && git push origin v<version>`.
 3. The Release workflow builds Linux, Windows, macOS and Flatpak, signs
-   `checksums.txt` with the fork's key (the `SUPERWHATSAPP_UPDATE_SIGNING_KEY`
+   `checksums.txt` with the fork's key (the `ZAPFAST_UPDATE_SIGNING_KEY`
    secret of the `release-signing` environment), and creates a **draft
    pre-release**. Publish it on GitHub so installed copies see the update.
 

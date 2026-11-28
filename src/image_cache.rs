@@ -154,7 +154,7 @@ mod tests {
 
     impl egui::load::ImageLoader for ReadyLoader {
         fn id(&self) -> &str {
-            "superwhatsapp::image_cache::tests::ReadyLoader"
+            "zapfast::image_cache::tests::ReadyLoader"
         }
 
         fn load(

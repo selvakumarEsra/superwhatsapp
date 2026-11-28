@@ -4,7 +4,6 @@
 import { createSignal, For, type JSX, Show } from "solid-js";
 import { commands, state, type ZngaSettings as Z } from "../../lib/bridge";
 import { t } from "../../lib/i18n";
-import { ask } from "../../lib/ui";
 import { Button, Caret, combo, field, Row, Switch } from "./parts";
 
 type Key = keyof Z;
@@ -120,89 +119,6 @@ function ChatPicker(p: { list: "twin" | "excluded"; chosen: [string, string][] }
 
 function when(at: number) {
   return new Date(at * 1000).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-}
-
-/** Settings › Znga › People (REQ-ZPROF-002, REQ-ZPROF-007): profiles on
- *  or off, the history read with Pause and Cancel, every profile, and
- *  Forget all. */
-function People() {
-  const [query, setQuery] = createSignal("");
-  const b = () => z().backfill;
-  const list = () => {
-    const q = query().trim().toLowerCase();
-    return z().people.filter((p) => !q || p.title.toLowerCase().includes(q));
-  };
-  const progress = () => {
-    const { state: s, done, total, reason } = b();
-    if (s === "running") return `${t("Learning from history:")} ${done} ${t("of")} ${total} ${t("chats")}`;
-    if (s === "paused") return `${t("Paused at")} ${done} ${t("of")} ${total} ${t("chats")}`;
-    if (s === "waiting") return reason ?? t("Waiting");
-    if (s === "done") return `${t("History read:")} ${total} ${t("chats")}`;
-    return null;
-  };
-  return (
-    <>
-      <Heading>{t("People")}</Heading>
-      <Toggle
-        title="Profiles"
-        description="Znga learns who each contact is to you, how you talk with them, and what each group is about, from the chats it may read. Used in drafts and answers; kept only on this computer."
-        key="profiles"
-      />
-      <Show when={z().profiles}>
-        <Toggle title="Ask me to fill gaps" description="At most one question a day in the Znga chat, never in quiet hours." key="profileQuestions" />
-        <Row
-          title="Learn from history"
-          description={progress() ?? `Reads up to the last 90 days (500 messages) of each chat once, newest chats first, at most ${b().dailyCalls} updates a day.`}
-        >
-          <Show
-            when={b().state === "running" || b().state === "waiting" || b().state === "paused"}
-            fallback={<Button label={b().state === "done" ? "Run again" : "Start"} onClick={() => void commands.zngaBackfill("start")} />}
-          >
-            <Show when={b().state === "paused"} fallback={<Button label="Pause" onClick={() => void commands.zngaBackfill("pause")} />}>
-              <Button label="Resume" onClick={() => void commands.zngaBackfill("resume")} />
-            </Show>
-            <Button label="Cancel" onClick={() => void commands.zngaBackfill("cancel")} />
-          </Show>
-        </Row>
-        <div class="flex items-center" style={{ gap: "8px", padding: "8px 0" }}>
-          <input
-            aria-label="Search profiles"
-            placeholder={t("Search people and groups")}
-            value={query()}
-            onInput={(e) => setQuery(e.currentTarget.value)}
-            class="selectable min-w-0 flex-1 outline-none"
-            style={field}
-          />
-          <Button
-            label="Forget all"
-            danger
-            disabled={z().people.length === 0}
-            onClick={() =>
-              ask({
-                title: t("Forget every profile?"),
-                body: t("Znga forgets everything it learned about your contacts and groups on this account. It will not read history again until you start it."),
-                action: t("Forget all"),
-                run: () => commands.zngaProfile("", "forgetAll", "", ""),
-              })
-            }
-          />
-        </div>
-        <Show when={z().people.length === 0}>
-          <div style={{ padding: "4px 0 8px", "font-size": "var(--fs-meta)", color: "var(--text-secondary)" }}>{t("No profiles yet.")}</div>
-        </Show>
-        <For each={list().slice(0, 200)}>
-          {(person) => (
-            <Row
-              title={person.title}
-              description={[person.group ? t("Group") : person.relation ?? t("Contact"), `${person.known} ${t(person.known === 1 ? "thing known" : "things known")}`].join(" · ")}
-            >
-              <Button label="Open" onClick={() => void commands.openInfo(person.id)} />
-            </Row>
-          )}
-        </For>
-      </Show>
-    </>
-  );
 }
 
 export default function ZngaSettings() {
@@ -332,8 +248,6 @@ export default function ZngaSettings() {
           }}
         />
       </div>
-
-      <People />
 
       <Heading>{t("Open promises")}</Heading>
       <Show when={z().openPromises.length === 0}>

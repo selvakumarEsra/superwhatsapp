@@ -2,9 +2,9 @@
 //! step (REQ-WEBUI-002). The page never holds the state itself.
 
 use serde::Serialize;
-use superwhatsapp::app::App;
-use superwhatsapp::backend::LinkStatus;
-use superwhatsapp::model::{Chat, ChatFilter, Content, Delivery, Message, Page};
+use zapfast::app::App;
+use zapfast::backend::LinkStatus;
+use zapfast::model::{Chat, ChatFilter, Content, Delivery, Message, Page};
 
 /// The most messages of the open chat sent at once.
 const WINDOW: usize = 300;
@@ -30,8 +30,6 @@ pub struct State {
     pub znga: Option<crate::znga::ZngaChat>,
     /// Text Znga offers to a chat's composer (REQ-ZCHAT-004).
     pub offer: Option<crate::znga::OfferView>,
-    /// The translation popup beside a message (REQ-ZANS-004).
-    pub translation: Option<crate::znga::ZTranslation>,
     /// Unread chats, muted and archived ones left out: the sidebar's count,
     /// like the Dock badge.
     pub unread_chats: u32,
@@ -46,9 +44,6 @@ pub struct State {
     /// all or missed: the Calls page's chip.
     pub call_filter: &'static str,
     pub calls_search: String,
-    /// The Calls tab's "New call" list, while it is open (egui's
-    /// `calls::new_call_list`).
-    pub new_call: Option<NewCall>,
     /// The contact or group info panel, when open.
     pub info: Option<Info>,
     pub settings: SettingsView,
@@ -197,7 +192,7 @@ pub struct SettingsView {
 }
 
 /// A locale's code, as settings store it (`en`, `pt-BR`, …).
-fn code(locale: superwhatsapp::i18n::Locale) -> String {
+fn code(locale: zapfast::i18n::Locale) -> String {
     serde_json::to_value(locale)
         .ok()
         .and_then(|v| v.as_str().map(str::to_owned))
@@ -214,7 +209,7 @@ fn css(color: egui::Color32) -> String {
 }
 
 /// A custom theme's palette on the page's colour tokens (tokens.css).
-fn palette(p: &superwhatsapp::theme::Palette) -> Vec<(&'static str, String)> {
+fn palette(p: &zapfast::theme::Palette) -> Vec<(&'static str, String)> {
     vec![
         ("--sidebar-bg", css(p.window)),
         ("--panel-bg", css(p.panel)),
@@ -261,7 +256,7 @@ fn snake<T: Serialize>(value: &T) -> String {
         .unwrap_or_default()
 }
 
-fn swatches(colors: &[superwhatsapp::settings::WallpaperColor]) -> Vec<Swatch> {
+fn swatches(colors: &[zapfast::settings::WallpaperColor]) -> Vec<Swatch> {
     colors
         .iter()
         .map(|color| Swatch {
@@ -274,8 +269,8 @@ fn swatches(colors: &[superwhatsapp::settings::WallpaperColor]) -> Vec<Swatch> {
         .collect()
 }
 
-fn sound(sound: &superwhatsapp::settings::NotificationSound) -> &'static str {
-    use superwhatsapp::settings::NotificationSound;
+fn sound(sound: &zapfast::settings::NotificationSound) -> &'static str {
+    use zapfast::settings::NotificationSound;
     match sound {
         NotificationSound::Receive => "receive",
         NotificationSound::Alert => "alert",
@@ -286,8 +281,8 @@ fn sound(sound: &superwhatsapp::settings::NotificationSound) -> &'static str {
 }
 
 fn settings(app: &mut App) -> SettingsView {
-    use superwhatsapp::app_lock::{FormError, FormMode};
-    use superwhatsapp::settings::{AutoLock, ThemeChoice, WallpaperColor};
+    use zapfast::app_lock::{FormError, FormMode};
+    use zapfast::settings::{AutoLock, ThemeChoice, WallpaperColor};
     let lock_form = app.app_lock.form.as_ref().map(|form| LockForm {
         mode: match form.mode {
             FormMode::Set => "set",
@@ -345,8 +340,8 @@ fn settings(app: &mut App) -> SettingsView {
         enter_sends: s.enter_sends,
         show_shortcut_hints: s.show_shortcut_hints,
         font: match s.font {
-            superwhatsapp::settings::FontChoice::System => "system",
-            superwhatsapp::settings::FontChoice::Inter => "inter",
+            zapfast::settings::FontChoice::System => "system",
+            zapfast::settings::FontChoice::Inter => "inter",
         },
         auto_download: account.auto_download,
         history_prefetch: account.history_prefetch,
@@ -369,7 +364,7 @@ fn settings(app: &mut App) -> SettingsView {
         phone: app
             .me
             .as_deref()
-            .and_then(superwhatsapp::model::phone_of)
+            .and_then(zapfast::model::phone_of)
             .map(|digits| format!("+{digits}")),
         version: env!("CARGO_PKG_VERSION"),
         files: files_view(app),
@@ -394,7 +389,7 @@ fn settings(app: &mut App) -> SettingsView {
         palette: custom_theme.is_some().then(|| palette(&app.palette)),
         locale: code(app.locale),
         language: app.settings.interface_language.map(code),
-        languages: superwhatsapp::i18n::Locale::ALL
+        languages: zapfast::i18n::Locale::ALL
             .iter()
             .map(|l| (code(*l), l.label()))
             .collect(),
@@ -485,32 +480,6 @@ pub struct Info {
     /// is in, and the three newest pictures and videos.
     pub media_count: Option<String>,
     pub media: Vec<MediaCell>,
-    /// What the panel shows: "overview", or the media view on its "media",
-    /// "docs" or "links" tab (egui's `InfoView`).
-    pub page: &'static str,
-    /// The listing is being made, or could not be.
-    pub media_pending: bool,
-    pub media_failed: bool,
-    /// The media view's tabs: each count, and whether the open one was cut.
-    pub tab_counts: [usize; 3],
-    pub tab_truncated: bool,
-    /// The open tab's rows, only while the media view is open.
-    pub gallery: Vec<MediaCell>,
-    pub docs: Vec<ItemRow>,
-    pub links: Vec<ItemRow>,
-    /// "Znga knows" (REQ-ZPROF-007): the profile, when profiles are on and
-    /// Znga may see this chat.
-    pub znga: Option<crate::znga::ZProfile>,
-}
-
-/// One document or link of the media view: egui's `item_row`. `target` is
-/// the message for a document and the address for a link.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ItemRow {
-    pub target: String,
-    pub title: String,
-    pub detail: String,
 }
 
 /// One picture of the info panel's media strip.
@@ -594,9 +563,6 @@ pub struct Open {
     pub subtitle: String,
     /// The subtitle is in the accent (online, typing).
     pub subtitle_accent: bool,
-    /// A message to scroll to and flash: a search result, a starred
-    /// message, a media cell (egui's `jump_highlight`).
-    pub jump: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -627,8 +593,6 @@ pub struct Msg {
     pub media: Option<MediaView>,
     /// A link preview under the text.
     pub preview: Option<PreviewView>,
-    /// Looks like another language: Translate is offered (REQ-ZANS-004).
-    pub translatable: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -676,7 +640,7 @@ fn jpeg(bytes: &[u8]) -> String {
 /// the message's own words).
 fn media_of(message: &Message) -> (Option<MediaView>, Option<PreviewView>, Option<String>) {
     let thumb = message.thumbnail.as_deref().map(jpeg);
-    let view = |media: &superwhatsapp::model::Media| MediaView {
+    let view = |media: &zapfast::model::Media| MediaView {
         url: crate::view::media(media.path.clone()),
         thumb: thumb.clone(),
         width: media.width,
@@ -702,11 +666,9 @@ fn media_of(message: &Message) -> (Option<MediaView>, Option<PreviewView>, Optio
             }),
             Some(text.clone()),
         ),
-        Content::Image { caption, media, .. } => (
-            Some(view(media)),
-            None,
-            Some(caption.clone().unwrap_or_default()),
-        ),
+        Content::Image { caption, media, .. } => {
+            (Some(view(media)), None, Some(caption.clone().unwrap_or_default()))
+        }
         Content::Video {
             caption,
             media,
@@ -778,7 +740,7 @@ pub struct FilesView {
 }
 
 fn files_view(app: &App) -> FilesView {
-    use superwhatsapp::i18n::gettext;
+    use zapfast::i18n::gettext;
     let locale = app.locale;
     let account = app.account();
     let stats = account.storage_stats;
@@ -799,7 +761,7 @@ fn files_view(app: &App) -> FilesView {
             "Photos, videos, stickers and files {account} downloaded to this computer. Clearing them keeps your messages; attachments download again when you open them.",
         )
         .replace("{account}", &account.display_label(locale)),
-        storage_total: total.map(superwhatsapp::util::bytes),
+        storage_total: total.map(zapfast::util::bytes),
         storage_rows: stats
             .map(|s| {
                 let total = s.bytes_total();
@@ -814,8 +776,8 @@ fn files_view(app: &App) -> FilesView {
                 .map(|(label, count, bytes, _)| {
                     (
                         label.into_owned(),
-                        format!("{count} · {}", superwhatsapp::util::bytes(bytes)),
-                        superwhatsapp::model::StorageStats::bar_width(bytes, total, 1000.0) / 1000.0,
+                        format!("{count} · {}", zapfast::util::bytes(bytes)),
+                        zapfast::model::StorageStats::bar_width(bytes, total, 1000.0) / 1000.0,
                     )
                 })
                 .collect()
@@ -859,15 +821,10 @@ pub struct CallView {
     pub microphone: Option<String>,
     pub speaker: Option<String>,
     pub camera_device: Option<String>,
-    /// The peer's latest video frame and our own camera's, as `zapframe`
-    /// addresses (src/ui/call.rs: the peer fills the screen, our camera
-    /// sits in the top corner).
-    pub remote_frame: Option<String>,
-    pub local_frame: Option<String>,
 }
 
 fn call_view(app: &mut App) -> Option<CallView> {
-    use superwhatsapp::calls::CallPhase;
+    use zapfast::calls::CallPhase;
     let call = app.call.clone()?;
     let name = app.call_name();
     let avatar = media(app.call_avatar());
@@ -882,11 +839,11 @@ fn call_view(app: &mut App) -> Option<CallView> {
         .then(|| call.started.map(|at| at.elapsed().as_secs()))
         .flatten();
     let status = if call.phase == CallPhase::Incoming {
-        superwhatsapp::ui::call::incoming_text(app.locale, &call, caller.as_deref())
+        zapfast::ui::call::incoming_text(app.locale, &call, caller.as_deref())
     } else if seconds.is_some() {
         String::new()
     } else {
-        superwhatsapp::ui::call::status(app.locale, &call)
+        zapfast::ui::call::status(app.locale, &call)
     };
     Some(CallView {
         chat: call.chat.clone(),
@@ -902,39 +859,12 @@ fn call_view(app: &mut App) -> Option<CallView> {
         camera: call.group.is_none() || call.video,
         connected: call.phase.is_connected(),
         hidden,
-        microphones: app
-            .call_devices
-            .microphones
-            .iter()
-            .map(|d| (d.id.clone(), d.label.clone()))
-            .collect(),
-        speakers: app
-            .call_devices
-            .speakers
-            .iter()
-            .map(|d| (d.id.clone(), d.label.clone()))
-            .collect(),
-        cameras: app
-            .call_devices
-            .cameras
-            .iter()
-            .map(|d| (d.id.clone(), d.label.clone()))
-            .collect(),
+        microphones: app.call_devices.microphones.iter().map(|d| (d.id.clone(), d.label.clone())).collect(),
+        speakers: app.call_devices.speakers.iter().map(|d| (d.id.clone(), d.label.clone())).collect(),
+        cameras: app.call_devices.cameras.iter().map(|d| (d.id.clone(), d.label.clone())).collect(),
         microphone: call.microphone.clone(),
         speaker: call.speaker.clone(),
         camera_device: call.camera.clone(),
-        remote_frame: crate::frames::publish(
-            "remote",
-            (call.video && call.remote_video)
-                .then(|| app.call_remote_frame.clone())
-                .flatten(),
-        ),
-        local_frame: crate::frames::publish(
-            "local",
-            (call.video && call.camera_on)
-                .then(|| app.call_local_frame.clone())
-                .flatten(),
-        ),
     })
 }
 
@@ -988,7 +918,7 @@ pub fn parse_filter(name: &str) -> Option<ChatFilter> {
 fn media(path: Option<std::path::PathBuf>) -> Option<String> {
     let path = path?;
     let text = path.to_str()?;
-    Some(crate::media::address("zapmedia", &encode(text)))
+    Some(format!("http://zapmedia.localhost/{}", encode(text)))
 }
 
 fn encode(text: &str) -> String {
@@ -1026,7 +956,7 @@ fn row(app: &mut App, chat: &Chat, now: i64) -> ChatRow {
             status: status(last.status),
         }),
         stamp: if chat.last_activity > 0 {
-            superwhatsapp::util::chat_stamp(app.locale, chat.last_activity)
+            zapfast::util::chat_stamp(app.locale, chat.last_activity)
         } else {
             String::new()
         },
@@ -1038,8 +968,8 @@ fn row(app: &mut App, chat: &Chat, now: i64) -> ChatRow {
 
 /// The typing line egui writes in a row (src/ui/chats.rs).
 fn typing_line(app: &App, chat: &Chat) -> Option<String> {
-    use superwhatsapp::i18n::gettext;
-    use superwhatsapp::model::ChatActivity;
+    use zapfast::i18n::gettext;
+    use zapfast::model::ChatActivity;
     let typing = app.typing_in(&chat.id);
     let (_, name, activity) = typing.first()?;
     let recording = *activity == ChatActivity::RecordingAudio;
@@ -1097,26 +1027,25 @@ fn message(app: &App, group: bool, message: &Message) -> Msg {
                     app.display_name_or(&quoted.sender, quoted.sender_name.as_deref())
                 },
                 text: quoted.summary_in(app.locale).into_owned(),
-                hue: superwhatsapp::util::hue(&quoted.sender),
+                hue: zapfast::util::hue(&quoted.sender),
                 mine,
             }
         }),
-        sender_hue: superwhatsapp::util::hue(&message.sender),
+        sender_hue: zapfast::util::hue(&message.sender),
         reactions,
         reacted: message.reactions.iter().any(|reaction| reaction.from_me),
-        clock: superwhatsapp::util::clock(message.timestamp),
+        clock: zapfast::util::clock(message.timestamp),
         starred: app
             .stars
             .get(&message.chat)
             .is_some_and(|ids| ids.contains(&message.id)),
         media,
         preview,
-        translatable: superwhatsapp::znga::translate::offered(app, &message.chat, &message.id),
     }
 }
 
 pub fn build(app: &mut App) -> State {
-    let now = superwhatsapp::util::now();
+    let now = zapfast::util::now();
     let link = match &app.link {
         LinkStatus::Starting => Link::Starting,
         LinkStatus::Unlinked { qr, pair_code, .. } => Link::Unlinked {
@@ -1134,7 +1063,7 @@ pub fn build(app: &mut App) -> State {
         },
     };
     if app.app_lock.is_locked() {
-        use superwhatsapp::app_lock::Forgetting;
+        use zapfast::app_lock::Forgetting;
         let lock = LockView {
             wrong: app.app_lock.wrong,
             wait: app.app_lock.wait_left().map(|left| left.as_secs() + 1),
@@ -1154,7 +1083,6 @@ pub fn build(app: &mut App) -> State {
         settings.znga.twin.clear();
         settings.znga.excluded.clear();
         settings.znga.facts.clear();
-        settings.znga.people.clear();
         settings.znga.open_promises.clear();
         settings.znga.audit.clear();
         return State {
@@ -1169,7 +1097,6 @@ pub fn build(app: &mut App) -> State {
             znga_row: None,
             znga: None,
             offer: None,
-            translation: None,
             unread_chats: 0,
             open: None,
             section: "chats",
@@ -1177,7 +1104,6 @@ pub fn build(app: &mut App) -> State {
             calls: Vec::new(),
             call_filter: "all",
             calls_search: String::new(),
-            new_call: None,
             info: None,
             settings,
             lock: Some(lock),
@@ -1204,17 +1130,12 @@ pub fn build(app: &mut App) -> State {
                 )
             })
             .unwrap_or_default();
-        let znga_tools = superwhatsapp::znga::chat::tools_for(app, &id);
-        let (subtitle, colour) = superwhatsapp::ui::conversation::subtitle(app, &chat);
+        let znga_tools = zapfast::znga::chat::tools_for(app, &id);
+        let (subtitle, colour) = zapfast::ui::conversation::subtitle(app, &chat);
         let subtitle_accent = colour == app.palette.accent;
         Some(Open {
             subtitle,
             subtitle_accent,
-            jump: app
-                .jump_highlight
-                .as_ref()
-                .filter(|jump| jump.chat == id)
-                .map(|jump| jump.message.clone()),
             id,
             title,
             avatar,
@@ -1227,13 +1148,11 @@ pub fn build(app: &mut App) -> State {
     let locked = LockedView {
         offered: app.locked_count() > 0 || app.locked_folder_open(),
         open: app.locked_folder_open(),
-        prompt: matches!(
-            app.dialog,
-            Some(superwhatsapp::model::Dialog::UnlockLockedChats)
-        )
-        .then(|| LockedPrompt {
-            setup: app.settings.chat_lock_code_hash.is_none(),
-            error: app.chat_lock_error,
+        prompt: matches!(app.dialog, Some(zapfast::model::Dialog::UnlockLockedChats)).then(|| {
+            LockedPrompt {
+                setup: app.settings.chat_lock_code_hash.is_none(),
+                error: app.chat_lock_error,
+            }
         }),
     };
     let section = if app.page == Page::Calls {
@@ -1250,10 +1169,13 @@ pub fn build(app: &mut App) -> State {
         "chats"
     };
     let starred = if app.show_starred {
-        let rows: Vec<superwhatsapp::archive::Starred> = app.starred.clone();
+        let rows: Vec<zapfast::archive::Starred> = app.starred.clone();
         rows.iter()
             // Stars in locked chats stay behind the lock, as in egui.
-            .filter(|row| !app.chat(&row.message.chat).is_some_and(|chat| chat.locked))
+            .filter(|row| {
+                !app.chat(&row.message.chat)
+                    .is_some_and(|chat| chat.locked)
+            })
             .map(|row| {
                 let chat = app.chat(&row.message.chat).cloned();
                 let group = chat.as_ref().is_some_and(Chat::is_group);
@@ -1264,7 +1186,7 @@ pub fn build(app: &mut App) -> State {
                         .map(|chat| app.chat_title(chat))
                         .unwrap_or_else(|| app.chat_title_of(&row.message.chat)),
                     msg: message(app, group, &row.message),
-                    moment: superwhatsapp::util::moment_stamp(app.locale, row.starred_at),
+                    moment: zapfast::util::moment_stamp(app.locale, row.starred_at),
                 }
             })
             .collect()
@@ -1274,10 +1196,10 @@ pub fn build(app: &mut App) -> State {
     let calls = if app.page == Page::Calls {
         // egui's history: locked chats' calls left out while their folder
         // is closed, alike calls folded, then the Missed chip and the search.
-        use superwhatsapp::ui::calls;
+        use zapfast::ui::calls;
         let visible = calls::visible_calls(app);
-        let missed_only = app.call_filter == superwhatsapp::model::CallFilter::Missed;
-        let needle = superwhatsapp::util::search_key(app.calls_search.trim());
+        let missed_only = app.call_filter == zapfast::model::CallFilter::Missed;
+        let needle = zapfast::util::search_key(app.calls_search.trim());
         let rows: Vec<Vec<Message>> = calls::rows(&visible)
             .into_iter()
             .filter(|row| {
@@ -1320,18 +1242,16 @@ pub fn build(app: &mut App) -> State {
         znga_row: crate::znga::row(app),
         znga: crate::znga::chat_view(app),
         offer: crate::znga::offer(app),
-        translation: crate::znga::translation_view(app),
         open,
         section,
         unread_chats: app.unread_chat_count(),
         starred,
         calls,
         call_filter: match app.call_filter {
-            superwhatsapp::model::CallFilter::All => "all",
-            superwhatsapp::model::CallFilter::Missed => "missed",
+            zapfast::model::CallFilter::All => "all",
+            zapfast::model::CallFilter::Missed => "missed",
         },
         calls_search: app.calls_search.clone(),
-        new_call: new_call(app),
         info,
         settings: settings(app),
         lock: None,
@@ -1342,7 +1262,7 @@ pub fn build(app: &mut App) -> State {
 /// One history row as egui's Calls page builds it (src/ui/calls.rs):
 /// consecutive alike calls folded under the newest.
 fn call_row(app: &mut App, row: &[Message]) -> CallRow {
-    use superwhatsapp::ui::calls;
+    use zapfast::ui::calls;
     let entry = &row[0];
     let call = calls::Entry::of(entry);
     let (video, duration, group_call) = match &entry.content {
@@ -1367,7 +1287,7 @@ fn call_row(app: &mut App, row: &[Message]) -> CallRow {
             .as_ref()
             .map(|call| calls::summary(call, app.locale))
             .unwrap_or_default(),
-        stamp: superwhatsapp::util::chat_stamp(app.locale, entry.timestamp),
+        stamp: zapfast::util::chat_stamp(app.locale, entry.timestamp),
         bad: call.as_ref().is_some_and(|call| call.status.is_bad()),
         avatar: media(app.avatar(&entry.chat)),
         group: group_call || chat.as_ref().is_some_and(Chat::is_group),
@@ -1379,117 +1299,7 @@ fn call_row(app: &mut App, row: &[Message]) -> CallRow {
     }
 }
 
-/// The "New call" list: the people called most, unless searching, then
-/// every contact matching the search by name or number.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct NewCall {
-    pub search: String,
-    pub frequent: Vec<Person>,
-    pub contacts: Vec<Person>,
-}
-
-/// One person to call: the picture, the name, and the number under it.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Person {
-    pub id: String,
-    pub name: String,
-    pub phone: Option<String>,
-    pub avatar: Option<String>,
-}
-
-fn new_call(app: &mut App) -> Option<NewCall> {
-    use superwhatsapp::ui::calls;
-    if app.page != Page::Calls || !app.new_call {
-        return None;
-    }
-    let needle = superwhatsapp::util::search_key(app.new_call_search.trim());
-    let frequent: Vec<String> = if needle.is_empty() {
-        calls::frequent(&calls::visible_calls(app), app.me.as_deref())
-            .into_iter()
-            .filter(|chat| !app.chat(chat).is_some_and(|chat| chat.locked))
-            .collect()
-    } else {
-        Vec::new()
-    };
-    let contacts: Vec<String> = superwhatsapp::ui::dialogs::contact_choices(app, &needle)
-        .into_iter()
-        .map(|contact| contact.id)
-        .collect();
-    let mut person = |id: &str| Person {
-        id: id.to_owned(),
-        name: app.display_name(id),
-        phone: superwhatsapp::model::phone_of(id).map(superwhatsapp::util::phone),
-        avatar: media(app.avatar(id)),
-    };
-    let frequent = frequent.iter().map(|id| person(id)).collect();
-    let contacts = contacts.iter().map(|id| person(id)).collect();
-    Some(NewCall {
-        search: app.new_call_search.clone(),
-        frequent,
-        contacts,
-    })
-}
-
-/// One picture or video cell: the file when downloaded, else the preview
-/// sent with it; a video shows its preview and length.
-fn media_cell(message: &Message) -> MediaCell {
-    let (view, _, _) = media_of(message);
-    let video = view.as_ref().is_some_and(|v| v.mime.starts_with("video/"));
-    MediaCell {
-        id: message.id.clone(),
-        src: view.as_ref().and_then(|v| {
-            if video {
-                v.thumb.clone()
-            } else {
-                v.url.clone().or_else(|| v.thumb.clone())
-            }
-        }),
-        video,
-        seconds: view.and_then(|v| v.seconds),
-    }
-}
-
-/// A document row: its name, then pages, size and day (egui's `docs_list`).
-fn doc_row(app: &App, message: &Message) -> Option<ItemRow> {
-    let Content::Document {
-        media,
-        file_name,
-        pages,
-        ..
-    } = &message.content
-    else {
-        return None;
-    };
-    let mut detail = Vec::new();
-    if let Some(pages) = pages {
-        detail.push(
-            superwhatsapp::i18n::ngettext(app.locale, "{} page", "{} pages", *pages)
-                .replace("{}", &pages.to_string()),
-        );
-    }
-    detail.push(superwhatsapp::util::bytes(media.size));
-    detail.push(superwhatsapp::util::chat_stamp(
-        app.locale,
-        message.timestamp,
-    ));
-    Some(ItemRow {
-        target: message.id.clone(),
-        title: file_name.clone(),
-        detail: detail.join(" · "),
-    })
-}
-
 fn info(app: &mut App, id: &str, now: i64) -> Info {
-    use superwhatsapp::model::{InfoView, MediaTab};
-    let view = app
-        .info
-        .as_ref()
-        .filter(|panel| panel.chat == id)
-        .map_or(InfoView::Overview, |panel| panel.view);
-    let listing_owned = app.info_media.clone().filter(|m| m.chat == id);
-    let listing = listing_owned.as_ref();
     // Group members may have no chat of their own.
     let chat = app
         .chat(id)
@@ -1497,7 +1307,7 @@ fn info(app: &mut App, id: &str, now: i64) -> Info {
         .unwrap_or_else(|| Chat::new(id.to_owned(), app.display_name(id)));
     let ours: Vec<String> = app.our_ids().into_iter().map(str::to_owned).collect();
     let ours_ref: Vec<&str> = ours.iter().map(String::as_str).collect();
-    let roles = superwhatsapp::group_admin::Roles::of(&chat);
+    let roles = zapfast::group_admin::Roles::of(&chat);
     let members = if chat.is_group() {
         app.participant_list(&chat)
             .into_iter()
@@ -1548,16 +1358,12 @@ fn info(app: &mut App, id: &str, now: i64) -> Info {
         timer: chat.ephemeral_expiration.unwrap_or(0),
         phone_display: chat
             .phone()
-            .map(superwhatsapp::util::phone)
+            .map(zapfast::util::phone)
             .filter(|phone| !phone.is_empty()),
         status: (!chat.is_group() && !chat.is_channel())
-            .then(|| superwhatsapp::ui::conversation::subtitle(app, &chat).0)
-            .filter(|line| {
-                !line.is_empty()
-                    && Some(line.as_str())
-                        != chat.phone().map(superwhatsapp::util::phone).as_deref()
-            }),
-        blockable: superwhatsapp::blocking::eligible(id, app.me.as_deref(), app.me_lid.as_deref()),
+            .then(|| zapfast::ui::conversation::subtitle(app, &chat).0)
+            .filter(|line| !line.is_empty() && Some(line.as_str()) != chat.phone().map(zapfast::util::phone).as_deref()),
+        blockable: zapfast::blocking::eligible(id, app.me.as_deref(), app.me_lid.as_deref()),
         blocked: app.blocklist.contains(id),
         block_editable: app.is_connected() && app.blocklist.editable(),
         contact_editable: !chat.is_group()
@@ -1577,58 +1383,32 @@ fn info(app: &mut App, id: &str, now: i64) -> Info {
                 count.to_string()
             }
         }),
-        media: listing
-            .map(|m| m.media.iter().take(3).map(media_cell).collect())
+        media: app
+            .info_media
+            .as_ref()
+            .filter(|m| m.chat == id)
+            .map(|m| {
+                m.media
+                    .iter()
+                    .take(3)
+                    .map(|message| {
+                        let (view, _, _) = media_of(message);
+                        let video = view.as_ref().is_some_and(|v| v.mime.starts_with("video/"));
+                        MediaCell {
+                            id: message.id.clone(),
+                            src: view.as_ref().and_then(|v| {
+                                if video { v.thumb.clone() } else { v.url.clone().or_else(|| v.thumb.clone()) }
+                            }),
+                            video,
+                            seconds: view.and_then(|v| v.seconds),
+                        }
+                    })
+                    .collect()
+            })
             .unwrap_or_default(),
-        page: match view {
-            InfoView::Media(MediaTab::Media) => "media",
-            InfoView::Media(MediaTab::Docs) => "docs",
-            InfoView::Media(MediaTab::Links) => "links",
-            _ => "overview",
-        },
-        media_pending: app.info_media_pending,
-        media_failed: app.info_media_failed,
-        tab_counts: listing.map_or([0; 3], |m| [m.media.len(), m.docs.len(), m.links.len()]),
-        tab_truncated: listing.is_some_and(|m| match view {
-            InfoView::Media(MediaTab::Media) => m.media_truncated,
-            InfoView::Media(MediaTab::Docs) => m.docs_truncated,
-            InfoView::Media(MediaTab::Links) => m.links_truncated,
-            _ => false,
-        }),
-        gallery: match (view, listing) {
-            (InfoView::Media(MediaTab::Media), Some(m)) => m.media.iter().map(media_cell).collect(),
-            _ => Vec::new(),
-        },
-        docs: match (view, listing) {
-            (InfoView::Media(MediaTab::Docs), Some(m)) => m
-                .docs
-                .iter()
-                .filter_map(|message| doc_row(app, message))
-                .collect(),
-            _ => Vec::new(),
-        },
-        links: match (view, listing) {
-            (InfoView::Media(MediaTab::Links), Some(m)) => m
-                .links
-                .iter()
-                .map(|link| ItemRow {
-                    target: link.url.clone(),
-                    title: link.title.clone().unwrap_or_else(|| link.url.clone()),
-                    detail: format!(
-                        "{} · {}",
-                        superwhatsapp::ui::info::domain(&link.url),
-                        superwhatsapp::util::chat_stamp(app.locale, link.timestamp)
-                    ),
-                })
-                .collect(),
-            _ => Vec::new(),
-        },
-        editor_names: superwhatsapp::util::editor_names(
+        editor_names: zapfast::util::editor_names(
             app.chat_title(&chat).trim_start_matches('~'),
-            app.contacts
-                .get(id)
-                .and_then(superwhatsapp::model::Contact::first_name),
+            app.contacts.get(id).and_then(zapfast::model::Contact::first_name),
         ),
-        znga: crate::znga::profile_view(app, id),
     }
 }

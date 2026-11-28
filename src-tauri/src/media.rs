@@ -5,24 +5,6 @@ use std::path::{Path, PathBuf};
 
 use tauri::http::{Request, Response, StatusCode};
 
-/// The page's address for `rest` under one of the app's own protocols.
-/// WebKit (macOS, Linux) loads custom protocols as `scheme://localhost/`;
-/// WebView2 (Windows) and Android only as `http://scheme.localhost/`.
-pub fn address(scheme: &str, rest: &str) -> String {
-    if cfg!(any(windows, target_os = "android")) {
-        format!("http://{scheme}.localhost/{rest}")
-    } else {
-        format!("{scheme}://localhost/{rest}")
-    }
-}
-
-/// What follows the protocol in an address made by [`address`], in either
-/// form, so a dumped state reads the same on every system.
-pub fn strip<'a>(scheme: &str, text: &'a str) -> Option<&'a str> {
-    text.strip_prefix(&format!("{scheme}://localhost/"))
-        .or_else(|| text.strip_prefix(&format!("http://{scheme}.localhost/")))
-}
-
 fn decode(text: &str) -> Option<String> {
     let bytes = text.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
@@ -47,7 +29,7 @@ fn allowed(path: &Path) -> bool {
         return false;
     };
     let roots: Vec<PathBuf> = [
-        Some(superwhatsapp::paths::AppDirs::discover().cache),
+        Some(zapfast::paths::AppDirs::discover().cache),
         Some(std::env::temp_dir()),
     ]
     .into_iter()
@@ -56,7 +38,7 @@ fn allowed(path: &Path) -> bool {
     .collect();
     // The chat background image Settings imported (wallpaper.<ext>).
     let wallpaper = path.parent().is_some_and(|parent| {
-        superwhatsapp::paths::AppDirs::discover()
+        zapfast::paths::AppDirs::discover()
             .state
             .canonicalize()
             .is_ok_and(|state| parent == state)
@@ -114,12 +96,7 @@ pub fn inline(value: &mut serde_json::Value) {
     use base64::Engine as _;
     match value {
         serde_json::Value::String(text) => {
-            if let Some(bytes) = crate::frames::inline(text) {
-                let data = base64::engine::general_purpose::STANDARD.encode(bytes);
-                *text = format!("data:image/jpeg;base64,{data}");
-                return;
-            }
-            let Some(rest) = strip("zapmedia", text) else {
+            let Some(rest) = text.strip_prefix("http://zapmedia.localhost/") else {
                 return;
             };
             let Some(path) = decode(rest).map(PathBuf::from) else {
@@ -136,23 +113,5 @@ pub fn inline(value: &mut serde_json::Value) {
         serde_json::Value::Array(items) => items.iter_mut().for_each(inline),
         serde_json::Value::Object(map) => map.values_mut().for_each(inline),
         _ => {}
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn addresses_use_the_form_the_web_view_loads() {
-        let made = address("zapmedia", "%2Fa.jpg");
-        if cfg!(any(windows, target_os = "android")) {
-            assert_eq!(made, "http://zapmedia.localhost/%2Fa.jpg");
-        } else {
-            assert_eq!(made, "zapmedia://localhost/%2Fa.jpg");
-        }
-        assert_eq!(strip("zapmedia", &made), Some("%2Fa.jpg"));
-        assert_eq!(strip("zapmedia", "http://zapmedia.localhost/x"), Some("x"));
-        assert_eq!(strip("zapmedia", "zapframe://localhost/x"), None);
     }
 }

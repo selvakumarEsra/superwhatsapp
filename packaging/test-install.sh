@@ -43,13 +43,13 @@ docker run --rm \
     test -s /usr/share/icons/hicolor/scalable/apps/superwhatsapp.svg
     grep -qx "Icon=superwhatsapp" /usr/share/applications/superwhatsapp.desktop
     grep -qx "StartupWMClass=superwhatsapp" /usr/share/applications/superwhatsapp.desktop
-    test -s /usr/share/superwhatsapp/omarchy/superwhatsapp.json.tpl
-    test -x /usr/share/superwhatsapp/omarchy/superwhatsapp-theme
+    test -s /usr/share/zapfast/omarchy/zapfast.json.tpl
+    test -x /usr/share/zapfast/omarchy/zapfast-theme
     if [ "$FORMAT" = deb ]; then apt-get remove -y superwhatsapp; else dnf remove -y superwhatsapp; fi
     test ! -e /usr/bin/superwhatsapp
     test ! -e /usr/share/applications/superwhatsapp.desktop
     test ! -e /usr/share/icons/hicolor/scalable/apps/superwhatsapp.svg
-    test ! -e /usr/share/superwhatsapp/omarchy/superwhatsapp.json.tpl
-    test ! -e /usr/share/superwhatsapp/omarchy/superwhatsapp-theme
+    test ! -e /usr/share/zapfast/omarchy/zapfast.json.tpl
+    test ! -e /usr/share/zapfast/omarchy/zapfast-theme
     test "$(cat /root/.config/superwhatsapp/fixture)" = preserve-existing-settings
   '

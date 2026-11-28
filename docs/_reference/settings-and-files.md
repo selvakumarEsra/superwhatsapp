@@ -12,17 +12,17 @@ On Linux:
 
 | What | Where | Notes |
 | --- | --- | --- |
-| Settings | `~/.config/superwhatsapp/settings.json` | JSON, safe to edit, or declared with the [Home Manager module](/download/); the app lock password and the locked-chats code are kept only as salted verifiers |
-| Account list | `~/.config/superwhatsapp/accounts.json` | Which numbers are linked here and which one is showing |
-| Session keys | `~/.local/state/superwhatsapp/accounts/<id>/session.db` | Deleting it unlinks that number |
-| Message archive | `~/.local/state/superwhatsapp/accounts/<id>/archive.db` | Encrypted; the only copy of history WhatsApp will not send again |
-| Per-number settings | `~/.local/state/superwhatsapp/accounts/<id>/settings.json` | Notifications, receipts, typing, automatic downloads, background history, the last open chat, the chat-list chip or label, and the wallpaper |
-| Stickers and packs | `~/.local/state/superwhatsapp/accounts/<id>/stickers/` | Plain WebP files; each pack is a folder |
-| Wallpaper image | `~/.local/state/superwhatsapp/accounts/<id>/wallpaper.jpg` | Copy of the chosen picture (or `.png`, `.webp`, `.gif`) |
-| Attachments, avatars | `~/.cache/superwhatsapp/accounts/<id>/` | Safe to delete; available files download again when viewed |
-| Last run's log | `~/.local/state/superwhatsapp/superwhatsapp.log` | `--verbose` for more |
-| The run before's log | `~/.local/state/superwhatsapp/superwhatsapp.previous.log` | Kept for one more start |
-| Crash log | `~/.local/state/superwhatsapp/panic.log` | Safe to delete |
+| Settings | `~/.config/zapfast/settings.json` | JSON, safe to edit, or declared with the [Home Manager module](/download/); the app lock password and the locked-chats code are kept only as salted verifiers |
+| Account list | `~/.config/zapfast/accounts.json` | Which numbers are linked here and which one is showing |
+| Session keys | `~/.local/state/zapfast/accounts/<id>/session.db` | Deleting it unlinks that number |
+| Message archive | `~/.local/state/zapfast/accounts/<id>/archive.db` | Encrypted; the only copy of history WhatsApp will not send again |
+| Per-number settings | `~/.local/state/zapfast/accounts/<id>/settings.json` | Notifications, receipts, typing, automatic downloads, background history, the last open chat, the chat-list chip or label, and the wallpaper |
+| Stickers and packs | `~/.local/state/zapfast/accounts/<id>/stickers/` | Plain WebP files; each pack is a folder |
+| Wallpaper image | `~/.local/state/zapfast/accounts/<id>/wallpaper.jpg` | Copy of the chosen picture (or `.png`, `.webp`, `.gif`) |
+| Attachments, avatars | `~/.cache/zapfast/accounts/<id>/` | Safe to delete; available files download again when viewed |
+| Last run's log | `~/.local/state/zapfast/zapfast.log` | `--verbose` for more |
+| The run before's log | `~/.local/state/zapfast/zapfast.previous.log` | Kept for one more start |
+| Crash log | `~/.local/state/zapfast/panic.log` | Safe to delete |
 
 Back up the archive if you need its history. WhatsApp sends only recent
 history to a new device, although SuperWhatsapp can request some older messages from
@@ -59,19 +59,11 @@ file already in the folder is never replaced, and the download becomes
 become `_`.
 
 On macOS, settings, state, and the logs are in
-`~/Library/Application Support/cc.superwhatsapp` and the caches in
-`~/Library/Caches/cc.superwhatsapp`. On Windows, settings are in
-`%APPDATA%\cc\superwhatsapp\config`, state and the logs in
-`%LOCALAPPDATA%\cc\superwhatsapp\data`, and the caches in
-`%LOCALAPPDATA%\cc\superwhatsapp\cache`.
-
-Releases up to 0.21.1-beta.11 kept these files under older names
-(`me.paolino.zapfast` on macOS, `zapfast` on Linux, `paolino\zapfast` on
-Windows). The first start of a newer release moves them to the folders above,
-with each archive's keyring key. If a key cannot be copied, nothing moves and
-SuperWhatsapp stops and says why in its log. If an older copy is still running,
-the new one shows that copy's window instead; quit it first. When both the old
-and new folders exist, the new ones are used and the old ones are left alone.
+`~/Library/Application Support/me.paolino.zapfast` and the caches in
+`~/Library/Caches/me.paolino.zapfast`. On Windows, settings are in
+`%APPDATA%\paolino\zapfast\config`, state and the logs in
+`%LOCALAPPDATA%\paolino\zapfast\data`, and the caches in
+`%LOCALAPPDATA%\paolino\zapfast\cache`.
 
 A single-number setup from before 0.19 moves into
 `accounts/1/` on first start, keyring key included; if that cannot finish (a
@@ -260,7 +252,7 @@ name or description, in the interface language or in English.
   and video do not: they travel over UDP straight to WhatsApp's call relays,
   which see this computer's address.
 - **GIPHY API key**: for GIF search, unless the build includes one. Set
-  `SUPERWHATSAPP_GIPHY_KEY` at compile time to include a default key.
+  `ZAPFAST_GIPHY_KEY` at compile time to include a default key.
 
 **Account** edits your WhatsApp name, About, and picture, and unlinks this
 computer. **Files** shows the archive, the downloads folder (which you can
@@ -332,10 +324,10 @@ the new one.
 
 ## The log
 
-Each run starts `superwhatsapp.log` afresh and records warnings and errors, never
+Each run starts `zapfast.log` afresh and records warnings and errors, never
 message contents, phone numbers, or keys. Include the end of this file when
 reporting an issue. **Settings > Files > Log > Open** shows it. The run before
-is kept beside it as `superwhatsapp.previous.log`: if SuperWhatsapp froze and you had to
+is kept beside it as `zapfast.previous.log`: if SuperWhatsapp froze and you had to
 restart it, that file holds what happened.
 
 During a call the log also records the call's numbers every few seconds: the
@@ -345,7 +337,7 @@ health. They are counts and sizes only.
 ### Saving a call's video for diagnosis
 
 To work on a video call's picture quality, start SuperWhatsapp with
-`SUPERWHATSAPP_CALL_VIDEO_DUMP` set to a folder. Each video call then writes the
+`ZAPFAST_CALL_VIDEO_DUMP` set to a folder. Each video call then writes the
 video it sends and the video it receives there, as raw H.264
 (`<time>-<call>-sent.h264` and `-received.h264`), which `ffmpeg` and media
 players read. Nothing is written without the variable. The files are the
@@ -354,7 +346,7 @@ agreed, and delete the files when you are done.
 
 ### Saving a call's audio for diagnosis
 
-To work on echo cancellation, start SuperWhatsapp with `SUPERWHATSAPP_CALL_AUDIO_DUMP` set
+To work on echo cancellation, start SuperWhatsapp with `ZAPFAST_CALL_AUDIO_DUMP` set
 to a folder. Each call's microphone stream then writes four files there,
 `<time>-<stream>-reference.wav` (the other side's voice as your speaker played
 it), `-microphone.wav` (your microphone before any processing), `-output.wav`

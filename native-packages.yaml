@@ -50,12 +50,12 @@ nfpm:
     dst: "/usr/share/icons/hicolor/scalable/apps/superwhatsapp.svg"
     file_info:
       mode: 420
-  - src: contrib/omarchy/superwhatsapp.json.tpl
-    dst: /usr/share/superwhatsapp/omarchy/superwhatsapp.json.tpl
+  - src: contrib/omarchy/zapfast.json.tpl
+    dst: /usr/share/zapfast/omarchy/zapfast.json.tpl
     file_info:
       mode: 420
-  - src: contrib/omarchy/superwhatsapp-theme
-    dst: /usr/share/superwhatsapp/omarchy/superwhatsapp-theme
+  - src: contrib/omarchy/zapfast-theme
+    dst: /usr/share/zapfast/omarchy/zapfast-theme
     file_info:
       mode: 493
   # native-packages adds the C library (libc6, glibc) at the version the
@@ -186,13 +186,13 @@ assets:
     checksummed: false
     local: dist/superwhatsapp-@VERSION@.tar.gz
 templates:
-  homebrew/superwhatsapp.rb: packaging/homebrew/superwhatsapp.rb.in
-  arch/superwhatsapp/PKGBUILD: packaging/arch/superwhatsapp/PKGBUILD.in
-  arch/superwhatsapp/superwhatsapp.install: packaging/arch/superwhatsapp.install
-  arch/superwhatsapp-bin/PKGBUILD: packaging/arch/superwhatsapp-bin/PKGBUILD.in
-  arch/superwhatsapp-bin/superwhatsapp-bin.install: packaging/arch/superwhatsapp.install
-  arch/superwhatsapp-git/PKGBUILD: packaging/arch/superwhatsapp-git/PKGBUILD.in
-  arch/superwhatsapp-git/superwhatsapp-git.install: packaging/arch/superwhatsapp.install
+  homebrew/zapfast.rb: packaging/homebrew/zapfast.rb.in
+  arch/zapfast/PKGBUILD: packaging/arch/zapfast/PKGBUILD.in
+  arch/zapfast/superwhatsapp.install: packaging/arch/zapfast.install
+  arch/zapfast-bin/PKGBUILD: packaging/arch/zapfast-bin/PKGBUILD.in
+  arch/zapfast-bin/zapfast-bin.install: packaging/arch/zapfast.install
+  arch/zapfast-git/PKGBUILD: packaging/arch/zapfast-git/PKGBUILD.in
+  arch/zapfast-git/zapfast-git.install: packaging/arch/zapfast.install
 repositories:
   homebrew:
     url: https://github.com/crmne/homebrew-tap.git
@@ -200,40 +200,40 @@ repositories:
     branch: main
     package_path: Casks
     files:
-      homebrew/superwhatsapp.rb: Casks/superwhatsapp.rb
-    version_file: Casks/superwhatsapp.rb
+      homebrew/zapfast.rb: Casks/zapfast.rb
+    version_file: Casks/zapfast.rb
     version_pattern: 'version "([^"]+)"'
     publish: push
   aur-source:
     group: aur
-    url: https://aur.archlinux.org/superwhatsapp.git
-    push_url: ssh://aur@aur.archlinux.org/superwhatsapp.git
+    url: https://aur.archlinux.org/zapfast.git
+    push_url: ssh://aur@aur.archlinux.org/zapfast.git
     branch: master
     package_path: "."
     files:
-      arch/superwhatsapp: "."
+      arch/zapfast: "."
     version_file: ".SRCINFO"
     version_pattern: "^\\s*pkgver = (\\S+)"
     publish: push
   aur-bin:
     group: aur
-    url: https://aur.archlinux.org/superwhatsapp-bin.git
-    push_url: ssh://aur@aur.archlinux.org/superwhatsapp-bin.git
+    url: https://aur.archlinux.org/zapfast-bin.git
+    push_url: ssh://aur@aur.archlinux.org/zapfast-bin.git
     branch: master
     package_path: "."
     files:
-      arch/superwhatsapp-bin: "."
+      arch/zapfast-bin: "."
     version_file: ".SRCINFO"
     version_pattern: "^\\s*pkgver = (\\S+)"
     publish: push
   aur-git:
     group: aur
-    url: https://aur.archlinux.org/superwhatsapp-git.git
-    push_url: ssh://aur@aur.archlinux.org/superwhatsapp-git.git
+    url: https://aur.archlinux.org/zapfast-git.git
+    push_url: ssh://aur@aur.archlinux.org/zapfast-git.git
     branch: master
     package_path: "."
     files:
-      arch/superwhatsapp-git: "."
+      arch/zapfast-git: "."
     version_file: ".SRCINFO"
     version_pattern: "^\\s*pkgver = (\\S+)"
     publish: push

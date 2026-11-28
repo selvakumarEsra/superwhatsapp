@@ -77,18 +77,6 @@ pub enum Card {
     /// their own browser.
     #[serde(rename_all = "camelCase")]
     Link { title: String, url: String },
-    /// A message an answer cites as `[n]` (REQ-ZANS-001): opening it goes
-    /// to that message in its chat.
-    #[serde(rename_all = "camelCase")]
-    Cite {
-        n: usize,
-        chat: String,
-        message: String,
-        chat_title: String,
-        sender: String,
-        at: i64,
-        text: String,
-    },
 }
 
 impl Card {
@@ -176,22 +164,6 @@ impl Card {
                 url.clone(),
                 super::web::site(url).unwrap_or_default(),
             ),
-            Card::Cite {
-                chat_title,
-                sender,
-                at,
-                text,
-                ..
-            } => (
-                "cite",
-                if sender.is_empty() || sender == chat_title {
-                    chat_title.clone()
-                } else {
-                    format!("{sender} in {chat_title}")
-                },
-                text.chars().take(160).collect(),
-                card_time(*at),
-            ),
         }
     }
 
@@ -216,7 +188,6 @@ impl Card {
             Card::Promise { .. } => &[("done", "Done"), ("notPromise", "Not a promise")],
             Card::Drift { .. } => &[("opener", "Draft an opener")],
             Card::Link { .. } => &[("openPage", "Open in browser"), ("copyLink", "Copy link")],
-            Card::Cite { .. } => &[("open", "Open")],
         }
     }
 
@@ -228,8 +199,7 @@ impl Card {
             | Card::CatchUp { chat, .. }
             | Card::Voice { chat, .. }
             | Card::Promise { chat, .. }
-            | Card::Drift { chat, .. }
-            | Card::Cite { chat, .. } => Some(chat).filter(|c| !c.is_empty()).map(|c| c.as_str()),
+            | Card::Drift { chat, .. } => Some(chat).filter(|c| !c.is_empty()).map(|c| c.as_str()),
             Card::Briefing { .. } | Card::Plan { .. } | Card::Link { .. } => None,
         }
     }
@@ -617,17 +587,6 @@ pub enum Intent {
     CatchUp { name: String },
     /// "done", about the latest Needs you.
     Done,
-    /// "what do you know about Ada?" (REQ-ZPROF-007).
-    Know { name: String },
-    /// "forget that Ada likes jazz": `rest` starts with the name.
-    Forget { rest: String },
-    /// The answer to a profile question Znga asked (REQ-ZPROF-006): the
-    /// choices are (value, label). Never parsed from text.
-    Learn {
-        chat: String,
-        title: String,
-        key: String,
-    },
     /// Anything else: a question for the archive (REQ-ZNGA-020).
     Ask(String),
 }
@@ -686,36 +645,6 @@ pub fn intent(text: &str) -> Intent {
         let name = strip_prefix_ci(name, &["the "]).unwrap_or(name);
         return Intent::CatchUp {
             name: name.to_owned(),
-        };
-    }
-    if let Some(name) = strip_prefix_ci(
-        text,
-        &[
-            "what do you know about ",
-            "what do you know of ",
-            "what do you know on ",
-            "who is ",
-            "who's ",
-        ],
-    ) && !name.is_empty()
-    {
-        let name = name.trim_end_matches(['.', '?', '!']).trim();
-        let name = strip_prefix_ci(name, &["the "]).unwrap_or(name);
-        if !name.is_empty() {
-            return Intent::Know {
-                name: name.to_owned(),
-            };
-        }
-    }
-    if let Some(rest) = strip_prefix_ci(text, &["forget that ", "forget "])
-        && !rest.is_empty()
-        && !matches!(
-            rest.to_lowercase().as_str(),
-            "it" | "it." | "that" | "everything"
-        )
-    {
-        return Intent::Forget {
-            rest: rest.trim_end_matches(['.', '!']).trim().to_owned(),
         };
     }
     Intent::Ask(text.to_owned())
@@ -950,100 +879,6 @@ pub fn explain_error(error: &str, engine: super::config::Engine) -> String {
 }
 
 /// A plan's start as "Fri 28 Nov, 18:00", in local time.
-/// An answer without its formatting, for copying or forwarding
-/// (REQ-ZANS-003): headings and bold lose their marks, bullets become
-/// "•", and citation numbers go.
-pub fn plain(text: &str) -> String {
-    let mut out: Vec<String> = Vec::new();
-    for line in text.lines() {
-        let trimmed = line.trim_start();
-        let line = if let Some(rest) = trimmed.strip_prefix('#') {
-            rest.trim_start_matches('#').trim_start().to_owned()
-        } else if let Some(rest) = trimmed
-            .strip_prefix("- ")
-            .or_else(|| trimmed.strip_prefix("* "))
-        {
-            format!("• {rest}")
-        } else {
-            line.to_owned()
-        };
-        let line = line.replace("**", "").replace("__", "");
-        out.push(without_citations(&line));
-    }
-    out.join("\n").trim().to_owned()
-}
-
-/// `text` without `[n]` and `[n, m]` citations.
-fn without_citations(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    let mut rest = text;
-    while let Some(open) = rest.find('[') {
-        let after = &rest[open + 1..];
-        match after.find(']') {
-            Some(close)
-                if !after[..close].trim().is_empty()
-                    && after[..close]
-                        .split(',')
-                        .all(|part| part.trim().parse::<usize>().is_ok()) =>
-            {
-                out.push_str(rest[..open].trim_end());
-                rest = &after[close + 1..];
-            }
-            _ => {
-                out.push_str(&rest[..open + 1]);
-                rest = after;
-            }
-        }
-    }
-    out.push_str(rest);
-    out
-}
-
-/// The numbers an answer cites, `[2]` or `[1, 3]`, in the order they first
-/// appear, each once.
-pub fn citation_numbers(text: &str) -> Vec<usize> {
-    let mut found = Vec::new();
-    let mut rest = text;
-    while let Some(open) = rest.find('[') {
-        rest = &rest[open + 1..];
-        let Some(close) = rest.find(']') else { break };
-        let inside = &rest[..close];
-        let numbers: Option<Vec<usize>> = inside
-            .split(',')
-            .map(|part| part.trim().parse::<usize>().ok())
-            .collect();
-        if let Some(numbers) = numbers.filter(|n| !n.is_empty()) {
-            for n in numbers {
-                if !found.contains(&n) {
-                    found.push(n);
-                }
-            }
-            rest = &rest[close + 1..];
-        }
-    }
-    found
-}
-
-/// The archive messages an answer cites, as cards in citation order
-/// (REQ-ZANS-001). A number no message has stays text in the answer.
-pub fn cited(text: &str, hits: &[super::archive_ask::Hit]) -> Vec<Item> {
-    citation_numbers(text)
-        .into_iter()
-        .filter_map(|n| {
-            let hit = hits.get(n.checked_sub(1)?)?;
-            Some(Item::new(Card::Cite {
-                n,
-                chat: hit.chat.clone(),
-                message: hit.id.clone(),
-                chat_title: hit.chat_title.clone(),
-                sender: hit.sender.clone(),
-                at: hit.at,
-                text: hit.text.clone(),
-            }))
-        })
-        .collect()
-}
-
 pub fn card_time(at: i64) -> String {
     jiff::Timestamp::from_second(at)
         .map(|t| {
@@ -1057,43 +892,6 @@ pub fn card_time(at: i64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn plain_text_drops_marks_and_citations() {
-        assert_eq!(
-            plain("## Emails\n- **Ada**: a@x.co [1]\n- Ben [2, 3]\n\nSee [note]."),
-            "Emails\n• Ada: a@x.co\n• Ben\n\nSee [note]."
-        );
-    }
-
-    #[test]
-    fn citations_become_links_and_unknown_numbers_stay_text() {
-        let hit = |id: &str| super::super::archive_ask::Hit {
-            chat: "c".into(),
-            id: id.into(),
-            chat_title: "Team".into(),
-            sender: "Ada".into(),
-            text: format!("mail {id}@x.co"),
-            at: 0,
-        };
-        let hits = [hit("a"), hit("b"), hit("c")];
-        let answer = "## Emails\n- a@x.co [1]\n- c@x.co [3, 1]\n- see [9] and [note]";
-        assert_eq!(citation_numbers(answer), vec![1, 3, 9]);
-        let items = cited(answer, &hits);
-        let ids: Vec<(usize, &str)> = items
-            .iter()
-            .map(|item| match &item.card {
-                Card::Cite { n, message, .. } => (*n, message.as_str()),
-                other => panic!("{other:?}"),
-            })
-            .collect();
-        assert_eq!(ids, vec![(1, "a"), (3, "c")]);
-        assert_eq!(items[0].card.actions(), &[("open", "Open")]);
-        assert_eq!(items[0].card.chat(), Some("c"));
-        // Kept with the answer: it reads back after a restart.
-        let saved = serde_json::to_string(&items).unwrap();
-        assert_eq!(serde_json::from_str::<Vec<Item>>(&saved).unwrap(), items);
-    }
 
     fn needs(chat: &str) -> Vec<Item> {
         vec![Item::new(Card::NeedsYou {

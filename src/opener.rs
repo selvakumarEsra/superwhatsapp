@@ -99,7 +99,7 @@ impl Default for DetachedLinks {
 #[cfg(all(unix, not(target_os = "macos")))]
 impl egui::plugin::Plugin for DetachedLinks {
     fn debug_name(&self) -> &'static str {
-        "superwhatsapp-links"
+        "zapfast-links"
     }
 
     fn output_hook(&mut self, _ctx: &egui::Context, output: &mut egui::FullOutput) {
@@ -231,10 +231,8 @@ mod tests {
     fn file_uris_escape_what_a_path_segment_cannot_carry() {
         use linux::file_uri;
         assert_eq!(
-            file_uri(Path::new(
-                "/home/ada/.local/state/superwhatsapp/superwhatsapp.log"
-            )),
-            "file:///home/ada/.local/state/superwhatsapp/superwhatsapp.log"
+            file_uri(Path::new("/home/ada/.local/state/zapfast/zapfast.log")),
+            "file:///home/ada/.local/state/zapfast/zapfast.log"
         );
         assert_eq!(
             file_uri(Path::new("/home/José Ω/a#b%c.log")),
@@ -284,9 +282,9 @@ mod tests {
         assert_eq!(launch(Command::new("sh").args(["-c", "exit 0"])), Ok(()));
         let failed = launch(Command::new("sh").args(["-c", "exit 4"])).unwrap_err();
         assert!(failed.starts_with("sh failed"), "{failed}");
-        let missing = launch(&mut Command::new("superwhatsapp-no-such-launcher")).unwrap_err();
+        let missing = launch(&mut Command::new("zapfast-no-such-launcher")).unwrap_err();
         assert!(
-            missing.starts_with("superwhatsapp-no-such-launcher: "),
+            missing.starts_with("zapfast-no-such-launcher: "),
             "{missing}"
         );
         let started = Instant::now();

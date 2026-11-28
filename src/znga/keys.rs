@@ -3,11 +3,7 @@
 
 use super::config::Engine;
 
-const SERVICE: &str = "cc.superwhatsapp.znga";
-/// Where installs from before the rename saved keys. Only read, to copy a
-/// key over the first time it is needed (REQ-SUPERWA-005); never written.
-#[cfg_attr(test, allow(dead_code))]
-const LEGACY_SERVICE: &str = "rocks.zapfast.ZapFast.znga";
+const SERVICE: &str = "rocks.zapfast.ZapFast.znga";
 
 /// Why a pasted value cannot be used as a key for `engine`.
 pub fn reject(engine: Engine, key: &str) -> Option<&'static str> {
@@ -77,29 +73,14 @@ fn platform_store() -> Option<std::sync::Arc<dyn keyring_core::api::CredentialSt
 
 #[cfg(not(test))]
 fn entry(engine: Engine) -> Option<keyring_core::Entry> {
-    entry_in(SERVICE, engine)
-}
-
-#[cfg(not(test))]
-fn entry_in(service: &str, engine: Engine) -> Option<keyring_core::Entry> {
     platform_store()?
-        .build(service, engine.key_sources().0, None)
+        .build(SERVICE, engine.key_sources().0, None)
         .ok()
 }
 
-/// The saved key, copied from the old service name when only it has one.
-/// The old entry stays.
 #[cfg(not(test))]
 fn stored(engine: Engine) -> Option<String> {
-    let entry = entry(engine)?;
-    if let Ok(key) = entry.get_password() {
-        return Some(key);
-    }
-    let key = entry_in(LEGACY_SERVICE, engine)?.get_password().ok()?;
-    if entry.set_password(&key).is_err() {
-        log::warn!("could not copy a Znga key to its new keychain name");
-    }
-    Some(key)
+    entry(engine)?.get_password().ok()
 }
 
 #[cfg(test)]
@@ -127,12 +108,9 @@ pub fn store(engine: Engine, key: &str) -> Result<(), String> {
 }
 
 pub fn forget(engine: Engine) {
-    // Both names, or the next read would copy the old one back.
     #[cfg(not(test))]
-    for service in [SERVICE, LEGACY_SERVICE] {
-        if let Some(entry) = entry_in(service, engine) {
-            let _ = entry.delete_credential();
-        }
+    if let Some(entry) = entry(engine) {
+        let _ = entry.delete_credential();
     }
     #[cfg(test)]
     let _ = engine;

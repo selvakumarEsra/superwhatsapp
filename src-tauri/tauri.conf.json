@@ -35,7 +35,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: zapmedia: http://zapmedia.localhost zapframe: http://zapframe.localhost; media-src 'self' zapmedia: http://zapmedia.localhost; connect-src ipc: http://ipc.localhost; font-src 'self'; frame-src 'none'; object-src 'none'"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: zapmedia: http://zapmedia.localhost; media-src 'self' zapmedia: http://zapmedia.localhost; connect-src ipc: http://ipc.localhost; font-src 'self'; frame-src 'none'; object-src 'none'"
     }
   },
   "bundle": {

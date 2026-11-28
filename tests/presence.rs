@@ -5,13 +5,13 @@
 //! app that stays connected in the tray that showed the account online with
 //! the window closed, and WhatsApp holds back the phone's own notifications
 //! while any linked device is available. `Worker::start_bot` builds every
-//! bot through `superwhatsapp::backend::host_owned_presence`; this test drives
+//! bot through `zapfast::backend::host_owned_presence`; this test drives
 //! that same builder step against a real client and store.
 //!
 //! whatsapp-rust exposes no wire-level test hook (its capturing transports
 //! are crate-internal), so the assertions sit at the client surface: the
 //! policy the lifecycle consults before every automatic announcement, and
-//! the validation outcome of the explicit announcements superwhatsapp sends.
+//! the validation outcome of the explicit announcements zapfast sends.
 
 use whatsapp_rust::features::{PresenceError, PresencePolicy};
 use whatsapp_rust::prelude::Bot;
@@ -25,15 +25,14 @@ async fn store(directory: &tempfile::TempDir) -> SqliteStore {
 }
 
 #[tokio::test]
-async fn superwhatsapp_bots_leave_presence_to_the_window() {
+async fn zapfast_bots_leave_presence_to_the_window() {
     let directory = tempfile::tempdir().unwrap();
     // Building a client is enough; never run or connect this bot.
-    let bot = superwhatsapp::backend::host_owned_presence(
-        Bot::builder().with_backend(store(&directory).await),
-    )
-    .build()
-    .await
-    .expect("the bot builds");
+    let bot =
+        zapfast::backend::host_owned_presence(Bot::builder().with_backend(store(&directory).await))
+            .build()
+            .await
+            .expect("the bot builds");
     let client = bot.client();
     assert_eq!(
         client.presence_policy(),

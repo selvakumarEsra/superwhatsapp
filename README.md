@@ -66,7 +66,7 @@ cd superwhatsapp/web && npm ci && cd ..
 web/node_modules/.bin/tauri dev
 ```
 
-`cargo run -p superwhatsapp-desktop -- --demo` opens the app with sample chats and
+`cargo run -p zapfast-desktop -- --demo` opens the app with sample chats and
 no account. The interface (Tauri 2 and Solid.js) is in `src-tauri/` and
 `web/`; see [`specs/tauri-ui.md`](specs/tauri-ui.md). The earlier egui
 interface still builds with `cargo run --release` while it is retired.

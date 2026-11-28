@@ -30,8 +30,8 @@ sources:
 - src/*.rs
 - src/backend/*.rs
 documentation:
-  docs/_guide/*.md: https://selvakumaresra.github.io/superwhatsapp/%{name}/
-  docs/_reference/*.md: https://selvakumaresra.github.io/superwhatsapp/%{name}/
+  docs/_guide/*.md: https://zapfast.rocks/%{name}/
+  docs/_reference/*.md: https://zapfast.rocks/%{name}/
 replies:
   version: Which version are you using?
   reproduction: What are the shortest steps that reproduce this?
@@ -98,7 +98,7 @@ instructions: |
   A Windows "unknown publisher", "Windows protected your PC", or "couldn't
   confirm the creator" prompt, or a macOS Gatekeeper prompt, is the operating
   system's warning for an unsigned or newly downloaded app, not an antivirus
-  detection. Select docs/_guide/download.md (https://selvakumaresra.github.io/superwhatsapp/download/),
+  detection. Select docs/_guide/download.md (https://zapfast.rocks/download/),
   which explains More info, then Run anyway, and do not ask for a SHA-256.
 
   When a report includes a screenshot that may show real conversations, contact
