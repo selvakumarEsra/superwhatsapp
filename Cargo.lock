@@ -8340,7 +8340,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "superwhatsapp"
-version = "0.21.1-beta.14"
+version = "0.21.1-beta.15"
 dependencies = [
  "aes 0.9.3",
  "anyhow",
@@ -8442,7 +8442,7 @@ dependencies = [
 
 [[package]]
 name = "superwhatsapp-desktop"
-version = "0.21.1-beta.14"
+version = "0.21.1-beta.15"
 dependencies = [
  "egui",
  "fastframe-dock",

@@ -1,6 +1,6 @@
 [package]
 name = "superwhatsapp"
-version = "0.21.1-beta.14"
+version = "0.21.1-beta.15"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
