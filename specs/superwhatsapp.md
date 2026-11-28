@@ -84,7 +84,7 @@ verifies:
 
 The Release workflow builds from a `v*` tag on `main` of
 `selvakumarEsra/superwhatsapp`, names its files `superwhatsapp-<tag>-<target>`
-(and `superwhatsapp-preview-*` for the new interface), signs
+(and never publishes `superwhatsapp-preview-*` packages), signs
 `checksums.txt` with the fork's update key, and publishes a draft for
 prereleases. Installed copies update from this repository only, accept the
 earlier names `zapfast` and `fastsapp` as their own, and trust only the

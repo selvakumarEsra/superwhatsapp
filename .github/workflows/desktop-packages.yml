@@ -3,8 +3,8 @@ name: Desktop packages
 # Installers for the Tauri app (specs/tauri-ui.md, REQ-WEBUI-017) on the
 # platforms the Release workflow covers today. They are uploaded as
 # workflow artifacts to try out; release.yml keeps shipping the egui app
-# until the new interface is complete, and attaches these as a preview
-# (`preview: true`) beside it until then.
+# until the new interface is complete and never publishes these as
+# "SuperWhatsapp Preview" packages.
 on:
   workflow_call:
     inputs:

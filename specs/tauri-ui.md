@@ -561,8 +561,8 @@ Until the new interface is complete, the Desktop packages workflow builds
 these installers as workflow artifacts on every change to the app, and the
 Release workflow keeps shipping the egui app; the release switches to the
 new packages only once the other requirements here are met. Until then
-each release also attaches the new packages as "SuperWhatsapp Preview", which
-installs beside SuperWhatsapp under its own name and never replaces it.
+releases carry no "SuperWhatsapp Preview" packages: the new installers stay
+workflow artifacts of the Desktop packages workflow.
 
 implementations:
   - .github/workflows/release.yml:jobs
@@ -584,9 +584,8 @@ implementations:
   breaks either fails CI, and the desktop crate's version must equal the
   core's.
 <!-- id: REQ-WEBUI-017.A5 -->
-- Before the switch, a release also carries `superwhatsapp-preview-<tag>-<target>`
-  installers for every platform above, and none of them is named like the
-  files the egui app's updater installs.
+- Before the switch, a release carries no `superwhatsapp-preview-*`
+  files; the preview installers are only Desktop packages artifacts.
 
 <!-- id: REQ-WEBUI-018 -->
 ## A demo mode and tests MUST cover the new interface

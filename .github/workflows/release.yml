@@ -308,21 +308,9 @@ jobs:
           path: "*.flatpak"
           if-no-files-found: error
 
-  # The Tauri interface's installers as "SuperWhatsapp Preview", beside the egui
-  # app, until it replaces it (specs/tauri-ui.md, REQ-WEBUI-017).
-  preview:
-    name: Tauri preview
-    needs: release-source
-    permissions:
-      contents: read
-    uses: ./.github/workflows/desktop-packages.yml
-    with:
-      preview: true
-      tag: ${{ inputs.tag || github.ref_name }}
-
   publish:
     name: GitHub release
-    needs: [build, macos, flatpak, preview]
+    needs: [build, macos, flatpak]
     # A dry run stops at the built files.
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
