@@ -56,20 +56,19 @@ A fast desktop app for macOS, Windows and Linux, with Znga built in: it spots th
 
 ## Build from source
 
-You need a recent stable [Rust](https://rustup.rs), Node.js 24, a C/C++
-toolchain, CMake and Perl (plus WebKitGTK 4.1, ALSA and PipeWire on Linux;
-see [Getting started](https://selvakumaresra.github.io/superwhatsapp/getting-started/)).
+You need a recent stable [Rust](https://rustup.rs), a C/C++ toolchain, CMake
+and Perl (plus egui's libraries, ALSA and PipeWire on Linux; see
+[Getting started](https://selvakumaresra.github.io/superwhatsapp/getting-started/)).
 
 ```sh
 git clone https://github.com/selvakumarEsra/superwhatsapp
-cd superwhatsapp/web && npm ci && cd ..
-web/node_modules/.bin/tauri dev
+cd superwhatsapp
+cargo run --release
 ```
 
-`cargo run -p zapfast-desktop -- --demo` opens the app with sample chats and
-no account. The interface (Tauri 2 and Solid.js) is in `src-tauri/` and
-`web/`; see [`specs/tauri-ui.md`](specs/tauri-ui.md). The earlier egui
-interface still builds with `cargo run --release` while it is retired.
+`cargo run --features demo -- --demo` opens the app with sample chats and no
+account. The new interface (Tauri 2 and Solid.js) is in `src-tauri/` and
+`web/`; see [`specs/tauri-ui.md`](specs/tauri-ui.md).
 
 ## Releases
 
@@ -82,7 +81,7 @@ for a dry run that builds every file without publishing.
 
 SuperWhatsapp is open source under the [MIT license](LICENSE). It connects
 through [whatsapp-rust](https://github.com/oxidezap/whatsapp-rust) and draws
-its interface with [Tauri](https://tauri.app) and [Solid](https://www.solidjs.com).
+its interface with [egui](https://www.egui.rs).
 
 ## Disclaimer
 

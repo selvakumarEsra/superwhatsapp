@@ -1005,8 +1005,8 @@ pub(crate) fn header_row_id() -> egui::Id {
     egui::Id::new("conversation-header-row")
 }
 
-/// Chat-header subtitle. The Tauri interface shows the same line.
-pub fn subtitle(app: &App, chat: &Chat) -> (String, Color32) {
+/// Chat-header subtitle.
+fn subtitle(app: &App, chat: &Chat) -> (String, Color32) {
     let palette = app.palette;
     let typing = app.typing_in(&chat.id);
     if !typing.is_empty() {

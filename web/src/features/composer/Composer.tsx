@@ -114,31 +114,34 @@ export default function Composer(p: { chat: string; znga?: boolean }) {
     <Show when={menu()}>
       {(at) => <Menu x={at().x} y={at().y} entries={entries()} onClose={() => setMenu(null)} />}
     </Show>
-    <footer class="relative shrink-0" style={{ padding: "0 8px 0 9px", color: "var(--icon)" }}>
-      {/* egui's composer (src/ui/conversation.rs): one white pill holding
-          attach, emoji, the field, Znga and the mic, outlined in the accent
-          while it has focus; the shortcut line under it. */}
+    <footer
+      class="relative flex shrink-0 items-end"
+      style={{ gap: "var(--composer-gap)", padding: "4px var(--composer-pad-x) 3px", color: "var(--icon)" }}
+    >
+      <button
+        type="button"
+        aria-label="Attach"
+        class="flex shrink-0 items-center justify-center"
+        style={{ ...round, background: "var(--composer-button-bg)", border: "var(--hairline) solid var(--input-border)", color: "var(--text-primary)" }}
+      >
+        <PlusIcon size={19} />
+      </button>
       <div
-        class="composer-pill flex items-end"
+        class="flex flex-1 items-end"
         style={{
-          "min-height": "41px",
-          "border-radius": "20.5px",
+          "min-height": "var(--composer-input-h)",
+          "margin-bottom": "3px",
+          "border-radius": "calc(var(--composer-input-h) / 2)",
           background: "var(--input-bg)",
-          border: "1.5px solid var(--input-border)",
-          padding: "0 4px 0 8px",
+          border: "var(--hairline) solid var(--input-border)",
+          "padding-left": "12px",
+          "padding-right": "6px",
         }}
       >
-        <button type="button" title={t("Attach")} aria-label="Attach" class="icon-button flex shrink-0 items-center justify-center rounded-full" style={{ ...round, margin: "4px 0", color: "var(--icon)" }}>
-          <PlusIcon size={20} />
-        </button>
-        <button type="button" title={t("Emoji")} aria-label="Emoji" class="icon-button flex shrink-0 items-center justify-center rounded-full" style={{ ...round, margin: "4px 0", color: "var(--icon)" }}>
-          <EmojiIcon size={21} />
-        </button>
         <textarea
           ref={field}
           rows={1}
           aria-label="Type a message"
-          placeholder={t("Type a message")}
           value={text()}
           onInput={(e) => {
             setText(e.currentTarget.value);
@@ -155,73 +158,44 @@ export default function Composer(p: { chat: string; znga?: boolean }) {
           }}
           class="selectable flex-1 resize-none bg-transparent outline-none"
           style={{
-            padding: "9.5px 0 9.5px 4px",
+            padding: "5px 0",
             "font-size": "var(--fs-input)",
-            "line-height": "19px",
+            "line-height": "var(--lh-msg)",
             color: "var(--text-primary)",
-            "max-height": "140px",
+            "max-height": "120px",
             "caret-color": "var(--accent)",
           }}
         />
         <Show when={p.znga}>
           <button
             type="button"
-            title="Znga"
             aria-label="Znga"
             aria-haspopup="menu"
             onClick={(e) => {
               const box = e.currentTarget.getBoundingClientRect();
               setMenu({ x: box.left - 90, y: box.top - 8 * 27 - 20 });
             }}
-            class="icon-button flex shrink-0 items-center justify-center rounded-full"
-            style={{ ...round, margin: "4px 0", color: "var(--accent-text)" }}
+            class="flex items-center justify-center"
+            style={{ height: "var(--composer-input-h)", width: "26px", color: "var(--accent-text)" }}
           >
-            <SparkleIcon size={19} />
+            <SparkleIcon size={18} />
           </button>
         </Show>
-        <button
-          type="button"
-          title={text().trim() ? t("Send") : t("Voice message")}
-          aria-label={text().trim() ? "Send" : "Voice message"}
-          onClick={send}
-          class="flex shrink-0 items-center justify-center rounded-full"
-          style={{
-            ...round,
-            margin: "4px 0",
-            background: text().trim() ? "var(--accent)" : "var(--search-bg)",
-            color: text().trim() ? "var(--accent-fg)" : "var(--icon)",
-          }}
-        >
-          <Show when={text().trim()} fallback={<MicIcon size={19} />}>
-            <SendIcon size={17} />
-          </Show>
+        <button type="button" aria-label="Emoji" class="flex items-center justify-center" style={{ height: "var(--composer-input-h)", width: "24px" }}>
+          <EmojiIcon size={18} />
         </button>
       </div>
-      <Show
-        when={state.settings.showShortcutHints}
-        fallback={<div style={{ height: "9px" }} />}
+      <button
+        type="button"
+        aria-label={text().trim() ? "Send" : "Voice message"}
+        onClick={send}
+        class="flex shrink-0 items-center justify-center"
+        style={{ ...round, background: "var(--accent)", color: "var(--accent-fg)" }}
       >
-        <div class="flex items-center" style={{ height: "24px", margin: "10px 0", gap: "6px", padding: "0 2px 0 6px", "font-size": "11px", color: "var(--text-meta)" }}>
-          <button
-            type="button"
-            title={t("Hide shortcut hints (bring them back from Keyboard shortcuts)")}
-            aria-label="Hide shortcut hints"
-            onClick={() => commands.setSetting("showShortcutHints", false)}
-            class="flex items-center justify-center"
-            style={{ width: "16px", height: "16px", color: "var(--text-meta)" }}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
-          </button>
-          <span class="min-w-0 flex-1 truncate">
-            {state.settings.enterSends
-              ? t("Enter sends · Shift+Enter for a new line · *bold* _italic_ ~strike~ · ⌘V pastes a picture")
-              : t("⌘Enter sends · *bold* _italic_ ~strike~ · ⌘V pastes a picture")}
-          </span>
-          <span aria-hidden="true" style={{ color: "var(--text-meta)" }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2" /><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M8 14h8" stroke-linecap="round" /></svg>
-          </span>
-        </div>
-      </Show>
+        <Show when={text().trim()} fallback={<MicIcon size={19} />}>
+          <SendIcon size={17} />
+        </Show>
+      </button>
     </footer>
     </>
   );

@@ -11187,7 +11187,7 @@ dependencies = [
 
 [[package]]
 name = "zapfast"
-version = "0.21.1-beta.11"
+version = "0.21.1-beta.10"
 dependencies = [
  "aes 0.9.3",
  "anyhow",
@@ -11289,15 +11289,12 @@ dependencies = [
 
 [[package]]
 name = "zapfast-desktop"
-version = "0.21.1-beta.11"
+version = "0.21.1-beta.10"
 dependencies = [
- "anyhow",
- "base64 0.23.1",
  "egui",
  "fastframe-dock",
  "fastframe-i18n",
  "fastframe-theme",
- "fastframe-update",
  "jiff 0.2.38",
  "log",
  "serde",
@@ -11305,7 +11302,6 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-single-instance",
- "tokio",
  "zapfast",
 ]
 

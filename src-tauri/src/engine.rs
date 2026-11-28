@@ -83,18 +83,6 @@ pub struct Start {
     /// The account's single-instance slot, held for the whole run; demo
     /// runs take none.
     pub instance: Option<Instance>,
-    /// Set when the update helper relaunched this app; acknowledged once
-    /// the page has loaded, or the helper restores the previous version.
-    pub receipt: Option<fastframe_update::Receipt>,
-    /// The helper restored the previous version: shown as an error.
-    pub update_error: Option<String>,
-    /// `--start-hidden`: no page loads until the window shows, so the
-    /// accounts start at once, as in the egui build.
-    pub hidden: bool,
-    /// A number, `wa.me` link or `whatsapp://` URI to open a chat for.
-    pub target: Option<zapfast::target::Request>,
-    /// A group invite link's code, to show the invite.
-    pub invite: Option<String>,
 }
 
 /// The slot that keeps one SuperWhatsapp, this interface or the egui one, on an
@@ -104,48 +92,16 @@ pub struct Instance {
     guard: zapfast::single_instance::Guard,
 }
 
-/// Becomes the running SuperWhatsapp, or asks the copy already running to
-/// show its window, open the linked chat or invite, and returns `None`, as
-/// the egui build's launch does.
-pub fn claim(start: &Start) -> Option<Instance> {
+/// Becomes the running SuperWhatsapp, or asks the copy already running to show
+/// its window and returns `None`, as the egui build's launch does.
+pub fn claim() -> Option<Instance> {
     use zapfast::single_instance::{Outcome, acquire};
     let dirs = zapfast::paths::AppDirs::discover();
     let waker = zapfast::backend::Waker::default();
-    // A hidden start must not surface a copy that is already running.
-    let verb = match (&start.target, &start.invite) {
-        (Some(request), _) => request.verb(),
-        (None, Some(code)) => format!("invite {code}"),
-        (None, None) if start.hidden => "ping".to_owned(),
-        (None, None) => "show".to_owned(),
-    };
-    match acquire(&dirs.runtime, &waker, &verb) {
+    match acquire(&dirs.runtime, &waker, "show") {
         Outcome::Only(guard) => Some(Instance { waker, guard }),
-        Outcome::Surfaced if start.hidden && start.target.is_none() && start.invite.is_none() => {
-            eprintln!("SuperWhatsapp is already running");
-            None
-        }
-        Outcome::Surfaced => {
-            eprintln!(
-                "SuperWhatsapp is already running; asked it to {}",
-                if start.target.is_some() {
-                    "open the chat"
-                } else if start.invite.is_some() {
-                    "show the group invite"
-                } else {
-                    "show its window"
-                }
-            );
-            None
-        }
-        Outcome::Outdated => {
-            eprintln!(
-                "SuperWhatsapp is already running, but that copy is too old to open the link; \
-                 asked it to show its window instead. Quit it and try again to open the link."
-            );
-            None
-        }
-        Outcome::Unanswered => {
-            eprintln!("SuperWhatsapp is already running but did not answer");
+        _ => {
+            eprintln!("SuperWhatsapp is already running; asked it to show its window");
             None
         }
     }
@@ -179,40 +135,6 @@ pub fn spawn(handle: AppHandle, start: Start) -> Engine {
         .spawn(move || run(handle, start, rx, wake, core))
         .expect("core thread");
     Engine { tx, shared }
-}
-
-/// Lets the accounts start. After an update, the helper is told first that
-/// the new version is up, off this thread; if that fails the accounts stay
-/// closed and the helper restores the previous version.
-fn release_startup(app: &mut App, receipt: Option<fastframe_update::Receipt>) {
-    let startups = app
-        .accounts
-        .iter_mut()
-        .filter_map(|account| account.backend.take_startup())
-        .collect();
-    release(startups, receipt.map(|receipt| move || receipt.acknowledge()));
-}
-
-/// Sends each permit, after `acknowledge` succeeds when there is one.
-fn release<F>(startups: Vec<tokio::sync::oneshot::Sender<()>>, acknowledge: Option<F>)
-where
-    F: FnOnce() -> anyhow::Result<()> + Send + 'static,
-{
-    let Some(acknowledge) = acknowledge else {
-        for startup in startups {
-            let _ = startup.send(());
-        }
-        return;
-    };
-    std::thread::spawn(move || {
-        if let Err(error) = acknowledge() {
-            log::warn!("could not acknowledge the update: {error:#}");
-            return;
-        }
-        for startup in startups {
-            let _ = startup.send(());
-        }
-    });
 }
 
 fn make_app(start: &Start) -> App {
@@ -253,43 +175,12 @@ fn make_app(start: &Start) -> App {
 
 fn run(
     handle: AppHandle,
-    mut start: Start,
+    start: Start,
     rx: Receiver<Input>,
     wake: Sender<Input>,
     shared: Arc<Shared>,
 ) {
     let mut app = make_app(&start);
-    if let Some(error) = start.update_error.take() {
-        app.toast_error(error);
-    }
-    // A link this launch was started with opens its chat, as in the egui
-    // build; the app drains its queue on the next step.
-    if let Some(request) = start.target.take() {
-        app.actions.push(zapfast::model::Action::StartChat {
-            name: request.display_name(),
-            id: request.chat.clone(),
-            dismiss_dialog: true,
-        });
-        if let Some(text) = request.text {
-            app.actions.push(zapfast::model::Action::PrefillComposer {
-                chat: request.chat,
-                text,
-            });
-        }
-    }
-    if let Some(code) = start.invite.take() {
-        app.actions.push(zapfast::model::Action::OpenUrl(format!(
-            "https://chat.whatsapp.com/{code}"
-        )));
-    }
-    // The accounts wait to open their archive and connect until the
-    // window is drawn (src/backend.rs, take_startup): here, until the page
-    // first asks for the state. A hidden start has no page yet.
-    let mut started = false;
-    if start.hidden && start.receipt.is_none() {
-        release_startup(&mut app, None);
-        started = true;
-    }
     let ctx = egui::Context::default();
     ctx.set_request_repaint_callback(move |_| {
         let _ = wake.send(Input::Wake);
@@ -319,13 +210,7 @@ fn run(
                     handle.exit(0);
                     return;
                 }
-                Input::Refresh => {
-                    force = true;
-                    if !started {
-                        started = true;
-                        release_startup(&mut app, start.receipt.take());
-                    }
-                }
+                Input::Refresh => force = true,
                 Input::Wake => {}
             }
         }
@@ -354,13 +239,6 @@ fn run(
         });
         // Nothing is drawn, so texture uploads are discarded.
         output.textures_delta.clear();
-        // Quit from another launch (`superwhatsapp quit`, the launcher's Quit
-        // action) or from inside the app.
-        if app.quit_requested {
-            app.shutdown();
-            handle.exit(0);
-            return;
-        }
         shared
             .keep_running
             .store(app.settings.keep_running_in_background, Ordering::Relaxed);
@@ -392,11 +270,6 @@ pub fn dump(page: Option<String>) -> view::State {
         demo: true,
         demo_page: page,
         instance: None,
-        receipt: None,
-        update_error: None,
-        hidden: false,
-        target: None,
-        invite: None,
     });
     let ctx = egui::Context::default();
     app.attach(&ctx);
@@ -428,33 +301,5 @@ mod translation_tests {
             engine.translate(&texts),
             ["Zoeken".to_owned(), "Not in any catalogue".to_owned()]
         );
-    }
-}
-
-#[cfg(test)]
-mod startup_tests {
-    use super::release;
-    use tokio::sync::oneshot::channel;
-
-    type Ack = fn() -> anyhow::Result<()>;
-
-    /// Without an update to confirm, every account starts at once.
-    #[test]
-    fn the_accounts_start_when_released() {
-        let (tx, mut rx) = channel();
-        release::<Ack>(vec![tx], None);
-        assert_eq!(rx.try_recv(), Ok(()));
-    }
-
-    /// After an update they start once the helper is told it worked, and
-    /// never when it could not be told, so the helper rolls back.
-    #[test]
-    fn after_an_update_they_wait_for_the_acknowledgement() {
-        let (tx, rx) = channel();
-        release(vec![tx], Some(|| Ok(())));
-        assert_eq!(rx.blocking_recv(), Ok(()));
-        let (tx, rx) = channel::<()>();
-        release(vec![tx], Some(|| anyhow::bail!("another version")));
-        assert!(rx.blocking_recv().is_err());
     }
 }

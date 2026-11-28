@@ -371,7 +371,7 @@ fn bottom_row(ui: &mut egui::Ui, area: Rect, height: f32, add: impl FnOnce(&mut 
 }
 
 /// The line under the peer's name, from the backend's phase and nothing else.
-pub fn status(locale: Locale, call: &CallUpdate) -> String {
+pub(crate) fn status(locale: Locale, call: &CallUpdate) -> String {
     match call.phase {
         // The button was pressed and the offer is still on its way out.
         CallPhase::Placing => gettext(locale, "Connecting…").into_owned(),
@@ -732,7 +732,7 @@ struct Who<'a> {
 /// What a ringing call says it is: a one-to-one call its kind, a group call
 /// also who is calling, as WhatsApp's own prompt does. The desktop
 /// notification says the same.
-pub fn incoming_text(locale: Locale, call: &CallUpdate, caller: Option<&str>) -> String {
+pub(crate) fn incoming_text(locale: Locale, call: &CallUpdate, caller: Option<&str>) -> String {
     match (call.group.is_some(), caller, call.video) {
         (false, _, false) => gettext(locale, "Incoming voice call").into_owned(),
         (false, _, true) => gettext(locale, "Incoming video call").into_owned(),

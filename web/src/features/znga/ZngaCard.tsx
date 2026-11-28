@@ -13,7 +13,6 @@ const LABELS: Record<ZCard["kind"], string> = {
   voice: "Voice note",
   promise: "Promise",
   drift: "Stay close",
-  link: "Web page",
 };
 
 export default function ZngaCard(p: { card: ZCard; entry: number; index: number }) {
@@ -21,9 +20,7 @@ export default function ZngaCard(p: { card: ZCard; entry: number; index: number 
   const press = (action: string) => {
     if (settled()) return;
     // Copy happens here: the page owns the clipboard.
-    if (action === "copy" || action === "copyLink") void navigator.clipboard?.writeText(p.card.body);
-    // A web page Znga recommends opens outside the app (REQ-ZCHAT-008).
-    if (action === "openPage" && /^https?:\/\//i.test(p.card.body)) void commands.openUrl(p.card.body);
+    if (action === "copy") void navigator.clipboard?.writeText(p.card.body);
     void commands.zngaCard(p.entry, p.index, action);
   };
   return (

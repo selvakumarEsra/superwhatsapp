@@ -73,9 +73,6 @@ pub struct Target {
     /// Empty folder the Claude Code CLI runs in, so no project's files or
     /// instructions reach it.
     pub workdir: std::path::PathBuf,
-    /// Web pages the engine may read with its own web tool
-    /// (REQ-ZCHAT-008); `None` offers no web tool.
-    pub web: Option<super::web::Web>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -83,26 +80,6 @@ pub struct HttpRequest {
     pub url: String,
     pub headers: Vec<(String, String)>,
     pub body: Value,
-}
-
-/// The web fetch tool version `model` takes: the dynamic-filtering one on
-/// the models that have it, the basic one elsewhere.
-fn web_fetch_tool(model: &str) -> &'static str {
-    let dynamic = [
-        "claude-opus-5-5",
-        "claude-opus-5",
-        "claude-opus-4-8",
-        "claude-opus-4-7",
-        "claude-opus-4-6",
-        "claude-sonnet-5-5",
-        "claude-sonnet-5",
-        "claude-sonnet-4-6",
-    ];
-    if dynamic.contains(&model) {
-        "web_fetch_20260209"
-    } else {
-        "web_fetch_20250910"
-    }
 }
 
 /// Whether `model` accepts `fallbacks: "default"` on the Claude API.
@@ -144,42 +121,27 @@ pub fn build_request(target: &Target, prompt: &Prompt) -> HttpRequest {
                 body["fallbacks"] = json!("default");
                 headers.push(("anthropic-beta".into(), FALLBACK_BETA.into()));
             }
-            if let Some(web) = &target.web {
-                body["tools"] = json!([{
-                    "type": web_fetch_tool(&target.model),
-                    "name": "web_fetch",
-                    "allowed_domains": web.sites,
-                    "max_uses": web.max_pages,
-                }]);
-            }
             HttpRequest {
                 url: format!("{endpoint}/v1/messages"),
                 headers,
                 body,
             }
         }
-        Engine::Gemini => {
-            let mut body = json!({
+        Engine::Gemini => HttpRequest {
+            url: format!("{endpoint}/v1beta/models/{}:generateContent", target.model),
+            headers: vec![
+                ("content-type".into(), "application/json".into()),
+                ("x-goog-api-key".into(), key),
+            ],
+            body: json!({
                 "systemInstruction": {"parts": [{"text": prompt.system}]},
                 "contents": prompt.turns.iter().map(|turn| json!({
                     "role": if turn.from_user { "user" } else { "model" },
                     "parts": [{"text": turn.text}],
                 })).collect::<Vec<_>>(),
                 "generationConfig": {"maxOutputTokens": prompt.max_tokens},
-            });
-            if target.web.is_some() {
-                // Gemini reads only the addresses written in the prompt.
-                body["tools"] = json!([{"url_context": {}}]);
-            }
-            HttpRequest {
-                url: format!("{endpoint}/v1beta/models/{}:generateContent", target.model),
-                headers: vec![
-                    ("content-type".into(), "application/json".into()),
-                    ("x-goog-api-key".into(), key),
-                ],
-                body,
-            }
-        }
+            }),
+        },
         Engine::OpenAi => {
             let mut headers = vec![("content-type".into(), "application/json".into())];
             if !key.is_empty() {
@@ -251,13 +213,7 @@ pub fn parse_response(engine: Engine, status: u16, body: &str) -> Result<String,
             value["content"]
                 .as_array()
                 .map(|blocks| {
-                    // With web reading, what comes before the last page
-                    // read is narration ("Let me look at…").
-                    let start = blocks
-                        .iter()
-                        .rposition(|block| block["type"] == "web_fetch_tool_result")
-                        .map_or(0, |at| at + 1);
-                    blocks[start..]
+                    blocks
                         .iter()
                         .filter(|block| block["type"] == "text")
                         .filter_map(|block| block["text"].as_str())
@@ -300,39 +256,25 @@ pub fn parse_response(engine: Engine, status: u16, body: &str) -> Result<String,
 
 /// The Claude Code CLI's arguments: one headless turn with no tools, no
 /// MCP servers, no settings, hooks or plugins, and nothing saved.
-/// With `web`, WebFetch is the one tool, allowed only on its sites
-/// (REQ-ZCHAT-008).
-pub fn claude_code_args(model: &str, system: &str, web: Option<&super::web::Web>) -> Vec<String> {
-    let mut args: Vec<String> = ["-p", "--output-format", "json", "--tools"]
-        .iter()
-        .map(|arg| (*arg).to_owned())
-        .collect();
-    match web {
-        Some(web) => {
-            args.push("WebFetch".into());
-            args.push("--allowedTools".into());
-            for site in &web.sites {
-                args.push(format!("WebFetch(domain:{site})"));
-                args.push(format!("WebFetch(domain:www.{site})"));
-            }
-        }
-        None => args.push(String::new()),
-    }
-    args.extend(
-        [
-            "--strict-mcp-config",
-            "--setting-sources",
-            "",
-            "--no-session-persistence",
-            "--model",
-            model,
-            "--system-prompt",
-            system,
-        ]
-        .iter()
-        .map(|arg| (*arg).to_owned()),
-    );
-    args
+pub fn claude_code_args(model: &str, system: &str) -> Vec<String> {
+    [
+        "-p",
+        "--output-format",
+        "json",
+        "--tools",
+        "",
+        "--strict-mcp-config",
+        "--setting-sources",
+        "",
+        "--no-session-persistence",
+        "--model",
+        model,
+        "--system-prompt",
+        system,
+    ]
+    .iter()
+    .map(|arg| (*arg).to_owned())
+    .collect()
 }
 
 /// A multi-turn prompt as the one message the CLI reads on stdin.
@@ -440,11 +382,7 @@ fn run_claude_code(target: &Target, prompt: &Prompt) -> Result<String, String> {
     std::fs::create_dir_all(&target.workdir)
         .map_err(|_| "Znga's working folder could not be made.".to_owned())?;
     let mut child = Command::new(&program)
-        .args(claude_code_args(
-            &target.model,
-            &prompt.system,
-            target.web.as_ref(),
-        ))
+        .args(claude_code_args(&target.model, &prompt.system))
         .current_dir(&target.workdir)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -591,14 +529,6 @@ pub fn complete_streaming(
     if target.engine.needs_key() && target.key.as_deref().is_none_or(str::is_empty) {
         return Err("Add an API key in Znga's setup first.".into());
     }
-    if target.engine == Engine::Claude && target.web.is_some() {
-        let answer = complete_claude_web(target, prompt)?;
-        if cancel.load(Ordering::Relaxed) {
-            return Err(super::runner::STOPPED.into());
-        }
-        on_delta(&answer);
-        return Ok(answer);
-    }
     let request = build_streaming_request(target, prompt);
     let local = !target.engine.is_cloud(&target.endpoint);
     let agent = agent_for(local);
@@ -640,40 +570,6 @@ pub fn complete_streaming(
     } else {
         Ok(answer)
     }
-}
-
-/// A Claude answer that may read web pages: one request at a time, so a
-/// turn the server paused (`pause_turn`) can be resumed.
-fn complete_claude_web(target: &Target, prompt: &Prompt) -> Result<String, String> {
-    let mut request = build_request(target, prompt);
-    // Reading several pages takes longer than an answer.
-    let agent: ureq::Agent = ureq::Agent::config_builder()
-        .timeout_global(Some(Duration::from_secs(300)))
-        .http_status_as_error(false)
-        .proxy(crate::proxy::ureq_proxy())
-        .build()
-        .into();
-    for _ in 0..4 {
-        let mut call = agent.post(&request.url);
-        for (name, value) in &request.headers {
-            call = call.header(name, value);
-        }
-        let mut response = call
-            .send(request.body.to_string().as_bytes())
-            .map_err(|error| unreachable_message(target, false, &error.to_string()))?;
-        let status = response.status().as_u16();
-        let text = response.body_mut().read_to_string().unwrap_or_default();
-        let value: Value = serde_json::from_str(&text).unwrap_or(Value::Null);
-        if (200..300).contains(&status) && value["stop_reason"] == "pause_turn" {
-            // Resume: the paused content goes back as the assistant turn.
-            if let Some(messages) = request.body["messages"].as_array_mut() {
-                messages.push(json!({"role": "assistant", "content": value["content"]}));
-            }
-            continue;
-        }
-        return parse_response(Engine::Claude, status, &text);
-    }
-    Err("Reading the pages took too long. Try a narrower question.".into())
 }
 
 fn agent_for(local: bool) -> ureq::Agent {
@@ -721,7 +617,6 @@ pub mod tests_support {
             model: Engine::Local.default_model().into(),
             key: None,
             workdir: std::env::temp_dir(),
-            web: None,
         }
     }
 }
@@ -750,7 +645,6 @@ mod tests {
             model: engine.default_model().into(),
             key: Some("k".into()),
             workdir: std::env::temp_dir(),
-            web: None,
         }
     }
 
@@ -847,7 +741,7 @@ mod tests {
 
     #[test]
     fn claude_code_runs_without_tools_settings_or_history() {
-        let args = claude_code_args("claude-opus-5-5", "sys", None);
+        let args = claude_code_args("claude-opus-5-5", "sys");
         let joined = args.join(" ");
         assert!(joined.starts_with("-p --output-format json --tools  --strict-mcp-config"));
         assert!(args.contains(&"--no-session-persistence".to_owned()));
@@ -884,7 +778,6 @@ mod tests {
             model: "claude-haiku-5-5".into(),
             key: None,
             workdir: dir.path().to_path_buf(),
-            web: None,
         };
         let prompt = Prompt {
             system: "Reply with the single word: ready".into(),
@@ -910,7 +803,6 @@ mod tests {
             model: "claude-haiku-5-5".into(),
             key: None,
             workdir: dir.path().to_path_buf(),
-            web: None,
         };
         let mine = [
             "haha ya",
@@ -1037,75 +929,5 @@ mod tests {
             ),
             StreamItem::Error(_)
         ));
-    }
-
-    fn web() -> crate::znga::web::Web {
-        crate::znga::web::Web::for_links(&["https://www.shop.example.com/phones".into()]).unwrap()
-    }
-
-    #[test]
-    fn claude_web_fetch_is_limited_to_the_linked_sites() {
-        let plain = build_request(&target(Engine::Claude), &prompt());
-        assert!(plain.body.get("tools").is_none());
-        let with_web = Target {
-            web: Some(web()),
-            ..target(Engine::Claude)
-        };
-        let request = build_request(&with_web, &prompt());
-        let tool = &request.body["tools"][0];
-        assert_eq!(tool["type"], "web_fetch_20260209");
-        assert_eq!(tool["name"], "web_fetch");
-        assert_eq!(tool["allowed_domains"], json!(["shop.example.com"]));
-        assert_eq!(tool["max_uses"], crate::znga::web::MAX_PAGES);
-        let haiku = Target {
-            model: "claude-haiku-5-5".into(),
-            ..with_web
-        };
-        let request = build_request(&haiku, &prompt());
-        assert_eq!(request.body["tools"][0]["type"], "web_fetch_20250910");
-        // Narration before the last page read is dropped.
-        let body = json!({"stop_reason": "end_turn", "content": [
-            {"type": "text", "text": "Let me look."},
-            {"type": "server_tool_use", "id": "s1", "name": "web_fetch", "input": {}},
-            {"type": "web_fetch_tool_result", "tool_use_id": "s1", "content": {}},
-            {"type": "text", "text": "Found two."},
-        ]});
-        assert_eq!(
-            parse_response(Engine::Claude, 200, &body.to_string()).unwrap(),
-            "Found two."
-        );
-    }
-
-    #[test]
-    fn gemini_gets_url_context() {
-        let plain = build_request(&target(Engine::Gemini), &prompt());
-        assert!(plain.body.get("tools").is_none());
-        let with_web = Target {
-            web: Some(web()),
-            ..target(Engine::Gemini)
-        };
-        let request = build_request(&with_web, &prompt());
-        assert_eq!(request.body["tools"], json!([{"url_context": {}}]));
-    }
-
-    #[test]
-    fn claude_code_may_fetch_only_the_linked_sites() {
-        let plain = claude_code_args("m", "sys", None);
-        let at = plain.iter().position(|a| a == "--tools").unwrap();
-        assert_eq!(plain[at + 1], "");
-        assert!(!plain.iter().any(|a| a.contains("WebFetch")));
-        let web = web();
-        let args = claude_code_args("m", "sys", Some(&web));
-        let at = args.iter().position(|a| a == "--tools").unwrap();
-        assert_eq!(args[at + 1], "WebFetch");
-        let allowed: Vec<&String> = args.iter().filter(|a| a.starts_with("WebFetch(")).collect();
-        assert_eq!(
-            allowed,
-            [
-                "WebFetch(domain:shop.example.com)",
-                "WebFetch(domain:www.shop.example.com)"
-            ]
-        );
-        assert!(args.contains(&"--strict-mcp-config".to_owned()));
     }
 }

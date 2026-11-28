@@ -4,15 +4,57 @@
 import { createSignal, For, type JSX, Show } from "solid-js";
 import { commands, state, type ZngaSettings as Z } from "../../lib/bridge";
 import { t } from "../../lib/i18n";
-import { Button, Caret, combo, field, Row, Switch } from "./parts";
 
 type Key = keyof Z;
 const z = () => state.settings.znga;
 const set = (key: Key, value: unknown) => void commands.zngaSet(key, value);
 
-// Sub-headings inside the Znga card: the card's own medium 12.5 caption.
+const field = {
+  height: "26px",
+  padding: "0 8px",
+  "border-radius": "7px",
+  background: "var(--search-bg)",
+  color: "var(--text-primary)",
+  "font-size": "var(--fs-row-text)",
+  border: "none",
+} as const;
+
 function Heading(p: { children: JSX.Element }) {
-  return <h3 style={{ margin: "6px 0 14px", "font-size": "12.5px", "font-weight": 500, color: "var(--text-secondary)" }}>{p.children}</h3>;
+  return (
+    <h3 style={{ margin: "22px 0 4px", "font-size": "var(--fs-meta)", "font-weight": 600, "text-transform": "uppercase", "letter-spacing": "0.03em", color: "var(--text-secondary)" }}>
+      {p.children}
+    </h3>
+  );
+}
+
+function Row(p: { title: string; description?: string; children?: JSX.Element }) {
+  return (
+    <div class="flex items-center justify-between" style={{ "min-height": "46px", padding: "8px 0", gap: "16px", "border-bottom": "var(--hairline) solid var(--divider)" }}>
+      <div class="min-w-0">
+        <div style={{ "font-size": "var(--fs-row-text)", color: "var(--text-primary)" }}>{t(p.title)}</div>
+        <Show when={p.description}>
+          <div style={{ "margin-top": "2px", "font-size": "var(--fs-meta)", "line-height": "14px", color: "var(--text-secondary)" }}>{t(p.description!)}</div>
+        </Show>
+      </div>
+      <div class="flex shrink-0 items-center" style={{ gap: "6px" }}>{p.children}</div>
+    </div>
+  );
+}
+
+function Switch(p: { label: string; on: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={p.on}
+      aria-label={p.label}
+      onClick={() => p.onChange(!p.on)}
+      class="relative inline-block rounded-full"
+      style={{ width: "30px", height: "18px", background: p.on ? "var(--accent)" : "var(--switch-off)", transition: "background .15s" }}
+    >
+      <span class="absolute rounded-full" style={{ top: "2px", left: p.on ? "14px" : "2px", width: "14px", height: "14px", background: "#fff", transition: "left .15s" }} />
+    </button>
+  );
 }
 
 function Toggle(p: { title: string; description?: string; key: Key }) {
@@ -67,6 +109,20 @@ function Count(p: { title: string; description?: string; key: Key; min: number; 
   );
 }
 
+function Button(p: { label: string; danger?: boolean; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      disabled={p.disabled}
+      onClick={p.onClick}
+      class="rounded-full"
+      style={{ height: "26px", padding: "0 12px", "font-size": "var(--fs-row-text)", background: "var(--round-button-bg)", color: p.danger ? "var(--danger)" : "var(--text-primary)", opacity: p.disabled ? 0.4 : 1 }}
+    >
+      {t(p.label)}
+    </button>
+  );
+}
+
 /** A chat picker over the account's chats, for Twin and Excluded. */
 function ChatPicker(p: { list: "twin" | "excluded"; chosen: [string, string][] }) {
   const [query, setQuery] = createSignal("");
@@ -76,7 +132,7 @@ function ChatPicker(p: { list: "twin" | "excluded"; chosen: [string, string][] }
     return state.chats.filter((c) => c.title.toLowerCase().includes(q) && !p.chosen.some(([id]) => id === c.id)).slice(0, 6);
   };
   return (
-    <div style={{ "padding-bottom": "18px" }}>
+    <div style={{ padding: "8px 0", "border-bottom": "var(--hairline) solid var(--divider)" }}>
       <div class="flex flex-wrap" style={{ gap: "6px" }}>
         <For each={p.chosen}>
           {([id, title]) => (
@@ -138,12 +194,9 @@ export default function ZngaSettings() {
 
       <Heading>{t("AI engine")}</Heading>
       <Row title="Engine">
-        <span class="relative inline-flex items-center" style={{ width: "248px" }}>
-          <select aria-label="Engine" value={z().engine} onChange={(e) => set("engine", e.currentTarget.value)} class="w-full" style={combo}>
-            <For each={z().engines}>{([id, label]) => <option value={id}>{label}</option>}</For>
-          </select>
-          <Caret />
-        </span>
+        <select aria-label="Engine" value={z().engine} onChange={(e) => set("engine", e.currentTarget.value)} style={field}>
+          <For each={z().engines}>{([id, label]) => <option value={id}>{label}</option>}</For>
+        </select>
       </Row>
       <Text title="Model" key="model" placeholder={z().defaultModel} />
       <Text title={z().engine === "claude-code" ? "Program" : "Address"} key="endpoint" placeholder={z().defaultEndpoint} />
@@ -227,7 +280,7 @@ export default function ZngaSettings() {
         )}
       </For>
       <div class="flex items-center" style={{ gap: "6px", padding: "8px 0", "border-bottom": "var(--hairline) solid var(--divider)" }}>
-        <select aria-label="Fact about" value={factChat()} onChange={(e) => setFactChat(e.currentTarget.value)} style={{ ...combo, width: "160px" }}>
+        <select aria-label="Fact about" value={factChat()} onChange={(e) => setFactChat(e.currentTarget.value)} style={{ ...field, width: "160px" }}>
           <option value="">{t("About…")}</option>
           <For each={state.chats.slice(0, 200)}>{(c) => <option value={c.id}>{c.title}</option>}</For>
         </select>

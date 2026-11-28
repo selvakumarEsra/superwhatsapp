@@ -1,12 +1,11 @@
-// The open chat (REQ-WEBUI-007), as the egui app draws it
-// (src/ui/conversation.rs): the picture, name and status line, the search,
-// call and menu buttons, the doodle wallpaper in egui's ink, and the
+// The open chat (REQ-WEBUI-007), as WhatsApp Desktop for macOS draws it:
+// a slim header with a button pill on the right, the wallpaper, and the
 // composer floating over it.
 import { createEffect, createSignal, For, on, Show } from "solid-js";
-import { commands, state, ZNGA_CHAT, type Open } from "../../lib/bridge";
+import { commands, state, type Open } from "../../lib/bridge";
 import { dayKey, dayLabel } from "../../lib/time";
 import Avatar from "../../components/Avatar";
-import { CallsIcon, DotsIcon, SearchIcon, VideoIcon } from "../../components/Icons";
+import { CallsIcon, DotsIcon, VideoIcon } from "../../components/Icons";
 import Composer from "../composer/Composer";
 import Message from "./Message";
 import { Menu } from "../../components/Menu";
@@ -15,14 +14,7 @@ import { ask } from "../../lib/ui";
 
 function HeaderButton(p: { label: string; onClick?: (e: MouseEvent) => void; children: import("solid-js").JSX.Element }) {
   return (
-    <button
-      type="button"
-      title={p.label}
-      aria-label={p.label}
-      onClick={(e) => p.onClick?.(e)}
-      class="icon-button flex items-center justify-center rounded-full"
-      style={{ width: "34px", height: "34px", "margin-left": "4px", color: "var(--icon)" }}
-    >
+    <button type="button" aria-label={p.label} onClick={(e) => p.onClick?.(e)} class="flex h-full items-center justify-center" style={{ width: "33px", color: "var(--icon)" }}>
       {p.children}
     </button>
   );
@@ -55,52 +47,46 @@ export default function Conversation(p: { chat: Open }) {
         data-tauri-drag-region
         class="flex shrink-0 items-center"
         style={{
-          height: "var(--list-header-h)",
-          "padding-left": "13px",
+          height: "var(--conv-header-h)",
+          "padding-left": "var(--bubble-gutter)",
           "padding-right": "10px",
           background: "var(--conversation-header-bg)",
           "border-bottom": "var(--hairline) solid var(--conversation-header-border)",
         }}
       >
-        {/* The picture and name open the info panel, as in egui; the rest
-            of the bar moves the window. */}
+        {/* The picture and name open the info panel, as on WhatsApp; the
+            rest of the bar moves the window. */}
         <button
           type="button"
           aria-label={p.chat.group ? "Group info" : "Contact info"}
           onClick={() => (state.info?.id === p.chat.id ? commands.closeInfo() : commands.openInfo(p.chat.id))}
           class="flex min-w-0 shrink items-center text-left"
         >
-          <Avatar src={p.chat.avatar} size={40} group={p.chat.group} seed={p.chat.id} />
-          <span class="flex min-w-0 flex-col" style={{ "margin-left": "12px" }}>
-            <span class="truncate" style={{ "font-size": "var(--fs-header-title)", "font-weight": 600, "line-height": "20px", color: "var(--text-primary)" }}>
-              {p.chat.title}
-            </span>
-            <Show when={p.chat.subtitle}>
-              <span
-                class="truncate"
-                style={{ "font-size": "var(--fs-header-sub)", "line-height": "17px", "margin-top": "3px", color: p.chat.subtitleAccent ? "var(--accent-text)" : "var(--text-secondary)" }}
-              >
-                {p.chat.subtitle}
-              </span>
-            </Show>
+          <Avatar src={p.chat.avatar} size={30} group={p.chat.group} seed={p.chat.id} />
+          <span
+            class="truncate"
+            style={{ "margin-left": "7.5px", "font-size": "var(--fs-header-title)", "font-weight": 600, "line-height": "16px", color: "var(--text-primary)" }}
+          >
+            {p.chat.title}
           </span>
         </button>
         <div data-tauri-drag-region class="h-full min-w-[12px] flex-1" />
-        <HeaderButton label="Search"><SearchIcon size={20} /></HeaderButton>
-        {/* The Znga chat is local: nobody to call. */}
-        <Show when={p.chat.id !== ZNGA_CHAT}>
-          <HeaderButton label="Video call" onClick={() => commands.startCall(p.chat.id, true)}><VideoIcon size={20} /></HeaderButton>
-          <HeaderButton label="Voice call" onClick={() => commands.startCall(p.chat.id, false)}><CallsIcon size={20} /></HeaderButton>
-        </Show>
-        <HeaderButton
-          label="Menu"
-          onClick={(e) => {
-            const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
-            setMenu({ x: box.right - 210, y: box.bottom + 6 });
-          }}
+        <div
+          class="flex items-center"
+          style={{ height: "var(--header-pill-h)", padding: "0 2px", "border-radius": "calc(var(--header-pill-h) / 2)", background: "var(--header-pill-bg)" }}
         >
-          <DotsIcon size={20} />
-        </HeaderButton>
+          <HeaderButton label="Video call"><VideoIcon size={18} /></HeaderButton>
+          <HeaderButton label="Voice call"><CallsIcon size={16} /></HeaderButton>
+          <HeaderButton
+            label="Menu"
+            onClick={(e) => {
+              const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              setMenu({ x: box.right - 210, y: box.bottom + 6 });
+            }}
+          >
+            <DotsIcon size={17} />
+          </HeaderButton>
+        </div>
       </header>
       <Show when={menu() && row()}>
         <Menu x={menu()!.x} y={menu()!.y} entries={chatMenu(row()!, ask, state.section === "archived")} onClose={() => setMenu(null)} />
@@ -117,13 +103,7 @@ export default function Conversation(p: { chat: Open }) {
         <Show when={state.settings.showWallpaper && !state.settings.wallpaperImage}>
           <div
             class="pointer-events-none absolute inset-0"
-            style={{
-              background: "var(--wallpaper-ink)",
-              "-webkit-mask-image": "url(/wallpaper.svg)",
-              "mask-image": "url(/wallpaper.svg)",
-              "-webkit-mask-repeat": "repeat",
-              "mask-repeat": "repeat",
-            }}
+            style={{ "background-image": "url(/wallpaper.svg)", opacity: "var(--wallpaper-opacity)", filter: "var(--wallpaper-filter)" }}
           />
         </Show>
         <div ref={list} class="scroll relative min-h-0 flex-1" style={{ "padding-bottom": "8px" }} role="log" aria-label="Messages">

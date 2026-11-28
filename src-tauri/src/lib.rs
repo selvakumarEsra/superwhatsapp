@@ -81,13 +81,6 @@ fn show_section(engine: State<'_, Engine>, section: String) {
     if !calls {
         actions.push(Action::ShowStarred(section == "starred"));
         actions.push(Action::ShowArchived(section == "archived"));
-        // The Locked plate, as egui's rail: the folder opens, or the code
-        // prompt comes up; any other place locks it again.
-        actions.push(if section == "locked" {
-            Action::OpenLockedFolder
-        } else {
-            Action::CloseLockedFolder
-        });
         match section.as_str() {
             "favourites" => actions.push(Action::SetChatFilter(ChatFilter::Favorites)),
             "chats" => actions.push(Action::SetChatFilter(ChatFilter::All)),
@@ -200,11 +193,6 @@ fn set_setting(engine: State<'_, Engine>, key: String, value: serde_json::Value)
         })),
         ("keepChatsArchived", _, _, Some(on)) => Input::Action(Action::SetKeepChatsArchived(on)),
         ("startWithSystem", _, _, Some(on)) => Input::Action(Action::SetStartWithSystem(on)),
-        ("showShortcutHints", _, _, Some(on)) => Input::Action(Action::SetShortcutHints(on)),
-        ("font", ..) => Input::Action(Action::SetFont(match text.as_deref() {
-            Some("inter") => zapfast::settings::FontChoice::Inter,
-            _ => zapfast::settings::FontChoice::System,
-        })),
         ("theme", ..) => Input::Action(Action::SetTheme(match text.as_deref() {
             Some("dark") => ThemeChoice::Dark,
             Some("light") => ThemeChoice::Light,
@@ -317,146 +305,6 @@ fn set_chat_lock_code(engine: State<'_, Engine>, code: Option<String>) {
     engine.send(Input::Action(Action::SetChatLockCode(code)));
 }
 
-/// Opens a web page in the browser, as egui's Action::OpenUrl does. Only
-/// http(s) links: the page never asks the system to open anything else.
-#[tauri::command]
-fn open_url(engine: State<'_, Engine>, url: String) {
-    if url.starts_with("https://") || url.starts_with("http://") {
-        engine.send(Input::Action(Action::OpenUrl(url)));
-    }
-}
-
-/// Starts a voice or video call with a chat, as the egui call buttons do.
-#[tauri::command]
-fn start_call(engine: State<'_, Engine>, chat: String, video: bool) {
-    engine.send(Input::Action(if video {
-        Action::StartVideoCall(chat)
-    } else {
-        Action::StartCall(chat)
-    }));
-}
-
-/// The call screen's buttons: answer, decline, hangup, mute, camera.
-#[tauri::command]
-fn call_control(engine: State<'_, Engine>, control: String, on: Option<bool>) {
-    let action = match control.as_str() {
-        "answer" => Action::AnswerCall,
-        "decline" => Action::DeclineCall,
-        "hangup" => Action::HangupCall,
-        "mute" => Action::SetCallMuted(on.unwrap_or(true)),
-        "camera" => Action::SetCallCamera(on.unwrap_or(false)),
-        "hide" => Action::LeaveCallSurface,
-        "return" => Action::ReturnToCall,
-        _ => return,
-    };
-    engine.send(Input::Action(action));
-}
-
-/// The contact editor's Save: the name goes through WhatsApp contact sync.
-#[tauri::command]
-fn save_contact(engine: State<'_, Engine>, id: String, first: String, last: String) {
-    engine.send(Input::Action(Action::SaveContact { id, first, last }));
-}
-
-/// Settings › Files: the page opened, so measure the media cache again,
-/// as egui does whenever Settings opens.
-#[tauri::command]
-fn measure_storage(engine: State<'_, Engine>) {
-    engine.send(Input::Edit(Box::new(|app| {
-        app.storage_token += 1;
-        let token = app.storage_token;
-        app.backend
-            .send(zapfast::backend::Command::LoadStorageStats { token });
-    })));
-}
-
-/// Settings › Files' buttons: open the archive's or the downloads' folder,
-/// open the log, pick or reset the downloads folder, clear the media cache.
-#[tauri::command]
-fn files_action(engine: State<'_, Engine>, action: String) {
-    engine.send(Input::Edit(Box::new(move |app| {
-        let push = match action.as_str() {
-            "archive" => Action::OpenFolder(app.account().dirs.state.clone()),
-            "downloads" => {
-                let dir = app
-                    .settings
-                    .download_folder
-                    .clone()
-                    .unwrap_or_else(|| app.account().dirs.media_cache_dir());
-                let _ = std::fs::create_dir_all(&dir);
-                Action::OpenFolder(dir)
-            }
-            "log" => Action::OpenLog(app.dirs.log_file()),
-            "pick" => Action::PickDownloadFolder,
-            "default" => Action::SetDownloadFolder(None),
-            "clear" => Action::ClearMediaCache(app.account().id.clone()),
-            _ => return,
-        };
-        app.actions.push(push);
-    })));
-}
-
-/// The call screen's device pickers; `None` is the system default.
-#[tauri::command]
-fn call_device(engine: State<'_, Engine>, kind: String, id: Option<String>) {
-    let action = match kind.as_str() {
-        "microphone" => Action::SetCallMicrophone(id),
-        "speaker" => Action::SetCallSpeaker(id),
-        "camera" => Action::SetCallCameraDevice(id),
-        _ => return,
-    };
-    engine.send(Input::Action(action));
-}
-
-/// The call screen's Full screen corner button: the window goes full
-/// screen, or leaves it, as egui's ToggleCallFullscreen does.
-#[tauri::command]
-fn call_fullscreen(window: tauri::WebviewWindow) -> bool {
-    let on = !window.is_fullscreen().unwrap_or(false);
-    let _ = window.set_fullscreen(on);
-    on
-}
-
-/// The Calls page's chip: all or missed.
-#[tauri::command]
-fn set_call_filter(engine: State<'_, Engine>, filter: String) {
-    let filter = if filter == "missed" {
-        zapfast::model::CallFilter::Missed
-    } else {
-        zapfast::model::CallFilter::All
-    };
-    engine.send(Input::Action(Action::SetCallFilter(filter)));
-}
-
-/// The Calls page's "Search name or number" field.
-#[tauri::command]
-fn search_calls(engine: State<'_, Engine>, text: String) {
-    engine.send(Input::Edit(Box::new(move |app| app.calls_search = text)));
-}
-
-/// The locked-chats prompt's answer: a new code the first time, else the
-/// code that opens the folder.
-#[tauri::command]
-fn unlock_locked(engine: State<'_, Engine>, code: String) {
-    let code = code.trim().to_owned();
-    if code.is_empty() {
-        return;
-    }
-    engine.send(Input::Edit(Box::new(move |app| {
-        let setup = app.settings.chat_lock_code_hash.is_none();
-        app.actions.push(if setup {
-            Action::CreateChatLockCode(code)
-        } else {
-            Action::UnlockLockedFolder(code)
-        });
-    })));
-}
-
-#[tauri::command]
-fn close_dialog(engine: State<'_, Engine>) {
-    engine.send(Input::Action(Action::CloseDialog));
-}
-
 #[tauri::command]
 fn fetch_blocklist(engine: State<'_, Engine>) {
     engine.send(Input::Action(Action::FetchBlocklist));
@@ -545,20 +393,12 @@ fn unlink(engine: State<'_, Engine>) {
     engine.send(Input::Action(Action::Unlink));
 }
 
-fn start(arguments: &[std::ffi::OsString]) -> Start {
-    let mut args = arguments
-        .iter()
-        .skip(1)
-        .map(|arg| arg.to_string_lossy().into_owned());
+fn start() -> Start {
+    let mut args = std::env::args().skip(1);
     let mut start = Start {
         demo: false,
         demo_page: None,
         instance: None,
-        receipt: None,
-        update_error: None,
-        hidden: false,
-        target: None,
-        invite: None,
     };
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -567,98 +407,31 @@ fn start(arguments: &[std::ffi::OsString]) -> Start {
                 start.demo = true;
                 start.demo_page = args.next();
             }
-            // A number, a `wa.me` link, the `whatsapp://` URI the desktop
-            // entry passes, or a group invite link.
-            argument if !argument.starts_with('-') => {
-                start.target = zapfast::target::parse(argument);
-                start.invite = zapfast::safety::group_invite_code(argument);
-            }
             _ => {}
         }
     }
     start
 }
 
-/// `superwhatsapp quit` and `superwhatsapp reload-themes` only talk to the
-/// running copy, as in the egui build: they never start SuperWhatsapp.
-/// Returns the exit code when the command line was one of them.
-fn control(arguments: &[std::ffi::OsString]) -> Option<i32> {
-    use zapfast::single_instance::{Sent, send};
-    let verb = match arguments.get(1)?.to_str()? {
-        "quit" => "quit",
-        "reload-themes" => "reload-themes",
-        _ => return None,
-    };
-    let dirs = zapfast::paths::AppDirs::discover();
-    let (code, message) = match (verb, send(&dirs.runtime, verb)) {
-        (_, Sent::Taken) | ("quit", Sent::NotRunning) => (0, None),
-        (_, Sent::NotRunning) => (
-            1,
-            Some("SuperWhatsapp is not running, so there are no themes to reload.".to_owned()),
-        ),
-        ("quit", Sent::Older) => (
-            1,
-            Some("The running SuperWhatsapp is too old to quit from the command line; use Quit in its tray menu.".to_owned()),
-        ),
-        (_, Sent::Older) => (
-            1,
-            Some("The running SuperWhatsapp is too old to reload themes from the command line.".to_owned()),
-        ),
-        (_, Sent::Failed(error)) => (1, Some(format!("Could not reach the running SuperWhatsapp: {error}"))),
-    };
-    if let Some(message) = message {
-        eprintln!("{message}");
-    }
-    Some(code)
-}
-
 pub fn run() {
-    // First, before anything else: run the update helper when asked
-    // (`--apply-update <job>`, then exit), and take the update flags off
-    // the command line, as the egui build does.
-    let launch = fastframe_update::intercept(&zapfast::updates::CONFIG);
-    // The updater checks a download with `--version`: `<slug> <version>`.
-    if launch.arguments.iter().skip(1).any(|arg| arg == "--version" || arg == "-V") {
-        println!("{} {}", zapfast::updates::CONFIG.slug, env!("CARGO_PKG_VERSION"));
-        return;
-    }
     // `--dump-state <page>`: print the demo's state as the page receives it
     // and exit, for screenshots and front-end tests (REQ-WEBUI-018).
     let mut args = std::env::args().skip(1);
     if args.next().as_deref() == Some("--dump-state") {
         let state = engine::dump(args.next());
-        let mut value = serde_json::to_value(&state).expect("state");
-        media::inline(&mut value);
-        println!("{}", serde_json::to_string_pretty(&value).expect("state"));
+        println!("{}", serde_json::to_string_pretty(&state).expect("state"));
         return;
     }
-    if let Some(code) = control(&launch.arguments) {
-        std::process::exit(code);
-    }
-    let mut start = start(&launch.arguments);
-    if let Some(argument) = launch.arguments.get(1).and_then(|arg| arg.to_str())
-        && !argument.starts_with('-')
-        && start.target.is_none()
-        && start.invite.is_none()
-    {
-        eprintln!("SuperWhatsapp cannot read a phone number or group invite link from {argument}");
-        std::process::exit(2);
-    }
+    let mut start = start();
     // One SuperWhatsapp per account: a copy already running, this interface or
     // the egui one, comes forward instead (REQ-WEBUI-012.A2).
-    // A relaunch after an update shows its window, so the page loads and
-    // confirms the update.
-    let start_hidden = launch.receipt.is_none()
-        && launch.arguments.iter().any(|arg| arg == desktop::START_HIDDEN);
-    start.hidden = start_hidden;
     if !start.demo {
-        match engine::claim(&start) {
+        match engine::claim() {
             Some(instance) => start.instance = Some(instance),
             None => return,
         }
     }
-    start.receipt = launch.receipt;
-    start.update_error = launch.error;
+    let start_hidden = std::env::args().any(|arg| arg == desktop::START_HIDDEN);
     tauri::Builder::default()
         // A second start brings the first window forward (REQ-WEBUI-012.A2).
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -700,18 +473,6 @@ pub fn run() {
             forgot_password,
             app_lock_form,
             set_chat_lock_code,
-            unlock_locked,
-            set_call_filter,
-            open_url,
-            start_call,
-            call_control,
-            call_device,
-            measure_storage,
-            files_action,
-            save_contact,
-            call_fullscreen,
-            search_calls,
-            close_dialog,
             fetch_blocklist,
             set_blocked,
             set_wallpaper_color,

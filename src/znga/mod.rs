@@ -49,7 +49,6 @@ pub mod triage;
 pub mod ui;
 pub mod update;
 pub mod voice;
-pub mod web;
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -80,11 +79,6 @@ pub enum Purpose {
         chats: Vec<(String, String)>,
     },
     Ask,
-    /// A question about web pages the person linked in the Znga chat
-    /// (REQ-ZCHAT-008).
-    Web {
-        account: String,
-    },
     /// Step 1 of asking (REQ-ZNGA-020): what to search the archive for.
     Plan {
         ask: u64,
@@ -167,13 +161,6 @@ pub enum Effect {
     Search { ask: u64, terms: Vec<String> },
     /// Znga's answer to a question asked in the Znga chat (REQ-ZCHAT-002).
     Answered { account: String, text: String },
-    /// Znga's answer from web pages, with the pages it recommends as
-    /// (title, address) (REQ-ZCHAT-008).
-    Browsed {
-        account: String,
-        text: String,
-        links: Vec<web::Link>,
-    },
 }
 
 /// A rewrite or suggested reply offered to a chat's composer; it replaces
@@ -497,7 +484,6 @@ impl Znga {
             model: self.config.model(),
             key,
             workdir: self.workdir.clone(),
-            web: None,
         }
     }
 
@@ -522,24 +508,6 @@ impl Znga {
             return Err("Znga is busy; skipped an automatic request.".into());
         }
         let target = self.target();
-        self.runner.submit(target, prompt, purpose, lane);
-        Ok(())
-    }
-
-    /// [`Self::submit`] with the engine allowed to read `web`
-    /// (REQ-ZCHAT-008).
-    pub fn submit_web(
-        &mut self,
-        prompt: Prompt,
-        purpose: Purpose,
-        web: web::Web,
-    ) -> Result<(), String> {
-        if let Some(reason) = self.blocked() {
-            return Err(reason.into());
-        }
-        let mut target = self.target();
-        target.web = Some(web);
-        let lane = runner::lane_for(purpose.background());
         self.runner.submit(target, prompt, purpose, lane);
         Ok(())
     }
@@ -698,29 +666,6 @@ impl Znga {
             (Purpose::Ask, Err(error)) => {
                 self.ask.push(Turn::assistant(format!("⚠ {error}")));
                 self.ask_dirty = true;
-            }
-            (Purpose::Web { account }, answer) => {
-                let (text, links) = match answer {
-                    Ok(text) => {
-                        let (text, links) = web::split_links(&text);
-                        let text = if text.is_empty() && !links.is_empty() {
-                            "Here is what I found:".to_owned()
-                        } else {
-                            text
-                        };
-                        (text, links)
-                    }
-                    Err(error) if error == runner::STOPPED => ("Stopped.".to_owned(), Vec::new()),
-                    Err(error) => (
-                        thread::explain_error(&error, self.config.engine),
-                        Vec::new(),
-                    ),
-                };
-                effects.push(Effect::Browsed {
-                    account,
-                    text,
-                    links,
-                });
             }
             (Purpose::Plan { ask }, Err(error)) if error == runner::STOPPED => {
                 return self.handle(Purpose::Answer { ask }, Err(error), now);

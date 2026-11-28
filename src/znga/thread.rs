@@ -73,10 +73,6 @@ pub enum Card {
         chat_title: String,
         reason: String,
     },
-    /// A web page Znga recommends (REQ-ZCHAT-008): the person opens it in
-    /// their own browser.
-    #[serde(rename_all = "camelCase")]
-    Link { title: String, url: String },
 }
 
 impl Card {
@@ -158,12 +154,6 @@ impl Card {
             Card::Drift {
                 chat_title, reason, ..
             } => ("drift", chat_title.clone(), reason.clone(), String::new()),
-            Card::Link { title, url } => (
-                "link",
-                title.clone(),
-                url.clone(),
-                super::web::site(url).unwrap_or_default(),
-            ),
         }
     }
 
@@ -187,7 +177,6 @@ impl Card {
             Card::Voice { .. } => &[("summarise", "Summarise")],
             Card::Promise { .. } => &[("done", "Done"), ("notPromise", "Not a promise")],
             Card::Drift { .. } => &[("opener", "Draft an opener")],
-            Card::Link { .. } => &[("openPage", "Open in browser"), ("copyLink", "Copy link")],
         }
     }
 
@@ -200,7 +189,7 @@ impl Card {
             | Card::Voice { chat, .. }
             | Card::Promise { chat, .. }
             | Card::Drift { chat, .. } => Some(chat).filter(|c| !c.is_empty()).map(|c| c.as_str()),
-            Card::Briefing { .. } | Card::Plan { .. } | Card::Link { .. } => None,
+            Card::Briefing { .. } | Card::Plan { .. } => None,
         }
     }
 
@@ -217,8 +206,7 @@ impl Card {
             "summarise" => "Summarising…",
             "opener" => "Drafting an opener…",
             "draft" => "Drafting a reply…",
-            "copy" | "copyLink" => "Copied",
-            "openPage" => "Opened in browser",
+            "copy" => "Copied",
             _ => "Opened",
         }
     }
@@ -226,7 +214,7 @@ impl Card {
     /// Whether taking `action` closes the card. Opening a chat or copying
     /// can be done again.
     pub fn closes(action: &str) -> bool {
-        !matches!(action, "open" | "copy" | "openPage" | "copyLink")
+        !matches!(action, "open" | "copy")
     }
 }
 

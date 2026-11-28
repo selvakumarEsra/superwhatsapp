@@ -90,9 +90,7 @@ jobs:
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             ca-certificates curl git build-essential pkg-config \
             libxkbcommon-dev libwayland-dev libgl1-mesa-dev libasound2-dev \
-            libpipewire-0.3-dev clang libclang-dev cmake perl \
-            libwebkit2gtk-4.1-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev \
-            libayatana-appindicator3-dev librsvg2-dev
+            libpipewire-0.3-dev clang libclang-dev cmake perl
       - uses: actions/checkout@v7
       - name: Check release version
         shell: bash
@@ -105,24 +103,9 @@ jobs:
       # The repository pins its toolchain; add the cross-target's standard
       # library to the toolchain the pin actually resolves to.
       - run: rustup target add ${{ matrix.target }}
-      # The interface the Tauri app embeds (specs/tauri-ui.md, REQ-WEBUI-017).
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-      - name: Front end
-        working-directory: web
-        run: |
-          npm ci
-          npm run build
       # No compiler cache: published binaries never build from outputs
-      # restored from an Actions cache. The Tauri app ships as
-      # `superwhatsapp`, the name the updater and every package know.
-      - run: cargo build --locked --release -p zapfast-desktop --features tauri/custom-protocol --target ${{ matrix.target }}
-      - name: Name the app
-        shell: bash
-        run: |
-          exe=""; [ "${{ runner.os }}" = Windows ] && exe=.exe
-          cp "target/${{ matrix.target }}/release/zapfast-desktop$exe" "target/${{ matrix.target }}/release/superwhatsapp$exe"
+      # restored from an Actions cache.
+      - run: cargo build --locked --release --target ${{ matrix.target }}
 
       # native-packages signs the Windows code (native-packages.yaml,
       # windows.signing) through the Azure CLI sign-in below, once the
@@ -232,27 +215,18 @@ jobs:
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
       - run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-      - name: Front end
-        working-directory: web
-        run: |
-          npm ci
-          npm run build
       # No compiler cache, as in the build job above.
       - name: Build both architectures
         run: |
-          for target in aarch64-apple-darwin x86_64-apple-darwin; do
-            cargo build --locked --release -p zapfast-desktop --features tauri/custom-protocol --target $target
-          done
+          cargo build --locked --release --target aarch64-apple-darwin
+          cargo build --locked --release --target x86_64-apple-darwin
 
       - name: Universal binary
         run: |
           mkdir -p universal
           lipo -create \
-            target/aarch64-apple-darwin/release/zapfast-desktop \
-            target/x86_64-apple-darwin/release/zapfast-desktop \
+            target/aarch64-apple-darwin/release/superwhatsapp \
+            target/x86_64-apple-darwin/release/superwhatsapp \
             -output universal/superwhatsapp
           # The two release builds fill most of the runner's disk; the DMG
           # and its notarization copy need room of their own.
@@ -306,7 +280,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-49
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-25.08
       options: --privileged
     steps:
       - uses: actions/checkout@v7
@@ -334,9 +308,21 @@ jobs:
           path: "*.flatpak"
           if-no-files-found: error
 
+  # The Tauri interface's installers as "SuperWhatsapp Preview", beside the egui
+  # app, until it replaces it (specs/tauri-ui.md, REQ-WEBUI-017).
+  preview:
+    name: Tauri preview
+    needs: release-source
+    permissions:
+      contents: read
+    uses: ./.github/workflows/desktop-packages.yml
+    with:
+      preview: true
+      tag: ${{ inputs.tag || github.ref_name }}
+
   publish:
     name: GitHub release
-    needs: [build, macos, flatpak]
+    needs: [build, macos, flatpak, preview]
     # A dry run stops at the built files.
     if: github.event_name == 'push'
     runs-on: ubuntu-latest

@@ -20,14 +20,8 @@ class FlatpakPackaging(unittest.TestCase):
     def test_source_and_bundle_have_the_same_sandbox(self):
         source = yaml.safe_load((HERE / f"{APP_ID}.yml").read_text())
         bundle = yaml.safe_load((HERE / f"{APP_ID}.bundle.yml").read_text())
-        for key in ("id", "command", "finish-args"):
+        for key in ("id", "runtime", "runtime-version", "sdk", "command", "finish-args"):
             self.assertEqual(source[key], bundle[key], key)
-        # The released bundle is the Tauri app, which draws in WebKitGTK from
-        # GNOME's runtime. The source manifest still builds the egui app until
-        # it can fetch the interface's npm packages offline (specs/tauri-ui.md,
-        # REQ-WEBUI-017).
-        self.assertEqual(bundle["runtime"], "org.gnome.Platform")
-        self.assertEqual(bundle["sdk"], "org.gnome.Sdk")
         self.assertIn("--persist=.local/state", source["finish-args"])
         self.assertIn("--talk-name=org.freedesktop.secrets", source["finish-args"])
         self.assertIn("--talk-name=org.freedesktop.Notifications", source["finish-args"])

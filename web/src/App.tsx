@@ -9,12 +9,10 @@ import { Confirm } from "./components/Menu";
 import ChatList from "./features/chats/ChatList";
 import Conversation from "./features/conversation/Conversation";
 import InfoPanel from "./features/info/InfoPanel";
-import CallScreen from "./features/calls/CallScreen";
 import EmptyPane from "./features/EmptyPane";
 import Settings from "./features/settings/Settings";
 import Link from "./features/Link";
 import LockScreen from "./features/LockScreen";
-import LockedPrompt from "./features/chats/LockedPrompt";
 
 /** Insights, which the new interface does not draw yet. */
 function Pending(p: { name: string }) {
@@ -33,11 +31,7 @@ function Pending(p: { name: string }) {
 export default function App() {
   onMount(() => void connect());
   // Znga and Insights are chosen here; the other sections come from the core.
-  // In a plain browser (the design preview), `#settings` opens Settings so
-  // it can be compared with the egui build; the app itself starts on chats.
-  const [panel, setPanel] = createSignal<"insights" | "settings" | null>(
-    !("__TAURI_INTERNALS__" in window) && location.hash === "#settings" ? "settings" : null,
-  );
+  const [panel, setPanel] = createSignal<"insights" | "settings" | null>(null);
   // Outside Tauri, `#settings` opens Settings, for screenshots.
   if (!("__TAURI_INTERNALS__" in window) && location.hash.startsWith("#settings")) setPanel("settings");
   const section = (): Section | "settings" => panel() ?? (state.znga ? "znga" : state.section);
@@ -95,9 +89,7 @@ export default function App() {
     <Show when={!state.lock} fallback={<LockScreen lock={state.lock!} />}>
     <Show when={linked()} fallback={<Link link={state.link} />}>
       <div class="flex h-full w-full">
-        <Sidebar section={section()} onSection={choose} unread={state.unreadChats} avatar={state.meAvatar} locked={state.locked.offered} />
-        {/* Settings takes the conversation's place beside the chat list,
-            as in egui. */}
+        <Sidebar section={section()} onSection={choose} unread={state.unreadChats} />
         <Show
           when={panel() === "settings"}
           fallback={
@@ -116,12 +108,9 @@ export default function App() {
             </>
           }
         >
-          <ChatList />
-          <Settings onClose={() => setPanel(null)} />
+          <Settings />
         </Show>
       </div>
-      <Show when={state.locked.prompt}>{(prompt) => <LockedPrompt setup={prompt().setup} error={prompt().error} />}</Show>
-      <CallScreen />
       <Show when={asking()}>
         {(q) => <Confirm title={q().title} body={q().body} action={q().action} danger onConfirm={q().run} onClose={() => ask(null)} />}
       </Show>

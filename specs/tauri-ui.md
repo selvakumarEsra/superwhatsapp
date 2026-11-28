@@ -11,8 +11,9 @@ version: 1
 
 ZapFast's interface moves from egui to a Tauri 2 shell with a Solid.js,
 TypeScript and Tailwind front end, built with Vite, the stack OpenTrader
-uses. The goal is that the switch is invisible: the new interface looks
-and behaves like the egui app it replaces (REQ-WEBUI-004).
+uses. The goal is a look and feel that matches WhatsApp Desktop for
+macOS pixel for pixel: its layout, spacing, typography, colours, motion
+and interactions.
 
 The egui interface is removed, not kept alongside. The Rust code that is
 not interface (the WhatsApp worker, archive, accounts, media, calls audio,
@@ -46,7 +47,7 @@ only inside the Tauri window, never served over the network); a mobile
 build; copying WhatsApp's logos, trademarks, sounds or proprietary
 artwork. The look is matched with original assets drawn to the same
 size and position (icons, the bundled Noto emoji, the wallpaper pattern)
-and the same font the egui app uses.
+and the same system font WhatsApp Desktop uses.
 
 Mini-apps are removed from ZapFast with this move (the `miniapps`
 feature, `src/miniapps/` and specs/miniapps.md); they remain in the
@@ -155,40 +156,35 @@ implementations:
   elements, not by inserting HTML).
 
 <!-- id: REQ-WEBUI-004 -->
-## The interface MUST look like SuperWhatsapp's egui app
+## The interface MUST match WhatsApp Desktop for macOS pixel for pixel
 
-**Changed 2026-11-27 by the person:** the baseline is no longer WhatsApp
-Desktop for macOS. The new interface looks like the egui app SuperWhatsapp
-ships today, which is WhatsApp's design as SuperWhatsapp modified it, so
-switching from egui to Tauri changes nothing a person can see. The egui
-demo (`superwhatsapp --demo-page <page> --demo-shot`) is the reference, at
-the same window size, theme and demo archive; since both draw the same
-demo data, the comparison is screen for screen.
+The reference is the WhatsApp Desktop app for macOS, captured on a fixed
+date and kept as the baseline until it is deliberately re-captured.
+Every screen ZapFast shares with WhatsApp Desktop matches it pixel for
+pixel at the same window size: the labelled sidebar, chat list, conversation, composer, info panel, menus,
+dialogs, settings and the empty "no chat open" pane. That covers
+geometry (widths, heights, paddings, radii, borders, shadows), colours
+in light and dark, the font stack, sizes, weights and line heights,
+bubble shapes and tails, tick and time styling, hover, pressed, focus
+and selected states, and motion (durations and easing). All values live
+as design tokens in `web/src/styles/tokens.css`; components use only
+tokens, never literal values.
 
-What the egui app looks like, and the new interface copies:
+Where ZapFast has something WhatsApp Desktop lacks (Znga, Insights,
+Keep, Favourites in the sidebar, several accounts, the app lock), it is drawn
+with the same tokens and component patterns so it looks native to the
+same design.
 
-- **Rail**: a narrow column of icons only (Chats, Calls, Znga, Favourites,
-  Insights at the top; Starred, Archived, Lock, Settings and the profile
-  picture at the bottom), the selected one on a rounded tile.
-- **Chat list**: a large "Chats" title with the side panel and new chat
-  buttons, a pill search field, filter chips (All, Unread with its count,
-  Private, Favorites, Groups…), rows with the contact's picture, name,
-  time, ticks, the last message, muted, mention and unread marks; the
-  open chat's row is a raised card. No section headers.
-- **Conversation**: a header with the picture, name and status, and
-  search, video, call and menu icons; bubbles with tails, media drawn in
-  place (pictures, documents, voice notes with waveforms, link previews),
-  formatting (*bold*, _italic_, ~strike~, links), quoted replies with the
-  sender's colour, reactions in a pill under the bubble, "edited", and the
-  time and ticks inside the bubble.
-- **Composer**: one rounded pill with + and emoji on the left, "Type a
-  message", and the microphone (send once there is text) on the right,
-  with the formatting tip line under it.
-- Times follow the system's 12 or 24 hour clock, as egui does.
-
-All values live as design tokens in `web/src/styles/tokens.css`, measured
-from the egui theme (`src/theme.rs`, `src/ui/`), never literals in
-components.
+How the baseline is taken: the person captures WhatsApp Desktop
+themselves, from their own logged-in Mac. The first capture (2026-11-24)
+is the dark theme, chat list and an open one-to-one chat, in a window of
+1288×806 points; the light theme and the remaining screens are captured
+the same way before they are matched [needs review]. Only measurements (computed sizes, colours,
+fonts) go into `tokens.css`; the captures contain personal chats, so
+they stay outside the repository and outside pull requests. Pixel
+comparisons use the demo archive arranged like the capture (same number
+of rows, message kinds and lengths), so text differs but structure does
+not.
 
 implementations:
   - web/src/styles/tokens.css:root
@@ -196,25 +192,31 @@ implementations:
 
 ## Acceptance
 <!-- id: REQ-WEBUI-004.A1 -->
-- For the chat, empty, settings and light demo pages at 1288×806, the
-  Tauri screenshot shows the same elements in the same places as the egui
-  screenshot: rail, list header, chips, rows, conversation header,
-  bubbles and composer, each within 4 px.
+- For each captured screen, at the capture's window size and theme, every
+  element's box (position and size) is within 1 px of the baseline.
 <!-- id: REQ-WEBUI-004.A2 -->
-- The colours in the token file equal the egui palette's, in light and
-  dark.
+- Every colour in the token file equals the baseline's computed colour
+  exactly, in both themes.
 <!-- id: REQ-WEBUI-004.A3 -->
-- Font sizes and weights of the title, row name, row preview, bubble text,
-  bubble time and composer text equal egui's.
+- Font family, size, weight and line height of every text style equal
+  the baseline's.
 <!-- id: REQ-WEBUI-004.A4 -->
-- Pictures, documents, voice notes and link previews are drawn in their
-  bubbles as egui draws them, not as text labels.
+- Hover, pressed, selected and keyboard-focus states of list rows,
+  buttons, menu items and bubbles match the baseline's.
 <!-- id: REQ-WEBUI-004.A5 -->
-- No WhatsApp logo, trademark, icon file, sound or wallpaper artwork is
-  bundled; icons and the wallpaper pattern are the egui app's own.
+- Panel slides, menu fades and the scroll-to-bottom button use the
+  baseline's durations and easing; with "reduce motion" set they appear
+  without animation.
 <!-- id: REQ-WEBUI-004.A6 -->
-- No component contains a literal colour; a lint check fails the build on
-  one.
+- No WhatsApp logo, trademark, icon file, sound or wallpaper artwork is
+  bundled; icons and the wallpaper pattern are original and drawn to the
+  baseline's size and position.
+<!-- id: REQ-WEBUI-004.A7 -->
+- No component contains a literal colour, size or duration; a lint
+  check fails the build on one.
+<!-- id: REQ-WEBUI-004.A8 -->
+- Below the width where WhatsApp Desktop hides its sidebar or stacks its
+  panels, ZapFast does the same, and Back returns to the list.
 
 <!-- id: REQ-WEBUI-005 -->
 ## Linking, accounts and the app lock MUST work as they do today
@@ -254,10 +256,11 @@ locked folder, Starred, the compact avatar column when the list is
 hidden, the chat menu (pin, mute, archive, mark read or unread, favourite,
 labels, lock, block, delete, clear, export), and drafts shown in rows.
 
-As in the egui app (REQ-WEBUI-004), the list is one ungrouped list with
-the pinned chats on top and filter chips above it; Favourites is a chip,
-not a heading. (The grouped Favourites/Chats headings copied from
-WhatsApp Desktop were dropped on 2026-11-27.)
+As on WhatsApp Desktop for macOS, the full list (All, no search) is grouped
+under collapsible headings: **Favourites** first, holding the favourite
+chats in the phone's favourites order as one-line rows, then **Chats**,
+holding every other chat with the pinned ones on top. Any filter or search
+shows one ungrouped list.
 
 implementations:
   - web/src/features/chats/ChatList.tsx:ChatList
@@ -276,8 +279,13 @@ implementations:
 - Every chat menu entry performs its action and the row updates without
   reloading the list.
 <!-- id: REQ-WEBUI-006.A4 -->
-- The list is never grouped under headings; the filter chips show the
-  same chats as egui's for the same archive.
+- With All chosen and no search, the list shows a Favourites heading over
+  the favourite chats and a Chats heading over the rest; a favourite chat
+  appears only under Favourites. Clicking a heading folds or unfolds its
+  chats, and the fold is remembered on this computer. With no favourites,
+  the Favourites heading is not shown.
+<!-- id: REQ-WEBUI-006.A5 -->
+- With any other filter, or while searching, the list is not grouped.
 
 <!-- id: REQ-WEBUI-007 -->
 ## The conversation MUST show every message kind and action
@@ -384,13 +392,6 @@ more.
 implementations:
   - web/src/features/calls/CallScreen.tsx:CallScreen
   - web/src/features/calls/CallsList.tsx:CallsList
-  - src-tauri/src/view.rs:call_row
-  - src-tauri/src/lib.rs:set_call_filter
-  - src-tauri/src/lib.rs:search_calls
-  - src-tauri/src/lib.rs:start_call
-  - src-tauri/src/lib.rs:call_control
-  - src-tauri/src/lib.rs:call_device
-  - src-tauri/src/view.rs:call_view
 
 ## Acceptance
 <!-- id: REQ-WEBUI-010.A1 -->
@@ -398,16 +399,6 @@ implementations:
   other side's video when it is a video call.
 <!-- id: REQ-WEBUI-010.A2 -->
 - No web-view permission prompt for the microphone or camera appears.
-<!-- id: REQ-WEBUI-010.A3 -->
-- The Calls history lists the same rows as the egui history: consecutive
-  alike calls fold under the newest with a count, a locked chat's calls
-  stay out while its folder is closed, and the All and Missed chips and
-  the "Search name or number" field narrow it the same way.
-<!-- id: REQ-WEBUI-010.A4 -->
-- A call placed from a chat's header or a Calls row opens the call screen
-  with egui's controls: Decline and Accept while ringing; Mute, the
-  camera, Devices and Hang up while live. Its back arrow sets the screen
-  aside behind a strip that returns to the call or hangs up.
 
 <!-- id: REQ-WEBUI-011 -->
 ## Info panels and dialogs MUST offer everything they do today
@@ -423,7 +414,6 @@ implementations:
   - web/src/features/info/InfoPanel.tsx:InfoPanel
   - web/src/components/Menu.tsx:Confirm
   - web/src/features/dialogs/Forward.tsx:Forward
-  - src-tauri/src/view.rs:info
 
 ## Acceptance
 <!-- id: REQ-WEBUI-011.A1 -->
@@ -434,16 +424,6 @@ implementations:
 <!-- id: REQ-WEBUI-011.A3 -->
 - An action the core refuses (for example, admin rights lost) shows the
   core's error and leaves the dialog open.
-<!-- id: REQ-WEBUI-011.A4 -->
-- A contact's panel offers egui's actions (Message, Copy number, Mute,
-  Pin, Archive, Block contact), and blocking or unblocking asks first.
-  Block is unavailable while the app is offline or the block list is not
-  loaded.
-<!-- id: REQ-WEBUI-011.A5 -->
-- Add to contacts (Rename for a saved contact) edits the name in place as
-  First name and Surname, saved with Enter and dropped with Escape; the
-  panel lists "Media, links and docs" with its count and the three newest
-  pictures.
 
 <!-- id: REQ-WEBUI-012 -->
 ## Settings and desktop integration MUST work on every platform
@@ -465,9 +445,6 @@ implementations:
   - src-tauri/src/lib.rs:set_custom_theme
   - src-tauri/src/lib.rs:wallpaper_image
   - src-tauri/src/engine.rs:claim
-  - src-tauri/src/lib.rs:open_url
-  - src-tauri/src/lib.rs:files_action
-  - src-tauri/src/lib.rs:measure_storage
 
 ## Acceptance
 <!-- id: REQ-WEBUI-012.A1 -->
@@ -483,14 +460,6 @@ implementations:
 <!-- id: REQ-WEBUI-012.A4 -->
 - Tray, notifications, badge and autostart work on Linux, Windows and
   macOS, or fall back as they do today where a platform lacks one.
-<!-- id: REQ-WEBUI-012.A5 -->
-- About names the stack the build is made with ("Rust, Tauri, Solid.js,
-  and whatsapp-rust"), and its links open in the system browser. The page
-  can ask the core to open only http and https links.
-<!-- id: REQ-WEBUI-012.A6 -->
-- Settings › Files shows where the archive, downloads and log are, opens
-  their folders, changes or resets the downloads folder, and measures the
-  media cache each time Settings opens; Clear… asks first.
 
 <!-- id: REQ-WEBUI-013 -->
 ## Znga and the extras MUST move into the web interface
@@ -588,26 +557,17 @@ MSI and zip), macOS (universal DMG), built by the Release workflow from a
 `v*` tag on `main`, with `checksums.txt` signed by the fork's key as
 today. Linux packages declare the WebKitGTK dependency.
 
-From v0.21.1-beta.11 the Release workflow ships the new interface as
-SuperWhatsapp itself, under the file names the egui app shipped
-(`superwhatsapp-<tag>-<target>`), so installed copies update to it the
-usual way: the app answers `--version` as `superwhatsapp <version>`, runs
-the update helper, and confirms a relaunch once its page has loaded, or
-the helper restores the previous version. It takes the egui build's
-command line too: `quit`, `reload-themes`, and a number, `wa.me`,
-`whatsapp://` or group invite link. The release Flatpak runs on GNOME's
-runtime for WebKitGTK; the Flathub source manifest still builds the egui
-app until it can fetch the interface's npm packages offline. The Desktop
-packages workflow keeps building Tauri's own installers on every change.
+Until the new interface is complete, the Desktop packages workflow builds
+these installers as workflow artifacts on every change to the app, and the
+Release workflow keeps shipping the egui app; the release switches to the
+new packages only once the other requirements here are met. Until then
+each release also attaches the new packages as "ZapFast Preview", which
+installs beside ZapFast under its own name and never replaces it.
 
 implementations:
   - .github/workflows/release.yml:jobs
   - .github/workflows/desktop-packages.yml:jobs
   - src-tauri/tauri.conf.json:bundle
-  - src-tauri/src/lib.rs:run
-  - src-tauri/src/lib.rs:control
-  - src-tauri/src/engine.rs:release
-  - src-tauri/src/engine.rs:claim
 
 ## Acceptance
 <!-- id: REQ-WEBUI-017.A1 -->
@@ -624,15 +584,9 @@ implementations:
   breaks either fails CI, and the desktop crate's version must equal the
   core's.
 <!-- id: REQ-WEBUI-017.A5 -->
-- Before the switch, while `RELEASE_PREVIEW` is `true`, a release also
-  carries `zapfast-preview-<tag>-<target>` installers for every platform
-  above, and none of them is named like the files the egui app's updater
-  installs. While it is not set, the release carries only the egui app's
-  files and still publishes. After the switch there is no preview.
-<!-- id: REQ-WEBUI-017.A6 -->
-- An egui copy of v0.21.1-beta.10 updates to the release and starts the
-  new interface on the same account; when the new version cannot confirm
-  its start, the helper restores the old one.
+- Before the switch, a release also carries `zapfast-preview-<tag>-<target>`
+  installers for every platform above, and none of them is named like the
+  files the egui app's updater installs.
 
 <!-- id: REQ-WEBUI-018 -->
 ## A demo mode and tests MUST cover the new interface

@@ -20,42 +20,23 @@ export interface ChatRow {
   id: string; title: string; avatar: string | null; group: boolean; time: number;
   unread: number; markedUnread: boolean; muted: boolean; pinned: boolean;
   favorite: boolean; favoritePosition: number; last: Last | null;
-  /** The time as egui writes it in the list. */
-  stamp: string; typing: string | null; draft: string | null; mention: boolean;
 }
-export interface FilterChip { id: string; label: string; count: number }
-export interface MediaView {
-  url: string | null; thumb: string | null; width: number | null; height: number | null; size: number;
-  mime: string; name: string | null; pages: number | null; seconds: number | null; waveform: number[];
-  voice: boolean; gif: boolean; round: boolean;
-}
-export interface PreviewView { url: string; title: string | null; description: string | null; thumb: string | null }
-export interface CallView {
-  chat: string; name: string; avatar: string | null; video: boolean;
-  phase: "incoming" | "live" | "over"; status: string; seconds: number | null;
-  failed: boolean; muted: boolean; cameraOn: boolean; camera: boolean; connected: boolean; hidden: boolean;
-  microphones: [string, string][]; speakers: [string, string][]; cameras: [string, string][];
-  microphone: string | null; speaker: string | null; cameraDevice: string | null;
-}
-export interface Quote { author: string; text: string; hue: number; mine: boolean }
+export interface Quote { author: string; text: string }
 export interface Msg {
-  id: string; fromMe: boolean; sender: string | null; senderId: string; senderHue: number; time: number;
+  id: string; fromMe: boolean; sender: string | null; senderId: string; time: number;
   kind: string; text: string; status: Status; edited: boolean; forwarded: boolean;
-  quoted: Quote | null; reactions: [string, number][]; reacted: boolean;
-  /** The time as egui writes it in a bubble. */
-  clock: string; starred: boolean; media: MediaView | null; preview: PreviewView | null;
+  quoted: Quote | null; reactions: [string, number][];
 }
 export interface Open {
   id: string; title: string; avatar: string | null; group: boolean; complete: boolean; messages: Msg[];
   /** The composer offers Znga's tools here (REQ-ZCHAT-004). */
   zngaTools: boolean;
-  subtitle: string; subtitleAccent: boolean;
 }
 /** The Znga chat's id; it never names a WhatsApp chat (REQ-ZCHAT-001). */
 export const ZNGA_CHAT = "znga@superwhatsapp.local";
 export interface ZAction { id: string; label: string }
 export interface ZCard {
-  kind: "needsYou" | "briefing" | "draft" | "catchUp" | "plan" | "voice" | "promise" | "drift" | "link";
+  kind: "needsYou" | "briefing" | "draft" | "catchUp" | "plan" | "voice" | "promise" | "drift";
   title: string; body: string; meta: string; actions: ZAction[]; outcome: string | null;
 }
 export interface ZEntry { id: number; at: number; fromMe: boolean; text: string; unasked: boolean; cards: ZCard[] }
@@ -76,38 +57,30 @@ export interface ZngaSettings {
   excluded: [string, string][]; facts: ZFact[]; openPromises: ZPromise[]; audit: ZAudit[];
   status: [string, boolean] | null;
 }
-export type Section = "chats" | "favourites" | "archived" | "starred" | "calls" | "locked";
-export interface StarredRow { chat: string; chatTitle: string; msg: Msg; moment: string }
+export type Section = "chats" | "favourites" | "archived" | "starred" | "calls";
+export interface StarredRow { chat: string; chatTitle: string; msg: Msg }
 export interface CallRow {
-  id: string; chat: string; title: string; summary: string; stamp: string; bad: boolean; avatar: string | null; group: boolean; time: number;
+  id: string; chat: string; title: string; avatar: string | null; group: boolean; time: number;
   outgoing: boolean; missed: boolean; video: boolean; duration: number;
 }
 export interface Member { id: string; name: string; avatar: string | null; admin: boolean }
-export interface MediaCell { id: string; src: string | null; video: boolean; seconds: number | null }
 export interface Info {
   id: string; title: string; avatar: string | null; group: boolean; channel: boolean;
   phone: string | null; description: string | null; memberCount: number; members: Member[];
   commonGroups: [string, string][]; muted: boolean; pinned: boolean; archived: boolean;
   favorite: boolean; canLeave: boolean; left: boolean; timer: number;
-  phoneDisplay: string | null; status: string | null; blockable: boolean; blocked: boolean; blockEditable: boolean;
-  contactEditable: boolean; known: boolean; editorNames: [string, string];
-  mediaCount: string | null; media: MediaCell[];
 }
 export interface Swatch { id: string; label: string; color: string | null }
 export interface Blocked { id: string; title: string; avatar: string | null }
 export interface LockForm { mode: "set" | "change" | "turnOff"; error: "tooShort" | "mismatch" | "wrongCurrent" | null; busy: boolean }
 export interface LockView { wrong: boolean; wait: number | null; checking: boolean; forgetting: "no" | "confirming" | "unlinking" }
-export interface FilesView {
-  archive: string; downloads: string; customDownloads: boolean; log: string; storageHint: string;
-  storageTotal: string | null; storageRows: [string, string, number][]; clearing: boolean; canClear: boolean;
-}
 export interface SettingsView {
-  theme: "dark" | "light" | "system"; zoom: number; showWallpaper: boolean; enterSends: boolean; showShortcutHints: boolean; font: "system" | "inter";
+  theme: "dark" | "light" | "system"; zoom: number; showWallpaper: boolean; enterSends: boolean;
   autoDownload: boolean; historyPrefetch: boolean; keepChatsArchived: boolean; pauseOtherMedia: boolean;
   notifications: boolean; notificationContent: boolean; groupSounds: boolean;
   messageSound: string; mentionSound: string; sendReadReceipts: boolean; sendTyping: boolean;
   keepRunning: boolean; startWithSystem: boolean | null; checkForUpdates: boolean; downloadUpdates: boolean;
-  proxy: string; name: string | null; about: string | null; phone: string | null; version: string; files: FilesView;
+  proxy: string; name: string | null; about: string | null; phone: string | null; version: string;
   wallpaperLight: string; wallpaperDark: string; swatchesLight: Swatch[]; swatchesDark: Swatch[];
   chatLockCode: boolean; appLock: boolean; autoLock: "oneMinute" | "fifteenMinutes" | "oneHour";
   lockForm: LockForm | null; blocked: Blocked[] | null; blockedLoading: boolean; blockedFailed: boolean;
@@ -117,24 +90,22 @@ export interface SettingsView {
   znga: ZngaSettings;
 }
 export interface State {
-  link: Link; call: CallView | null; me: string | null; meAvatar: string | null; filters: FilterChip[]; filter: string; search: string; chats: ChatRow[]; unreadChats: number; open: Open | null;
+  link: Link; me: string | null; filter: string; search: string; chats: ChatRow[]; unreadChats: number; open: Open | null;
   zngaRow: ChatRow | null; znga: ZngaChat | null; offer: OfferView | null;
-  section: Section; starred: StarredRow[]; calls: CallRow[]; callFilter: "all" | "missed"; callsSearch: string; info: Info | null; settings: SettingsView;
+  section: Section; starred: StarredRow[]; calls: CallRow[]; info: Info | null; settings: SettingsView;
   lock: LockView | null;
-  /** The locked-chats folder behind the rail's Lock plate. */
-  locked: { offered: boolean; open: boolean; prompt: { setup: boolean; error: boolean } | null };
 }
 
 const empty: State = {
-  link: { state: "starting" }, call: null, me: null, meAvatar: null, filters: [], filter: "all", search: "", chats: [], unreadChats: 0, open: null,
+  link: { state: "starting" }, me: null, filter: "all", search: "", chats: [], unreadChats: 0, open: null,
   zngaRow: null, znga: null, offer: null,
-  section: "chats", starred: [], calls: [], callFilter: "all", callsSearch: "", info: null,
+  section: "chats", starred: [], calls: [], info: null,
   settings: {
-    theme: "system", zoom: 1, showWallpaper: true, enterSends: true, showShortcutHints: true, font: "system", autoDownload: true, historyPrefetch: true,
+    theme: "system", zoom: 1, showWallpaper: true, enterSends: true, autoDownload: true, historyPrefetch: true,
     keepChatsArchived: true, pauseOtherMedia: true, notifications: true, notificationContent: true, groupSounds: true,
     messageSound: "receive", mentionSound: "alert", sendReadReceipts: true, sendTyping: true, keepRunning: false,
     startWithSystem: null, checkForUpdates: true, downloadUpdates: false, proxy: "", name: null, about: null,
-    phone: null, version: "", files: { archive: "", downloads: "", customDownloads: false, log: "", storageHint: "", storageTotal: null, storageRows: [], clearing: false, canClear: false }, wallpaperLight: "theme", wallpaperDark: "theme", swatchesLight: [], swatchesDark: [],
+    phone: null, version: "", wallpaperLight: "theme", wallpaperDark: "theme", swatchesLight: [], swatchesDark: [],
     chatLockCode: false, appLock: false, autoLock: "fifteenMinutes", lockForm: null, blocked: null,
     blockedLoading: false, blockedFailed: false, wallpaperImage: null, customTheme: null, themes: [], palette: null,
     locale: "en", language: null, languages: [],
@@ -149,7 +120,6 @@ const empty: State = {
     },
   },
   lock: null,
-  locked: { offered: false, open: false, prompt: null },
 };
 const [state, setState] = createStore<State>(empty);
 export { state };
@@ -194,19 +164,6 @@ export const commands = {
   appLockForm: (mode: LockForm["mode"] | null, current = "", next = "", confirm = "") =>
     invoke("app_lock_form", { mode, current, new: next, confirm }),
   setChatLockCode: (code: string | null) => invoke("set_chat_lock_code", { code }),
-  openUrl: (url: string) => invoke("open_url", { url }),
-  startCall: (chat: string, video: boolean) => invoke("start_call", { chat, video }),
-  callControl: (control: "answer" | "decline" | "hangup" | "mute" | "camera" | "hide" | "return", on?: boolean) =>
-    invoke("call_control", { control, on: on ?? null }),
-  callDevice: (kind: "microphone" | "speaker" | "camera", id: string | null) => invoke("call_device", { kind, id }),
-  callFullscreen: () => invoke<boolean>("call_fullscreen"),
-  saveContact: (id: string, first: string, last: string) => invoke("save_contact", { id, first, last }),
-  measureStorage: () => invoke("measure_storage"),
-  filesAction: (action: "archive" | "downloads" | "log" | "pick" | "default" | "clear") => invoke("files_action", { action }),
-  setCallFilter: (filter: "all" | "missed") => invoke("set_call_filter", { filter }),
-  searchCalls: (text: string) => invoke("search_calls", { text }),
-  unlockLocked: (code: string) => invoke("unlock_locked", { code }),
-  closeDialog: () => invoke("close_dialog"),
   fetchBlocklist: () => invoke("fetch_blocklist"),
   setBlocked: (chat: string, blocked: boolean) => invoke("set_blocked", { chat, blocked }),
   setWallpaperColor: (color: string, dark: boolean) => invoke("set_wallpaper_color", { color, dark }),

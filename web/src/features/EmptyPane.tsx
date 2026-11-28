@@ -1,29 +1,31 @@
-// What the right side shows with no chat open, as the egui app draws it
-// (src/ui/conversation.rs, the empty state): the chat colour, a chat icon
-// on a soft plate, the app's name, and where to start.
-import { ChatsIcon } from "../components/Icons";
-import { t } from "../lib/i18n";
+// What the right side shows with no chat open.
+import { LockIcon } from "../components/Icons";
 
 export default function EmptyPane() {
   return (
-    <section class="flex h-full min-w-0 flex-1 flex-col items-center" style={{ background: "var(--conversation-bg)" }}>
-      <div class="flex flex-col items-center text-center" style={{ "margin-top": "calc(50vh - 126px)" }}>
-        <span
-          class="flex items-center justify-center"
-          style={{ width: "72px", height: "72px", "border-radius": "16px", background: "var(--empty-plate)", color: "var(--text-secondary)" }}
-        >
-          <ChatsIcon size={40} />
-        </span>
-        <h2 style={{ margin: "12px 0 0", "font-size": "26px", "line-height": "32px", "font-weight": 700, color: "var(--text-primary)" }}>
+    <section
+      class="flex h-full min-w-0 flex-1 flex-col items-center justify-center"
+      style={{ background: "var(--empty-bg)", "border-left": "1px solid var(--divider)", "border-bottom": "6px solid var(--accent)" }}
+    >
+      <div class="flex max-w-[560px] flex-col items-center px-[32px] text-center">
+        <svg width="250" height="160" viewBox="0 0 250 160" aria-hidden="true">
+          <rect x="40" y="20" width="170" height="110" rx="10" fill="none" stroke="var(--text-secondary)" stroke-width="3" opacity=".35" />
+          <rect x="95" y="130" width="60" height="8" rx="2" fill="var(--text-secondary)" opacity=".35" />
+          <path d="M100 60h50M100 75h35" stroke="var(--accent)" stroke-width="5" stroke-linecap="round" />
+          <circle cx="78" cy="68" r="14" fill="var(--accent)" opacity=".8" />
+        </svg>
+        <h2 class="mt-[28px]" style={{ "font-size": "32px", "font-weight": 300, color: "var(--text-primary)", margin: "28px 0 0" }}>
           SuperWhatsapp
         </h2>
-        <p style={{ margin: "6px 0 0", "font-size": "14.5px", "line-height": "18px", color: "var(--text-secondary)" }}>
-          {t("Select a chat on the left.")}
-        </p>
-        <p style={{ margin: "8px 0 0", "font-size": "12.5px", "line-height": "16px", color: "var(--text-meta)" }}>
-          {t("⌘+K to search · ? for keyboard shortcuts")}
+        <p class="mt-[18px]" style={{ "font-size": "14px", "line-height": "20px", color: "var(--text-secondary)" }}>
+          Send and receive messages from your computer, linked to your phone.
+          <br />
+          Pick a chat on the left to start.
         </p>
       </div>
+      <p class="absolute bottom-[40px] flex items-center gap-[6px]" style={{ "font-size": "14px", color: "var(--text-secondary)" }}>
+        <LockIcon size={12} /> Your messages stay on this computer, encrypted.
+      </p>
     </section>
   );
 }

@@ -1,105 +1,124 @@
-// The navigation rail, as the egui app draws it (src/ui/rail.rs,
-// REQ-WEBUI-004): a narrow column of icons, the lit one on a raised plate.
-// Chats, Calls, Znga, Favourites and Insights at the top; Starred,
-// Archived, Locked (while chats are locked) and Settings at the bottom over your own picture. On macOS the
-// window's traffic lights sit above the first icon.
-import { For, type JSX } from "solid-js";
-import { ArchiveIcon, CallsIcon, ChartIcon, ChatsIcon, HeartIcon, LockIcon, SettingsIcon, SparkleIcon, StarIcon } from "./Icons";
+// The labelled sidebar on the left, as WhatsApp Desktop for macOS draws
+// it (REQ-WEBUI-004). The window's traffic lights sit above the first item.
+import { createSignal, For, type JSX, Show } from "solid-js";
+import { ArchiveIcon, CallsIcon, ChartIcon, ChatsIcon, ChevronDownIcon, ChevronRightIcon, DotsIcon, HeartIcon, SparkleIcon, StarIcon } from "./Icons";
 import Avatar from "./Avatar";
 import { t } from "../lib/i18n";
 
-/** The core's destinations plus the panels drawn here (Znga, Insights). */
-export type Section = "chats" | "calls" | "znga" | "favourites" | "insights" | "archived" | "starred" | "locked";
+/** The core's destinations plus the panels still to come (Znga, Insights). */
+export type Section = "chats" | "calls" | "znga" | "favourites" | "insights" | "archived" | "starred";
 
-function Plate(p: { label: string; icon: JSX.Element; active: boolean; badge?: number; cell?: string; onClick: () => void }) {
+function Item(p: { label: string; icon: JSX.Element; count?: number; active: boolean; onClick: () => void }) {
   return (
-    <div class="flex shrink-0 items-center justify-center" style={{ width: "var(--rail-w)", height: p.cell ?? "var(--rail-cell)" }}>
-      <button
-        type="button"
-        title={t(p.label)}
-        aria-label={t(p.label)}
-        aria-current={p.active ? "page" : undefined}
-        onClick={p.onClick}
-        class="rail-plate relative flex items-center justify-center"
-        classList={{ lit: p.active }}
-        style={{
-          width: "var(--rail-plate)",
-          height: "var(--rail-plate)",
-          "border-radius": "var(--sidebar-radius)",
-          color: p.active ? "var(--icon-active)" : "var(--icon)",
-        }}
-      >
+    <button
+      type="button"
+      aria-current={p.active ? "page" : undefined}
+      onClick={p.onClick}
+      class="sidebar-item flex w-full items-center text-left"
+      style={{
+        height: "var(--sidebar-item-h)",
+        "margin-bottom": "var(--sidebar-item-gap)",
+        "padding-left": "9px",
+        "padding-right": "10px",
+        gap: "8px",
+        "border-radius": "var(--sidebar-radius)",
+        background: p.active ? "var(--sidebar-selected)" : undefined,
+        color: "var(--text-primary)",
+      }}
+    >
+      <span class="flex shrink-0 items-center justify-center" style={{ width: "var(--sidebar-icon)" }}>
         {p.icon}
-        {p.badge ? (
-          <span
-            class="absolute flex items-center justify-center rounded-full"
-            style={{
-              top: "0px",
-              right: "-2px",
-              height: "16px",
-              "min-width": "16px",
-              padding: "0 4px",
-              "font-size": "10px",
-              "font-weight": 600,
-              background: "var(--unread)",
-              color: "var(--unread-fg)",
-            }}
-          >
-            {p.badge > 99 ? "99+" : p.badge}
-          </span>
-        ) : null}
-      </button>
-    </div>
+      </span>
+      <span class="flex-1 truncate" style={{ "font-size": "var(--fs-sidebar)" }}>{t(p.label)}</span>
+      <Show when={p.count}>
+        <span style={{ "font-size": "var(--fs-sidebar-count)", color: "var(--text-secondary)" }}>{p.count}</span>
+      </Show>
+    </button>
   );
 }
 
-/** The lower group's cells: a plate and a gap, as rail.rs stacks them. */
-const BOTTOM_CELL = "calc(var(--rail-plate) + var(--rail-gap))";
+function Heading(p: { label: string; open: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-expanded={p.open}
+      onClick={p.onToggle}
+      class="flex w-full items-center justify-between"
+      style={{
+        height: "22px",
+        "margin-top": "14px",
+        "padding-left": "9px",
+        "padding-right": "10px",
+        "font-size": "var(--fs-section)",
+        "font-weight": 600,
+        color: "var(--text-section)",
+      }}
+    >
+      {t(p.label)}
+      <Show when={p.open} fallback={<ChevronRightIcon size={13} />}>
+        <ChevronDownIcon size={13} />
+      </Show>
+    </button>
+  );
+}
 
-export default function Sidebar(p: {
-  section: Section | "settings";
-  onSection: (s: Section | "settings") => void;
-  unread: number;
-  avatar?: string | null;
-  /** egui offers Locked only while chats are locked. */
-  locked?: boolean;
-}) {
-  const icon = (i: (q: { size?: number }) => JSX.Element) => i({ size: 20 });
-  const top: [Section, string, JSX.Element][] = [
+export default function Sidebar(p: { section: Section | "settings"; onSection: (s: Section | "settings") => void; unread: number }) {
+  const [moreOpen, setMoreOpen] = createSignal(true);
+  const icon = (i: (q: { size?: number }) => JSX.Element) => i({ size: 18 });
+  const main: [Section, string, JSX.Element][] = [
     ["chats", "Chats", icon(ChatsIcon)],
     ["calls", "Calls", icon(CallsIcon)],
     ["znga", "Znga", icon(SparkleIcon)],
     ["favourites", "Favourites", icon(HeartIcon)],
     ["insights", "Insights", icon(ChartIcon)],
   ];
-  const bottom = (): [Section, string, JSX.Element][] => [
-    ["starred", "Starred", icon(StarIcon)],
+  const more: [Section, string, JSX.Element][] = [
     ["archived", "Archived", icon(ArchiveIcon)],
-    ...(p.locked ? ([["locked", "Locked chats", icon(LockIcon)]] as [Section, string, JSX.Element][]) : []),
+    ["starred", "Starred", icon(StarIcon)],
   ];
   return (
     <nav
       class="flex h-full shrink-0 flex-col"
-      style={{ width: "var(--rail-w)", background: "var(--sidebar-bg)" }}
+      style={{ width: "var(--sidebar-w)", background: "var(--sidebar-bg)" }}
       aria-label="Navigation"
     >
-      {/* The traffic lights' strip: it moves the window. */}
-      <div data-tauri-drag-region class="shrink-0" style={{ height: "42px" }} />
-      <For each={top}>
-        {([id, label, i]) => (
-          <Plate label={label} icon={i} active={p.section === id} onClick={() => p.onSection(id)} />
-        )}
-      </For>
-      <div data-tauri-drag-region class="min-h-0 flex-1" />
-      <For each={bottom()}>
-        {([id, label, i]) => (
-          <Plate label={label} icon={i} active={p.section === id} cell={BOTTOM_CELL} onClick={() => p.onSection(id)} />
-        )}
-      </For>
-      <Plate label="Settings" icon={icon(SettingsIcon)} active={p.section === "settings"} cell={BOTTOM_CELL} onClick={() => p.onSection("settings")} />
-      <div class="flex shrink-0 items-center justify-center" style={{ height: "49px", "margin-top": "-4.5px" }}>
-        <button type="button" title={t("Profile")} aria-label={t("Profile")} onClick={() => p.onSection("settings")} class="rounded-full">
-          <Avatar src={p.avatar ?? null} size={32} />
+      <div data-tauri-drag-region class="shrink-0" style={{ height: "var(--titlebar-h)" }} />
+      <div
+        class="scroll min-h-0 flex-1"
+        style={{ "padding-left": "var(--sidebar-inset-l)", "padding-right": "var(--sidebar-inset-r)" }}
+      >
+        <For each={main}>
+          {([id, label, i]) => (
+            <Item label={label} icon={i} count={id === "chats" ? p.unread : undefined} active={p.section === id} onClick={() => p.onSection(id)} />
+          )}
+        </For>
+        <Heading label="More" open={moreOpen()} onToggle={() => setMoreOpen(!moreOpen())} />
+        <Show when={moreOpen()}>
+          <For each={more}>{([id, label, i]) => <Item label={label} icon={i} active={p.section === id} onClick={() => p.onSection(id)} />}</For>
+        </Show>
+      </div>
+      <div
+        class="flex shrink-0 items-center"
+        style={{ height: "46px", "padding-left": "16px", "padding-right": "18px", gap: "10px", color: "var(--text-primary)" }}
+      >
+        <button
+          type="button"
+          aria-label="Settings"
+          aria-current={p.section === "settings" ? "page" : undefined}
+          onClick={() => p.onSection("settings")}
+          class="sidebar-item flex min-w-0 flex-1 items-center text-left"
+          style={{
+            height: "32px",
+            gap: "10px",
+            padding: "0 6px",
+            "margin-left": "-6px",
+            "border-radius": "var(--sidebar-radius)",
+            background: p.section === "settings" ? "var(--sidebar-selected)" : undefined,
+          }}
+        >
+          <Avatar src={null} size={24} />
+          <span class="flex-1 truncate" style={{ "font-size": "var(--fs-sidebar)", "font-weight": 600 }}>{t("You")}</span>
+          <span style={{ color: "var(--icon)", display: "inline-flex" }}><DotsIcon size={18} /></span>
         </button>
       </div>
     </nav>

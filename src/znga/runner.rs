@@ -58,9 +58,6 @@ pub struct Runner<P> {
     pub fake: Option<Fake>,
     #[cfg(test)]
     fake_answers: Vec<(u64, Result<String, String>)>,
-    /// Test hook: where the last request would have gone.
-    #[cfg(test)]
-    pub last_target: Option<Target>,
 }
 
 /// More queued background requests than this and new optional ones are
@@ -85,8 +82,6 @@ impl<P> Runner<P> {
             fake: None,
             #[cfg(test)]
             fake_answers: Vec::new(),
-            #[cfg(test)]
-            last_target: None,
         }
     }
 
@@ -136,7 +131,6 @@ impl<P> Runner<P> {
         );
         #[cfg(test)]
         if let Some(fake) = &self.fake {
-            self.last_target = Some(target.clone());
             let answer = fake(&prompt);
             self.fake_answers.push((id, answer));
             return id;

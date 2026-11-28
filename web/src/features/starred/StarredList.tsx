@@ -3,6 +3,7 @@
 // click unstars it.
 import { createSignal, For, Show } from "solid-js";
 import { commands, state, type StarredRow } from "../../lib/bridge";
+import { listTime } from "../../lib/time";
 import { Menu } from "../../components/Menu";
 import { StarIcon } from "../../components/Icons";
 
@@ -24,9 +25,6 @@ function Row(p: { row: StarredRow }) {
           />
         )}
       </Show>
-      {/* chats.rs:starred_row: the chat's name and the moment on one
-          line, then the message as its bubble, on its own side, with the
-          clock in its corner. */}
       <div
         role="option"
         tabIndex={0}
@@ -36,33 +34,31 @@ function Row(p: { row: StarredRow }) {
           e.preventDefault();
           setMenu({ x: e.clientX, y: e.clientY });
         }}
-        class="starred-row relative flex cursor-default flex-col"
-        style={{ padding: "0 16px 10px", "border-radius": "6px" }}
-        aria-label={`${p.row.chatTitle}, ${p.row.msg.text}`}
+        class="chat-row cursor-default"
+        style={{ margin: "0 var(--row-inset)", padding: "8px var(--row-pad-r) 9px var(--row-pad-l)", "border-radius": "var(--row-radius)" }}
       >
-        <div class="flex items-center justify-between" style={{ height: "28px", gap: "8px" }}>
-          <span class="truncate" style={{ "font-size": "14px", "font-weight": 500, color: "var(--text-primary)" }}>{p.row.chatTitle}</span>
-          <span class="shrink-0" style={{ "font-size": "var(--fs-meta)", color: "var(--text-secondary)" }}>{p.row.moment}</span>
+        <div class="flex items-baseline justify-between gap-[6px]" style={{ "font-size": "var(--fs-meta)", color: "var(--text-secondary)" }}>
+          <span class="truncate">
+            {author()}
+            <Show when={p.row.msg.fromMe || p.row.msg.sender}> ▸ {p.row.chatTitle}</Show>
+          </span>
+          <span class="shrink-0">{listTime(p.row.msg.time)}</span>
         </div>
         <div
-          class="flex items-end"
+          class="mt-[5px] inline-block max-w-full"
           style={{
-            "align-self": p.row.msg.fromMe ? "flex-end" : "flex-start",
-            gap: "6px",
-            padding: "6px 10px",
+            padding: "5px 9px",
             "border-radius": "10px",
             background: p.row.msg.fromMe ? "var(--bubble-out)" : "var(--bubble-in)",
+            "font-size": "var(--fs-msg)",
+            "line-height": "var(--lh-msg)",
+            color: "var(--text-primary)",
           }}
         >
-          {/* The words wrap beside the clock: the row less the margins,
-              the clock and its gap (chats.rs:starred_row). */}
-          <span
-            class="line-clamp-[12] whitespace-pre-wrap break-words"
-            style={{ "max-width": "178px", "font-size": "13px", "line-height": "16px", color: "var(--text-primary)" }}
-          >
-            {p.row.msg.text}
+          <span class="line-clamp-4 whitespace-pre-wrap break-words">{p.row.msg.text}</span>
+          <span class="ml-[6px] inline-flex items-center gap-[2px] align-bottom" style={{ "font-size": "var(--fs-msg-meta)", color: "var(--text-meta)" }}>
+            <StarIcon size={10} />
           </span>
-          <span class="shrink-0" style={{ "font-size": "11px", "line-height": "13px", color: "var(--text-secondary)" }}>{p.row.msg.clock}</span>
         </div>
       </div>
     </>

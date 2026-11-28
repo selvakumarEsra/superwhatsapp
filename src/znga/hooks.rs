@@ -522,7 +522,7 @@ pub fn stop_ask(app: &mut App) {
     let running = app.znga.runner.partial(|purpose| {
         matches!(
             purpose,
-            Purpose::Answer { .. } | Purpose::Plan { .. } | Purpose::Ask | Purpose::Web { .. }
+            Purpose::Answer { .. } | Purpose::Plan { .. } | Purpose::Ask
         )
     });
     if let Some((id, _)) = running {
@@ -1034,11 +1034,6 @@ fn apply(app: &mut App, effects: Vec<Effect>) {
             Effect::Answered { account, text } => {
                 super::chat::answer(app, &account, text, Vec::new());
             }
-            Effect::Browsed {
-                account,
-                text,
-                links,
-            } => super::chat::browsed(app, &account, text, links),
         }
     }
 }

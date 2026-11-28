@@ -59,21 +59,10 @@ pub fn setup(app: &tauri::App, start_hidden: bool) -> tauri::Result<()> {
     if let Some(icon) = app.default_window_icon() {
         tray = tray.icon(icon.clone());
     }
-    // Linux trays load libayatana-appindicator when built, and that panics
-    // where it is missing (the Flatpak runtime, minimal desktops). Without
-    // a tray SuperWhatsapp still runs; it just shows its window.
-    let tray = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| tray.build(app)));
-    let has_tray = match tray {
-        Ok(built) => built.is_ok(),
-        Err(_) => {
-            log::warn!("no tray: the system has no app indicator library");
-            false
-        }
-    };
+    tray.build(app)?;
     // The window starts hidden (tauri.conf.json) so a login start never
-    // flashes it; every other start shows it now, as does a hidden start
-    // with no tray to show it from.
-    if !start_hidden || !has_tray {
+    // flashes it; every other start shows it now.
+    if !start_hidden {
         show(app.handle());
     }
     Ok(())

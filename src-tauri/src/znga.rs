@@ -198,12 +198,6 @@ pub fn row(app: &App) -> Option<ChatRow> {
                 .unwrap_or_else(|| "Ask me anything about your chats.".into()),
             status: "none",
         }),
-        stamp: last.map_or_else(String::new, |e| {
-            zapfast::util::chat_stamp(app.locale, e.at)
-        }),
-        typing: None,
-        draft: None,
-        mention: false,
     })
 }
 

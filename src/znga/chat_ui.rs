@@ -210,23 +210,6 @@ pub fn show(app: &mut App, ui: &mut Ui) {
                 });
         });
     if let Some((entry, index, action)) = clicked {
-        // A web page opens in the person's own browser (REQ-ZCHAT-008).
-        let link = entries
-            .iter()
-            .find(|e| e.id == entry)
-            .and_then(|e| e.items.get(index))
-            .and_then(|item| match &item.card {
-                super::thread::Card::Link { url, .. } => Some(url.clone()),
-                _ => None,
-            })
-            .filter(|url| super::web::site(url).is_some());
-        if let Some(url) = link {
-            match action {
-                "openPage" => ui.ctx().open_url(egui::OpenUrl::new_tab(url)),
-                "copyLink" => ui.ctx().copy_text(url),
-                _ => {}
-            }
-        }
         chat::card_action(app, entry, index, action);
     }
     if let Some(text) = ask {
@@ -396,7 +379,6 @@ fn kind_label(kind: &str) -> &'static str {
         "voice" => "VOICE NOTE",
         "promise" => "PROMISE",
         "drift" => "CHECK IN",
-        "link" => "WEB PAGE",
         _ => "",
     }
 }

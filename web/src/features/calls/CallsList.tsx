@@ -1,56 +1,69 @@
-// The call history (REQ-WEBUI-010), as the egui app draws it
-// (src/ui/calls.rs:history_row): 68-point rows with the 48-point picture,
-// the name (red when missed) and the time, then the way the call went and
-// egui's own summary ("Missed voice call", "Video call · 12 min 34 s"),
-// and what it carried on the right. Alike calls fold into one row with a
-// count. Clicking a call opens its chat.
+// The call log, newest first (REQ-WEBUI-010): who, which way, missed or
+// not, voice or video, and when. Clicking a call opens its chat.
 import { For, Show } from "solid-js";
 import { commands, state, type CallRow } from "../../lib/bridge";
+import { listTime } from "../../lib/time";
 import Avatar from "../../components/Avatar";
-import { CallsIcon, PhoneIncomingIcon, PhoneMissedIcon, PhoneOutgoingIcon, VideoIcon } from "../../components/Icons";
-import { t } from "../../lib/i18n";
+import { ArrowUpRightIcon, CallsIcon, VideoIcon } from "../../components/Icons";
+
+const length = (seconds: number) => {
+  if (!seconds) return "";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return m >= 60 ? `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
+};
 
 function Row(p: { call: CallRow }) {
-  const Glyph = () => (p.call.missed ? <PhoneMissedIcon size={15} /> : p.call.outgoing ? <PhoneOutgoingIcon size={15} /> : <PhoneIncomingIcon size={15} />);
+  const kind = () => (p.call.missed ? "Missed" : p.call.outgoing ? "Outgoing" : "Incoming");
   return (
     <div
       role="option"
       tabIndex={0}
       onClick={() => commands.openChat(p.call.chat)}
       onKeyDown={(e) => e.key === "Enter" && commands.openChat(p.call.chat)}
-      class="chat-row relative flex cursor-default items-center"
-      style={{ height: "var(--row-h)" }}
-      aria-label={`${p.call.title}, ${p.call.summary}, ${p.call.stamp}`}
+      class="chat-row flex cursor-default items-center"
+      style={{ height: "var(--row-h)", margin: "0 var(--row-inset)", "padding-left": "var(--row-pad-l)", "border-radius": "var(--row-radius)" }}
     >
-      <div class="row-card absolute" style={{ inset: "2px var(--row-inset)", "border-radius": "var(--row-radius)" }} />
-      <div class="relative flex shrink-0 items-center justify-center" style={{ width: "76px" }}>
-        <Avatar src={p.call.avatar} size={48} group={p.call.group} seed={p.call.chat} />
-      </div>
-      <div class="relative flex h-full min-w-0 flex-1 flex-col" style={{ "padding-top": "13px", "padding-right": "6px" }}>
-        <div class="flex items-center justify-between" style={{ gap: "8px", height: "20px" }}>
-          <span class="truncate" style={{ "font-size": "14.5px", "font-weight": 500, color: p.call.missed ? "var(--danger)" : "var(--text-primary)" }}>
-            {p.call.title}
-          </span>
-          <span class="shrink-0" style={{ "font-size": "var(--fs-meta)", color: "var(--text-meta)" }}>{p.call.stamp}</span>
-        </div>
-        <div class="flex items-center" style={{ gap: "6px", height: "18px", "margin-top": "4px", "font-size": "13px", color: "var(--text-secondary)" }}>
-          <span class="flex shrink-0" style={{ color: p.call.bad ? "var(--danger)" : "var(--accent)" }}><Glyph /></span>
-          <span class="truncate">{p.call.summary}</span>
-        </div>
-      </div>
-      {/* Call back, as the egui row's button: the way the call went. */}
-      <button
-        type="button"
-        title={t(p.call.video ? "Video call" : "Voice call")}
-        aria-label={t(p.call.video ? "Video call" : "Voice call")}
-        onClick={(e) => { e.stopPropagation(); void commands.startCall(p.call.chat, p.call.video); }}
-        class="icon-button relative flex shrink-0 items-center justify-center rounded-full"
-        style={{ width: "36px", height: "36px", "margin-right": "12px", color: "var(--text-secondary)" }}
+      <Avatar src={p.call.avatar} size={40} group={p.call.group} seed={p.call.chat} />
+      <div
+        class="flex h-full min-w-0 flex-1 items-center justify-between"
+        style={{ "margin-left": "var(--row-gap)", "padding-right": "var(--row-pad-r)", "border-bottom": "var(--hairline) solid var(--divider)" }}
       >
-        <Show when={p.call.video} fallback={<CallsIcon size={18} />}>
-          <VideoIcon size={18} />
-        </Show>
-      </button>
+        <div class="min-w-0">
+          <div
+            class="truncate"
+            style={{
+              "font-size": "var(--fs-row-title)",
+              "font-weight": "var(--fw-row-title)",
+              "line-height": "15px",
+              color: p.call.missed ? "var(--danger)" : "var(--text-primary)",
+            }}
+          >
+            {p.call.title}
+          </div>
+          <div class="mt-[2px] flex items-center gap-[4px]" style={{ "font-size": "var(--fs-row-text)", "line-height": "14px", color: "var(--text-secondary)" }}>
+            <span
+              style={{
+                display: "inline-flex",
+                transform: p.call.outgoing ? undefined : "rotate(180deg)",
+                color: p.call.missed ? "var(--danger)" : "var(--accent-text)",
+              }}
+            >
+              <ArrowUpRightIcon size={12} />
+            </span>
+            {kind()}
+            <Show when={p.call.duration > 0}> · {length(p.call.duration)}</Show>
+          </div>
+        </div>
+        <div class="flex shrink-0 flex-col items-end gap-[3px]" style={{ "font-size": "var(--fs-meta)", color: "var(--text-secondary)" }}>
+          {listTime(p.call.time)}
+          <span aria-label={p.call.video ? "Video call" : "Voice call"}>
+            <Show when={p.call.video} fallback={<CallsIcon size={13} />}>
+              <VideoIcon size={13} />
+            </Show>
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -60,18 +73,9 @@ export default function CallsList() {
     <Show
       when={state.calls.length > 0}
       fallback={
-        <div class="flex flex-col items-center px-[24px] pt-[48px] text-center" style={{ color: "var(--text-secondary)" }}>
-          <Show when={state.callFilter === "missed"} fallback={<CallsIcon size={40} />}>
-            <PhoneMissedIcon size={40} />
-          </Show>
-          <p style={{ "font-size": "15px", "font-weight": 600, margin: "14px 0 0", color: "var(--text-primary)" }}>
-            {t(state.callFilter === "missed" ? "No missed calls" : state.callsSearch.trim() ? "No matching calls" : "No calls yet")}
-          </p>
-          <Show when={!state.callsSearch.trim()}>
-            <p style={{ "font-size": "13px", "line-height": "17px", margin: "6px 0 0" }}>
-              {t(state.callFilter === "missed" ? "Choose All to see every call." : "Calls from your phone's call log and the ones you make here appear here.")}
-            </p>
-          </Show>
+        <div class="flex flex-col items-center px-[32px] pt-[48px] text-center" style={{ color: "var(--text-secondary)" }}>
+          <CallsIcon size={40} />
+          <p style={{ "font-size": "var(--fs-row-text)", "line-height": "16px", margin: "14px 0 0" }}>No calls yet.</p>
         </div>
       }
     >

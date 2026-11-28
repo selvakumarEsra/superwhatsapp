@@ -88,30 +88,3 @@ pub fn serve<R: tauri::Runtime>(
         Err(_) => refuse(StatusCode::NOT_FOUND),
     }
 }
-
-/// Replaces every `zapmedia` address in `value` with the file as a `data:`
-/// address, so a dumped state shows its pictures in a plain browser
-/// (`--dump-state`, REQ-WEBUI-018). Files that are not allowed stay as they are.
-pub fn inline(value: &mut serde_json::Value) {
-    use base64::Engine as _;
-    match value {
-        serde_json::Value::String(text) => {
-            let Some(rest) = text.strip_prefix("http://zapmedia.localhost/") else {
-                return;
-            };
-            let Some(path) = decode(rest).map(PathBuf::from) else {
-                return;
-            };
-            if !allowed(&path) {
-                return;
-            }
-            if let Ok(bytes) = std::fs::read(&path) {
-                let data = base64::engine::general_purpose::STANDARD.encode(bytes);
-                *text = format!("data:{};base64,{data}", kind(&path));
-            }
-        }
-        serde_json::Value::Array(items) => items.iter_mut().for_each(inline),
-        serde_json::Value::Object(map) => map.values_mut().for_each(inline),
-        _ => {}
-    }
-}

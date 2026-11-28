@@ -1,324 +1,275 @@
 /*
- * Design tokens (REQ-WEBUI-004): the egui app's own look, measured from its
- * theme (src/theme.rs, Palette::light and Palette::dark) and layout
- * (src/ui/rail.rs, chats.rs, conversation.rs, widgets.rs). Components use
- * only these. A custom theme overrides the colours from the core
- * (src-tauri/src/view.rs:palette).
+ * WhatsApp Desktop for macOS, as tokens (REQ-WEBUI-004). Components use
+ * only these, never literal values.
+ *
+ * Dark values are measured from the baseline capture of 2026-11-24
+ * (dark, 1288×806 pt; 1 pt = 1 CSS px). Text sizes were calibrated by
+ * rendering the same words in the system font and matching their
+ * measured widths. Light values are not measured yet: they follow the
+ * same structure with WhatsApp's light palette until a light capture
+ * exists [REQ-WEBUI-004, needs review].
  */
 :root {
   color-scheme: light;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
 
-  /* Palette::light */
+  /* Surfaces (light: unmeasured) */
   --app-bg: #ffffff;
-  --sidebar-bg: #f2f2f2;          /* the rail: the list's colour, 5% darker */
-  --sidebar-selected: #d9dde1;    /* surface_active */
-  --sidebar-hover: #e6e9ec;       /* surface_hover */
+  --sidebar-bg: #f2f1f0;
+  --sidebar-selected: #e3e2e1;
   --panel-bg: #ffffff;
-  --panel-border: #e9edef;        /* outline */
-  --search-bg: #f0f2f5;           /* surface */
-  --row-hover: #e6e9ec;
-  --row-selected: #d9dde1;
-  --row-edge: rgba(255, 255, 255, 0.55);
-  --row-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
-  --divider: #e9edef;
-  --round-button-bg: #f0f2f5;
-  --conversation-bg: #efeae2;     /* chat */
-  --conversation-header-bg: #ffffff;
-  --conversation-header-border: #e9edef;
-  --header-pill-bg: transparent;
-  --wallpaper-ink: rgba(30, 30, 30, 0.114);
+  --panel-border: #dcdcdc;
+  --search-bg: #ededed;
+  --row-hover: #f4f4f4;
+  --row-selected: #e9e9e9;
+  --divider: #e6e6e6;
+  --round-button-bg: #ededed;
+  --conversation-bg: #f5f1eb;
+  --conversation-header-bg: #f7f7f7;
+  --conversation-header-border: #e2e2e2;
+  --header-pill-bg: #ececec;
+  --wallpaper-opacity: 0.06;
+  --wallpaper-filter: none;
   --bubble-in: #ffffff;
   --bubble-out: #d9fdd3;
-  --composer-button-bg: #f0f2f5;
+  --composer-button-bg: #ffffff;
   --input-bg: #ffffff;
-  --input-border: #e9edef;
+  --input-border: rgba(0, 0, 0, 0.12);
   --date-chip-bg: #ffffff;
-  --empty-bg: #f0f2f5;
-  --empty-plate: rgba(255, 255, 255, 0.55);
-  --card-bg: #f8f9fa;           /* panel and surface, half and half */
+  --empty-bg: #f7f7f7;
   --menu-bg: #ffffff;
-  --menu-hover: #f0f2f5;
-  --danger: #ea0038;
+  --menu-hover: #f0f0f0;
+  --danger: #e5484d;
   --scrollbar: rgba(0, 0, 0, 0.2);
-  --switch-off: #d9dde1;
-  --overlay: rgba(11, 20, 26, 0.35);
-  --info-w: 380px;
-  --shadow-bubble: 0 1px 1.5px rgba(11, 20, 26, 0.13);
-  --shadow-menu: 0 6px 20px rgba(0, 0, 0, 0.2);
-  --chip-bg: #ffffff;
-  --chip-border: #d9dde1;
-  --surface: #f0f2f5;
-  --window-bg: #f0f2f5;
-  --sender-s: 65%;
-  --sender-l: 38%;
-  --chip-on-bg: rgba(0, 128, 105, 0.18);
-  --chip-on-fg: #008069;
+  --switch-off: #d1d1d6;
+  --overlay: rgba(0, 0, 0, 0.35);
+  --info-w: 340px;
+  --shadow-bubble: 0 0.5px 0.5px rgba(0, 0, 0, 0.13);
+  --shadow-menu: 0 6px 24px rgba(0, 0, 0, 0.18);
 
-  --text-primary: #111b21;
-  --text-secondary: #515f67;
-  --text-section: #636b72;
-  --text-meta: #636b72;           /* dim */
-  --text-call-sub: #515f67;
-  --icon: #515f67;
-  --icon-active: #111b21;
-  --accent: #008069;
-  --accent-hover: #006e5a;
-  --accent-text: #008069;
+  /* Text and icons */
+  --text-primary: #111111;
+  --text-secondary: #737373;
+  --text-section: #8a8a8a;
+  --text-meta: rgba(0, 0, 0, 0.45);
+  --text-call-sub: #555555;
+  --icon: #4f4f4f;
+  --icon-active: #111111;
+  --accent: #1daa61;
+  --accent-text: #1a9c57;
   --accent-fg: #ffffff;
-  --new-chat-bg: #008069;
-  --unread: #008069;
-  --unread-time: #008069;
+  --new-chat-bg: #1daa61;
+  --unread: #1daa61;
+  --unread-time: #1a9c57;
   --unread-fg: #ffffff;
-  --muted-badge: #636b72;
-  --tick: #636b72;
-  --tick-read: #027eb5;
+  --tick: #8c8c8c;
+  --tick-read: #53bdeb;
   --link: #027eb5;
   --quote-bar: #06cf9c;
-  --quote-bg: rgba(240, 242, 245, 0.35);
-  --typing: #008069;
-  --star: #f5b700;
+  --quote-bg: rgba(0, 0, 0, 0.05);
 
-  /* Picture-less avatars: id-coloured rounds as egui paints them. */
+  /* Default avatars: a tint per chat (dark measured: indigo, plum) */
   --avatar-0-bg: #e1e1f7; --avatar-0-fg: #5f5fc4;
   --avatar-1-bg: #f7e1ea; --avatar-1-fg: #c4517a;
   --avatar-2-bg: #dff3e4; --avatar-2-fg: #2f9a4f;
   --avatar-3-bg: #dcecf7; --avatar-3-fg: #3a84b8;
   --avatar-4-bg: #f7ecdc; --avatar-4-fg: #b8792f;
   --avatar-5-bg: #e6e6e6; --avatar-5-fg: #8a8a8a;
-  --reaction-border: #efeae2;
-  --reaction-bg: #ffffff;
+  --reaction-border: #f5f1eb;
 
-  /* Geometry, in points (egui's units). */
-  --titlebar-h: 30px;
-  --rail-w: 52px;               /* rail::WIDTH */
-  --rail-cell: 48px;            /* rail::CELL */
-  --rail-plate: 36px;           /* rail::PLATE */
-  --rail-gap: 8px;              /* rail::GAP */
-  --rail-icon: 20px;            /* rail::ICON */
-  --rail-avatar: 32px;          /* rail::AVATAR */
-  --sidebar-w: var(--rail-w);
-  --sidebar-radius: 10px;       /* theme::RADIUS + 2 */
-  --list-w: 299px;
-  --hairline: 1px;
-  --list-header-h: 60px;        /* theme::TOP_BAR_HEIGHT */
-  --list-title-l: 46px;         /* beside the macOS window buttons */
-  --header-icon: 18px;
-  --round-button: 34px;
-  --search-h: 34px;
-  --search-inset: 14px;
-  --chip-h: 28px;
-  --row-h: 68px;                /* theme::ROW_HEIGHT */
-  --row-inset: 8px;
+  /* Geometry (measured) */
+  --titlebar-h: 33.5px;
+  --sidebar-w: 194px;
+  --sidebar-item-h: 26.5px;
+  --sidebar-item-gap: 0.5px;
+  --sidebar-inset-l: 7px;
+  --sidebar-inset-r: 8.5px;
+  --sidebar-radius: 7px;
+  --sidebar-icon: 20px;
+  --list-w: 320px;
+  --hairline: 0.5px;
+  --list-header-h: 44px;
+  --round-button: 30px;
+  --search-h: 30px;
+  --search-inset: 13.5px;
+  --row-h: 59px;
+  --row-inset: 13.5px;
   --row-radius: 10px;
-  --row-pad-l: 0px;
-  --row-pad-r: 14px;
-  --row-gap: 14px;
-  --avatar-row: 48px;
-  --badge-h: 20px;
-  --conv-header-h: 59px;
-  --avatar-header: 40px;
-  --header-pill-h: 36px;
-  --bubble-gutter: 18px;        /* WHATSAPP_SIDE_MARGIN */
-  --bubble-pad-x: 9px;
-  --bubble-pad-y: 6px;
-  --bubble-radius: 10px;        /* widgets::BUBBLE_RADIUS */
-  --bubble-max: 72%;            /* WHATSAPP_WIDTH_SHARE */
-  --bubble-gap: 2px;
-  --bubble-gap-run: 10px;
-  --tail-w: 8px;
-  --date-chip-h: 26px;
-  --date-chip-w: 60px;
-  --date-chip-gap: 12px;
-  --composer-button: 32px;
-  --composer-input-h: 40px;
-  --composer-pad-x: 8px;
-  --composer-pad-b: 8px;
-  --composer-gap: 6px;
+  --row-pad-l: 7px;
+  --row-pad-r: 8px;
+  --row-gap: 9.5px;
+  --avatar-row: 40px;
+  --badge-h: 14px;
+  --conv-header-h: 45.5px;
+  --avatar-header: 30px;
+  --header-pill-h: 29.5px;
+  --bubble-gutter: 14px;
+  --bubble-pad-x: 10.5px;
+  --bubble-pad-y: 6.25px;
+  --bubble-radius: 12px;
+  --bubble-max: 70%;
+  --bubble-gap: 3px;
+  --bubble-gap-run: 10.5px;
+  --date-chip-h: 19px;
+  --date-chip-w: 85.5px;
+  --date-chip-gap: 13px;
+  --composer-button: 34px;
+  --composer-input-h: 27.5px;
+  --composer-pad-x: 9px;
+  --composer-pad-b: 7px;
+  --composer-gap: 7.5px;
 
-  /* Type, egui's sizes. */
-  --fs-title: 20px;
-  --fw-title: 700;
-  --fs-sidebar: 14px;
-  --fs-section: 13px;
+  /* Type. Sizes match the baseline's measured text widths in the system
+     font as Core Text renders it (the Tauri window's WebKit does the same). */
+  --fs-title: 11.25px;
+  --fw-title: 600;
+  --fs-sidebar: 11.25px;
+  --fs-section: 9px;
   --fs-sidebar-count: 11px;
-  --fs-search: 14.5px;
-  --fs-chip: 12.5px;
-  --fs-archived: 14.5px;
-  --fs-row-title: 14.5px;
-  --fw-row-title: 500;
-  --fs-row-text: 13px;
-  --fs-meta: 11.5px;
-  --fs-badge: 11px;
-  --fs-msg: 14.5px;             /* widgets::MESSAGE_TEXT_SIZE */
-  --lh-msg: 19.5px;
-  --fs-msg-meta: 11px;
-  --fs-sender: 13px;
-  --fs-date-chip: 12.5px;
-  --fs-header-title: 16px;
-  --fs-header-sub: 13px;
-  --fs-input: 14.5px;
-  --fs-hint: 11.5px;
+  --fs-search: 11.25px;
+  --fs-archived: 12.25px;
+  --fs-row-title: 11.75px;
+  --fw-row-title: 600;
+  --fs-row-text: 10.75px;
+  --fs-meta: 10.75px;
+  --fs-badge: 9px;
+  --fs-msg: 11px;
+  --lh-msg: 15px;
+  --fs-msg-meta: 9px;
+  --fs-sender: 9.5px;
+  --fs-date-chip: 9.25px;
+  --fs-header-title: 11.75px;
+  --fs-header-sub: 9.25px;
+  --fs-input: 11px;
 
   /* Motion */
   --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
-  --dur-panel: 220ms;           /* ui::SLIDE_SECONDS */
+  --dur-panel: 250ms;
   --dur-fade: 150ms;
 }
 
-/* Palette::dark: follows the system unless Settings chose a theme. */
+/* Dark: follows the system unless Settings chose a theme (data-theme). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --app-bg: #111b21;
-    --sidebar-bg: #0d151a;
-    --sidebar-selected: #35444d;
-    --sidebar-hover: #2a3942;
-    --panel-bg: #111b21;
-    --panel-border: #222d34;
-    --search-bg: #202c33;
-    --row-hover: #2a3942;
-    --row-selected: #35444d;
-    --row-edge: rgba(233, 237, 239, 0.08);
-    --row-shadow: 0 2px 6px rgba(0, 0, 0, 0.33);
-    --divider: #222d34;
-    --round-button-bg: #202c33;
-    --conversation-bg: #0b141a;
-    --conversation-header-bg: #111b21;
-    --conversation-header-border: #222d34;
-    --wallpaper-ink: rgba(255, 255, 255, 0.161);
-    --bubble-in: #202c33;
-    --bubble-out: #005c4b;
-    --composer-button-bg: #202c33;
-    --input-bg: #202c33;
-    --input-border: #222d34;
-    --date-chip-bg: #202c33;
-    --empty-bg: #0b141a;
-  --empty-plate: rgba(255, 255, 255, 0.06);
-  --card-bg: #18242a;
-    --empty-plate: rgba(255, 255, 255, 0.06);
-    --card-bg: #18242a;
-    --menu-bg: #233138;
-    --menu-hover: #2a3942;
-    --danger: #f15c6d;
+    --app-bg: #1e1e1e;
+    --sidebar-bg: #272625;
+    --sidebar-selected: #353434;
+    --panel-bg: #1e1e1e;
+    --panel-border: #3a3a3a;
+    --search-bg: #3b3b3b;
+    --row-hover: #2a2a2a;
+    --row-selected: #353535;
+    --divider: #3b3b3b;
+    --round-button-bg: #3c3c3c;
+    --conversation-bg: #0a0a0a;
+    --conversation-header-bg: #161616;
+    --conversation-header-border: #28282a;
+    --header-pill-bg: #2c2c2c;
+    --wallpaper-opacity: 0.07;
+    --wallpaper-filter: invert(1);
+    --bubble-in: #242626;
+    --bubble-out: #274d3a;
+    --composer-button-bg: #2b2b2b;
+    --input-bg: #2c2c2c;
+    --input-border: rgba(255, 255, 255, 0.22);
+    --date-chip-bg: #161717;
+    --empty-bg: #161616;
+    --menu-bg: #2c2c2c;
+    --menu-hover: #3a3a3a;
+    --danger: #ff6369;
     --scrollbar: rgba(255, 255, 255, 0.16);
-    --switch-off: #35444d;
+    --switch-off: #48484a;
     --overlay: rgba(0, 0, 0, 0.55);
-    --shadow-bubble: 0 1px 1.5px rgba(0, 0, 0, 0.55);
-    --shadow-menu: 0 6px 20px rgba(0, 0, 0, 0.55);
-    --chip-bg: #111b21;
-    --chip-border: #35444d;
-  --surface: #202c33;
-  --window-bg: #0b141a;
-  --sender-s: 60%;
-  --sender-l: 68%;
-    --surface: #202c33;
-    --window-bg: #0b141a;
-    --sender-s: 60%;
-    --sender-l: 68%;
-    --chip-on-bg: rgba(0, 168, 132, 0.18);
-    --chip-on-fg: #00a884;
-    --text-primary: #e9edef;
-    --text-secondary: #97a5ae;
-    --text-section: #8a989f;
-    --text-meta: #8a989f;
-    --text-call-sub: #97a5ae;
-    --icon: #97a5ae;
-    --icon-active: #e9edef;
-    --accent: #00a884;
-    --accent-hover: #06cf9c;
-    --accent-text: #00a884;
-    --accent-fg: #0b141a;
-    --new-chat-bg: #00a884;
-    --unread: #00a884;
-    --unread-time: #00a884;
-    --unread-fg: #0b141a;
-    --muted-badge: #8a989f;
-    --tick: #8a989f;
-    --tick-read: #53bdeb;
-    --link: #53bdeb;
-    --quote-bg: rgba(11, 20, 26, 0.35);
-    --typing: #00a884;
+    --shadow-bubble: none;
+    --shadow-menu: 0 6px 24px rgba(0, 0, 0, 0.5);
+    --text-primary: #ffffff;
+    --text-secondary: #a8a6a6;
+    --text-section: #81807f;
+    --text-meta: rgba(255, 255, 255, 0.72);
+    --text-call-sub: #c4c4c4;
+    --icon: #d9d9d9;
+    --icon-active: #ffffff;
+    --accent: #5ab96b;
+    --accent-text: #66d27a;
+    --accent-fg: #060105;
+    --new-chat-bg: #1eac62;
+    --unread: #5ab96b;
+    --unread-time: #66d27a;
+    --unread-fg: #060105;
     --avatar-0-bg: #242445; --avatar-0-fg: #9d9df2;
     --avatar-1-bg: #321a29; --avatar-1-fg: #ee7aa0;
     --avatar-2-bg: #1a3224; --avatar-2-fg: #6fd58e;
     --avatar-3-bg: #1a2a36; --avatar-3-fg: #79b8e6;
     --avatar-4-bg: #352a1a; --avatar-4-fg: #e6ae6f;
     --avatar-5-bg: #3a3a3a; --avatar-5-fg: #b3b3b3;
-    --reaction-border: #0b141a;
-    --reaction-bg: #233138;
+    --reaction-border: #0a0a0a;
+    --tick: #989696;
+    --tick-read: #64b5e0;
+    --link: #53bdeb;
+    --quote-bg: rgba(255, 255, 255, 0.06);
   }
 }
 
 :root[data-theme="dark"] {
-  color-scheme: dark;
-  --app-bg: #111b21;
-  --sidebar-bg: #0d151a;
-  --sidebar-selected: #35444d;
-  --sidebar-hover: #2a3942;
-  --panel-bg: #111b21;
-  --panel-border: #222d34;
-  --search-bg: #202c33;
-  --row-hover: #2a3942;
-  --row-selected: #35444d;
-  --row-edge: rgba(233, 237, 239, 0.08);
-  --row-shadow: 0 2px 6px rgba(0, 0, 0, 0.33);
-  --divider: #222d34;
-  --round-button-bg: #202c33;
-  --conversation-bg: #0b141a;
-  --conversation-header-bg: #111b21;
-  --conversation-header-border: #222d34;
-  --wallpaper-ink: rgba(255, 255, 255, 0.161);
-  --bubble-in: #202c33;
-  --bubble-out: #005c4b;
-  --composer-button-bg: #202c33;
-  --input-bg: #202c33;
-  --input-border: #222d34;
-  --date-chip-bg: #202c33;
-  --empty-bg: #0b141a;
-  --menu-bg: #233138;
-  --menu-hover: #2a3942;
-  --danger: #f15c6d;
-  --scrollbar: rgba(255, 255, 255, 0.16);
-  --switch-off: #35444d;
-  --overlay: rgba(0, 0, 0, 0.55);
-  --shadow-bubble: 0 1px 1.5px rgba(0, 0, 0, 0.55);
-  --shadow-menu: 0 6px 20px rgba(0, 0, 0, 0.55);
-  --chip-bg: #111b21;
-  --chip-border: #35444d;
-  --surface: #202c33;
-  --chip-on-bg: rgba(0, 168, 132, 0.18);
-  --chip-on-fg: #00a884;
-  --text-primary: #e9edef;
-  --text-secondary: #97a5ae;
-  --text-section: #8a989f;
-  --text-meta: #8a989f;
-  --text-call-sub: #97a5ae;
-  --icon: #97a5ae;
-  --icon-active: #e9edef;
-  --accent: #00a884;
-  --accent-hover: #06cf9c;
-  --accent-text: #00a884;
-  --accent-fg: #0b141a;
-  --new-chat-bg: #00a884;
-  --unread: #00a884;
-  --unread-time: #00a884;
-  --unread-fg: #0b141a;
-  --muted-badge: #8a989f;
-  --tick: #8a989f;
-  --tick-read: #53bdeb;
-  --link: #53bdeb;
-  --quote-bg: rgba(11, 20, 26, 0.35);
-  --typing: #00a884;
-  --avatar-0-bg: #242445; --avatar-0-fg: #9d9df2;
-  --avatar-1-bg: #321a29; --avatar-1-fg: #ee7aa0;
-  --avatar-2-bg: #1a3224; --avatar-2-fg: #6fd58e;
-  --avatar-3-bg: #1a2a36; --avatar-3-fg: #79b8e6;
-  --avatar-4-bg: #352a1a; --avatar-4-fg: #e6ae6f;
-  --avatar-5-bg: #3a3a3a; --avatar-5-fg: #b3b3b3;
-  --reaction-border: #0b141a;
-  --reaction-bg: #233138;
-}
+    color-scheme: dark;
+    --app-bg: #1e1e1e;
+    --sidebar-bg: #272625;
+    --sidebar-selected: #353434;
+    --panel-bg: #1e1e1e;
+    --panel-border: #3a3a3a;
+    --search-bg: #3b3b3b;
+    --row-hover: #2a2a2a;
+    --row-selected: #353535;
+    --divider: #3b3b3b;
+    --round-button-bg: #3c3c3c;
+    --conversation-bg: #0a0a0a;
+    --conversation-header-bg: #161616;
+    --conversation-header-border: #28282a;
+    --header-pill-bg: #2c2c2c;
+    --wallpaper-opacity: 0.07;
+    --wallpaper-filter: invert(1);
+    --bubble-in: #242626;
+    --bubble-out: #274d3a;
+    --composer-button-bg: #2b2b2b;
+    --input-bg: #2c2c2c;
+    --input-border: rgba(255, 255, 255, 0.22);
+    --date-chip-bg: #161717;
+    --empty-bg: #161616;
+    --menu-bg: #2c2c2c;
+    --menu-hover: #3a3a3a;
+    --danger: #ff6369;
+    --scrollbar: rgba(255, 255, 255, 0.16);
+    --switch-off: #48484a;
+    --overlay: rgba(0, 0, 0, 0.55);
+    --shadow-bubble: none;
+    --shadow-menu: 0 6px 24px rgba(0, 0, 0, 0.5);
+    --text-primary: #ffffff;
+    --text-secondary: #a8a6a6;
+    --text-section: #81807f;
+    --text-meta: rgba(255, 255, 255, 0.72);
+    --text-call-sub: #c4c4c4;
+    --icon: #d9d9d9;
+    --icon-active: #ffffff;
+    --accent: #5ab96b;
+    --accent-text: #66d27a;
+    --accent-fg: #060105;
+    --new-chat-bg: #1eac62;
+    --unread: #5ab96b;
+    --unread-time: #66d27a;
+    --unread-fg: #060105;
+    --avatar-0-bg: #242445; --avatar-0-fg: #9d9df2;
+    --avatar-1-bg: #321a29; --avatar-1-fg: #ee7aa0;
+    --avatar-2-bg: #1a3224; --avatar-2-fg: #6fd58e;
+    --avatar-3-bg: #1a2a36; --avatar-3-fg: #79b8e6;
+    --avatar-4-bg: #352a1a; --avatar-4-fg: #e6ae6f;
+    --avatar-5-bg: #3a3a3a; --avatar-5-fg: #b3b3b3;
+    --reaction-border: #0a0a0a;
+    --tick: #989696;
+    --tick-read: #64b5e0;
+    --link: #53bdeb;
+    --quote-bg: rgba(255, 255, 255, 0.06);
+  }
 
 @media (prefers-reduced-motion: reduce) {
   :root {

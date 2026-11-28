@@ -1,31 +1,27 @@
-// Settings (REQ-WEBUI-012), laid out as the egui app lays them out
-// (src/ui/settings.rs): one page beside the chat list, a 640-point column
-// with the back arrow, the title and the search field, then each section
-// as a bold heading over a rounded card. Every value is the core's stored
-// one, so the egui build and this one share them.
+// Settings (REQ-WEBUI-012), laid out as WhatsApp Desktop for macOS lays
+// them out: the profile and the sections in the list column, the chosen
+// section's rows on the right. Every value is the core's stored one, so
+// the egui build and this one share them.
 import { createEffect, createSignal, For, type JSX, onMount, Show } from "solid-js";
 import { commands, state, type LockForm, type SettingsView } from "../../lib/bridge";
 import { ask } from "../../lib/ui";
 import Avatar from "../../components/Avatar";
-import { ArrowUpRightIcon, BackIcon, ChevronRightIcon, PlusIcon, SearchIcon } from "../../components/Icons";
+import { ChevronRightIcon } from "../../components/Icons";
 import { t } from "../../lib/i18n";
 import ZngaSettings from "./ZngaSettings";
-import { Button, Caret, combo, Row, Switch } from "./parts";
 
 type Key = keyof SettingsView;
-type Page = "account" | "appearance" | "chats" | "notifications" | "privacy" | "znga" | "system" | "files" | "about";
+type Page = "account" | "appearance" | "chats" | "notifications" | "privacy" | "znga" | "system" | "about";
 
-/** egui's order (src/ui/settings.rs:sections). */
 const PAGES: [Page, string][] = [
+  ["account", "Account"],
   ["appearance", "Appearance"],
   ["chats", "Chats"],
   ["notifications", "Notifications"],
   ["privacy", "Privacy"],
-  ["system", "System"],
-  ["account", "Account"],
-  ["files", "Files"],
-  ["about", "About"],
   ["znga", "Znga"],
+  ["system", "System"],
+  ["about", "About"],
 ];
 
 const set = (key: Key, value: unknown) => void commands.setSetting(key, value);
@@ -39,46 +35,63 @@ const KEYWORDS: Record<Page, string> = {
   privacy: "privacy read receipts typing app lock password blocked",
   znga: "znga ai assistant companion engine model ollama claude gemini openai key twin memory promises digest quiet sentinel",
   system: "system background login start proxy",
-  files: "files archive downloads folder storage cache images videos stickers log",
   about: "about version",
 };
 const matches = (page: Page, label: string, query: string) =>
   query.split(/\s+/).every((word) => `${label} ${KEYWORDS[page]}`.toLowerCase().includes(word));
 
+function Row(p: { title: string; description?: string; children?: JSX.Element }) {
+  return (
+    <div class="flex items-center justify-between" style={{ "min-height": "46px", padding: "8px 0", gap: "16px", "border-bottom": "var(--hairline) solid var(--divider)" }}>
+      <div class="min-w-0">
+        <div style={{ "font-size": "var(--fs-row-text)", color: "var(--text-primary)" }}>{t(p.title)}</div>
+        <Show when={p.description}>
+          <div style={{ "margin-top": "2px", "font-size": "var(--fs-meta)", "line-height": "14px", color: "var(--text-secondary)" }}>{t(p.description!)}</div>
+        </Show>
+      </div>
+      <div class="shrink-0">{p.children}</div>
+    </div>
+  );
+}
+
 function Toggle(p: { title: string; description?: string; key: Key }) {
   const on = () => state.settings[p.key] === true;
   return (
     <Row title={p.title} description={p.description}>
-      <Switch label={p.title} on={on()} onChange={(value) => set(p.key, value)} />
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on()}
+        aria-label={p.title}
+        onClick={() => set(p.key, !on())}
+        class="relative inline-block rounded-full"
+        style={{ width: "30px", height: "18px", background: on() ? "var(--accent)" : "var(--switch-off)", transition: "background .15s" }}
+      >
+        <span class="absolute rounded-full" style={{ top: "2px", left: on() ? "14px" : "2px", width: "14px", height: "14px", background: "#fff", transition: "left .15s" }} />
+      </button>
     </Row>
   );
 }
 
-/** Where About's links go, as egui's (Cargo.toml repository, AUTHOR_URL). */
-const SOURCE_URL = "https://github.com/selvakumarEsra/superwhatsapp";
-const AUTHOR_URL = "https://www.linkedin.com/in/selvae/";
-
-/** The website's page on writing a theme (egui's THEMES_GUIDE). */
-const THEMES_GUIDE = "https://selvakumaresra.github.io/superwhatsapp/themes/";
-
-/** The Wallpaper row's button, as egui labels it. */
-const wallpaperLabel = () => {
-  if (state.settings.wallpaperImage) return "Image";
-  const dark = darkNow();
-  const id = dark ? state.settings.wallpaperDark : state.settings.wallpaperLight;
-  const swatch = (dark ? state.settings.swatchesDark : state.settings.swatchesLight).find((s) => s.id === id);
-  return swatch?.label ?? "Theme";
-};
-
 function Choice(p: { title: string; description?: string; key: Key; options: [string, string][] }) {
   return (
     <Row title={p.title} description={p.description}>
-      <span class="relative inline-flex items-center" style={{ width: "200px" }}>
-        <select aria-label={p.title} value={String(state.settings[p.key])} onChange={(e) => set(p.key, e.currentTarget.value)} class="w-full" style={combo}>
-          <For each={p.options}>{([value, label]) => <option value={value}>{t(label)}</option>}</For>
-        </select>
-        <Caret />
-      </span>
+      <select
+        aria-label={p.title}
+        value={String(state.settings[p.key])}
+        onChange={(e) => set(p.key, e.currentTarget.value)}
+        style={{
+          height: "26px",
+          padding: "0 8px",
+          "border-radius": "7px",
+          background: "var(--search-bg)",
+          color: "var(--text-primary)",
+          "font-size": "var(--fs-row-text)",
+          border: "none",
+        }}
+      >
+        <For each={p.options}>{([value, label]) => <option value={value}>{t(label)}</option>}</For>
+      </select>
     </Row>
   );
 }
@@ -97,11 +110,31 @@ function Text(p: { title: string; description?: string; key: Key; placeholder?: 
         onBlur={(e) => save(e.currentTarget.value.trim())}
         onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
         class="selectable outline-none"
-        style={{ width: "240px", height: "28px", padding: "0 8px", "border-radius": "6px", background: "var(--input-bg)", border: "1px solid var(--panel-border)", color: "var(--text-primary)", "font-size": "14px" }}
+        style={{ width: "220px", height: "26px", padding: "0 8px", "border-radius": "7px", background: "var(--search-bg)", color: "var(--text-primary)", "font-size": "var(--fs-row-text)" }}
       />
     </Row>
   );
 }
+
+function Button(p: { label: string; danger?: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={p.onClick}
+      class="rounded-full"
+      style={{
+        height: "26px",
+        padding: "0 12px",
+        "font-size": "var(--fs-row-text)",
+        background: "var(--round-button-bg)",
+        color: p.danger ? "var(--danger)" : "var(--text-primary)",
+      }}
+    >
+      {t(p.label)}
+    </button>
+  );
+}
+
 
 /** Whether the page shows the dark theme now. */
 const darkNow = () =>
@@ -333,75 +366,7 @@ const SOUNDS: [string, string][] = [
   ["none", "None"],
 ];
 
-/** Settings › Files, as egui lays it out (src/ui/settings.rs): the
- *  archive, downloads and log with their folders, and the media cache's
- *  size by kind with Clear…, measured again each time Settings opens. */
-function Files() {
-  const f = () => state.settings.files;
-  onMount(() => void commands.measureStorage());
-  return (
-    <>
-      <Row title="Message archive" description={f().archive} top>
-        <Button label="Open folder" icon={<ArrowUpRightIcon size={15} />} onClick={() => commands.filesAction("archive")} />
-      </Row>
-      <Row title="Downloads" description={f().downloads} top>
-        <div class="flex flex-wrap justify-end" style={{ gap: "6px" }}>
-          <Button label="Open folder" icon={<ArrowUpRightIcon size={15} />} onClick={() => commands.filesAction("downloads")} />
-          <Button label="Change…" onClick={() => commands.filesAction("pick")} />
-          <Show when={f().customDownloads}>
-            <Button label="Use default" onClick={() => commands.filesAction("default")} />
-          </Show>
-        </div>
-      </Row>
-      {/* storage_usage: the total and Clear…, the hint, then by kind. */}
-      <div style={{ "padding-bottom": "18px" }}>
-        <div class="flex items-center justify-between">
-          <span style={{ "font-size": "14px", "line-height": "18px", "font-weight": 500, color: "var(--text-primary)" }}>{t("Storage used")}</span>
-          <span class="flex items-center" style={{ gap: "10px" }}>
-            <Show when={f().storageTotal}>
-              <span style={{ "font-size": "14px", "font-weight": 600, color: "var(--text-primary)" }}>{f().storageTotal}</span>
-            </Show>
-            <Button
-              label="Clear…"
-              disabled={!f().canClear}
-              onClick={() =>
-                ask({
-                  title: t("Clear the media cache?"),
-                  body: f().storageHint,
-                  action: t("Clear"),
-                  run: () => commands.filesAction("clear"),
-                })
-              }
-            />
-          </span>
-        </div>
-        <p style={{ margin: "2px 0 0", "font-size": "12.5px", "line-height": "15px", color: "var(--text-secondary)" }}>{f().storageHint}</p>
-        <Show when={f().storageRows.length > 0}>
-          <div style={{ "margin-top": "10px" }}>
-            <For each={f().storageRows}>
-              {([label, detail, share]) => (
-                <div style={{ "margin-bottom": "8px" }}>
-                  <div class="flex items-center justify-between" style={{ height: "20px" }}>
-                    <span style={{ "font-size": "14px", "font-weight": 500, color: "var(--text-primary)" }}>{label}</span>
-                    <span style={{ "font-size": "12.5px", color: "var(--text-secondary)" }}>{detail}</span>
-                  </div>
-                  <div class="overflow-hidden rounded-full" style={{ height: "6px", background: "var(--panel-border)" }}>
-                    <div class="h-full rounded-full" style={{ width: `${Math.round(share * 1000) / 10}%`, background: "var(--accent)" }} />
-                  </div>
-                </div>
-              )}
-            </For>
-          </div>
-        </Show>
-      </div>
-      <Row title="Log" description={f().log} top>
-        <Button label="Open" onClick={() => commands.filesAction("log")} />
-      </Row>
-    </>
-  );
-}
-
-function Body(p: { page: Page | "wallpaper"; onWallpaper?: () => void }) {
+function Body(p: { page: Page }) {
   return (
     <>
       <Show when={p.page === "account"}>
@@ -426,9 +391,19 @@ function Body(p: { page: Page | "wallpaper"; onWallpaper?: () => void }) {
         </Row>
       </Show>
       <Show when={p.page === "appearance"}>
-        {/* egui's order: Theme, Font, Wallpaper, Zoom, Language. */}
-        <Row title="Theme" top>
-          <span class="relative inline-flex items-center" style={{ width: "200px" }}>
+        <Row title="Language">
+          <select
+            aria-label={t("Language")}
+            value={state.settings.language ?? ""}
+            onChange={(e) => commands.setLanguage(e.currentTarget.value || null)}
+            style={{ height: "26px", padding: "0 8px", "border-radius": "7px", background: "var(--search-bg)", color: "var(--text-primary)", "font-size": "var(--fs-row-text)", border: "none" }}
+          >
+            <option value="">{t("Follow system")}</option>
+            <For each={state.settings.languages}>{([code, name]) => <option value={code}>{name}</option>}</For>
+          </select>
+        </Row>
+        <Row title="Theme" description="Theme files in the themes folder appear here too.">
+          <div class="flex items-center" style={{ gap: "6px" }}>
             <select
               aria-label="Theme"
               value={state.settings.customTheme ? `file:${state.settings.customTheme}` : state.settings.theme}
@@ -437,58 +412,26 @@ function Body(p: { page: Page | "wallpaper"; onWallpaper?: () => void }) {
                 if (value.startsWith("file:")) void commands.setCustomTheme(value.slice(5));
                 else set("theme", value);
               }}
-              class="w-full"
-              style={combo}
+              style={{ height: "26px", padding: "0 8px", "border-radius": "7px", background: "var(--search-bg)", color: "var(--text-primary)", "font-size": "var(--fs-row-text)", border: "none" }}
             >
-              <option value="system">{t("Follow system")}</option>
-              <option value="light">{t("Light")}</option>
-              <option value="dark">{t("Dark")}</option>
+              <option value="system">Follow system</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
               <For each={state.settings.themes}>{([file, name]) => <option value={`file:${file}`}>{name}</option>}</For>
             </select>
-            <Caret />
-          </span>
-          <Button label="Open themes folder" icon={<ArrowUpRightIcon size={15} />} onClick={() => commands.themesFolder(false)} />
-          <Button label="How to make a theme" icon={<ArrowUpRightIcon size={15} />} onClick={() => commands.openUrl(THEMES_GUIDE)} />
-        </Row>
-        <Choice
-          title="Font"
-          description="System is your desktop's interface font. Inter looks the same on every computer."
-          key="font"
-          options={[["system", "System"], ["inter", "Inter"]]}
-        />
-        <Row title="Wallpaper">
-          <Button label={wallpaperLabel()} icon={<ChevronRightIcon size={15} />} onClick={() => p.onWallpaper?.()} />
-        </Row>
-        <Row title="Zoom" description="⌘+Plus and ⌘+Minus work anywhere, and ⌘+0 resets it.">
-          <div class="flex items-center" style={{ gap: "10px", color: "var(--text-secondary)" }}>
-            <button type="button" title={t("Smaller")} aria-label={t("Smaller")} onClick={() => set("zoom", -0.1)} class="icon-button rounded-full" style={{ padding: "3px" }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14" /></svg>
-            </button>
-            <button type="button" title={t("Reset")} onClick={() => set("zoom", 0)} style={{ "min-width": "40px", "font-size": "13.5px", "font-weight": 500, color: "var(--text-primary)" }}>
-              {Math.round(state.settings.zoom * 100)}%
-            </button>
-            <button type="button" title={t("Larger")} aria-label={t("Larger")} onClick={() => set("zoom", 0.1)} class="icon-button rounded-full" style={{ padding: "3px" }}>
-              <PlusIcon size={16} />
-            </button>
+            <Button label="Open themes folder" onClick={() => commands.themesFolder(false)} />
+            <Button label="Reload" onClick={() => commands.themesFolder(true)} />
           </div>
         </Row>
-        <Row title="Language">
-          <span class="relative inline-flex items-center" style={{ width: "200px" }}>
-            <select
-              aria-label={t("Language")}
-              value={state.settings.language ?? ""}
-              onChange={(e) => commands.setLanguage(e.currentTarget.value || null)}
-              class="w-full"
-              style={combo}
-            >
-              <option value="">{t("Auto")}</option>
-              <For each={state.settings.languages}>{([code, name]) => <option value={code}>{name}</option>}</For>
-            </select>
-            <Caret />
-          </span>
+        <Row title="Zoom">
+          <div class="flex items-center" style={{ gap: "8px" }}>
+            <Button label="−" onClick={() => set("zoom", -0.1)} />
+            <button type="button" onClick={() => set("zoom", 0)} style={{ width: "44px", "font-size": "var(--fs-row-text)", color: "var(--text-primary)" }}>
+              {Math.round(state.settings.zoom * 100)}%
+            </button>
+            <Button label="+" onClick={() => set("zoom", 0.1)} />
+          </div>
         </Row>
-      </Show>
-      <Show when={p.page === "wallpaper"}>
         <Swatches />
         <Row title="Wallpaper image" description="Shown behind messages instead of the colour and doodles.">
           <div class="flex" style={{ gap: "6px" }}>
@@ -535,111 +478,108 @@ function Body(p: { page: Page | "wallpaper"; onWallpaper?: () => void }) {
       <Show when={p.page === "znga"}>
         <ZngaSettings />
       </Show>
-      <Show when={p.page === "files"}>
-        <Files />
-      </Show>
       <Show when={p.page === "about"}>
-        {/* src/ui/settings.rs:about: the mark, name and version, what it is
-            built with, the links as soft pills, and the credit. */}
-        <div style={{ "padding-bottom": "16px" }}>
-          <div class="flex items-center" style={{ gap: "14px" }}>
-            <img src="/mark.png" alt="" width="44" height="44" style={{ width: "44px", height: "44px" }} />
-            <div>
-              <div class="selectable" style={{ "font-size": "16px", "font-weight": 600, color: "var(--text-primary)" }}>
-                SuperWhatsapp {state.settings.version}
-              </div>
-              <div style={{ "font-size": "13px", "line-height": "17px", color: "var(--text-secondary)" }}>
-                {t("A native WhatsApp client built with Rust, Tauri, Solid.js, and whatsapp-rust.")}
-              </div>
-            </div>
-          </div>
-          <div class="flex flex-wrap" style={{ gap: "8px", "margin-top": "12px" }}>
-            <Button label="Source code" icon={<ArrowUpRightIcon size={15} />} onClick={() => commands.openUrl(SOURCE_URL)} />
-          </div>
-          <div style={{ "margin-top": "14px", "font-size": "13px", color: "var(--text-secondary)" }}>
-            <span style={{ color: "var(--danger)" }}>{"\u2665"}&nbsp;&nbsp;</span>
-            {t("Built with love by")}{" "}
-            <a
-              href={AUTHOR_URL}
-              title={AUTHOR_URL}
-              onClick={(e) => { e.preventDefault(); void commands.openUrl(AUTHOR_URL); }}
-              style={{ "font-weight": 500, color: "var(--link)", "text-decoration": "none" }}
-            >
-              Selvakumar Esra
-            </a>
-          </div>
-        </div>
+        <Row title="SuperWhatsapp" description="A fast WhatsApp client, with Znga.">
+          <span class="selectable" style={{ "font-size": "var(--fs-row-text)", color: "var(--text-secondary)" }}>{state.settings.version}</span>
+        </Row>
       </Show>
     </>
   );
 }
 
-export default function Settings(p: { onClose: () => void }) {
+export default function Settings() {
+  // Outside Tauri, `#settings/<page>` opens that page, for screenshots.
+  const linked = location.hash.split("/")[1] as Page | undefined;
+  const [page, setPage] = createSignal<Page>(PAGES.some(([id]) => id === linked) ? linked! : "account");
+  const title = () => PAGES.find(([id]) => id === page())![1];
   const [query, setQuery] = createSignal("");
-  // egui's Wallpaper page, reached from Appearance › Wallpaper.
-  const [wallpaper, setWallpaper] = createSignal(location.hash === "#settings/wallpaper");
   const shown = () => {
     const q = query().trim().toLowerCase();
-    return PAGES.filter(([id, label]) => !q || matches(id, label, q));
+    return PAGES.slice(1).filter(([id, label]) => !q || matches(id, label, q));
   };
   return (
-    <section
-      class="scroll h-full min-w-0 flex-1"
-      aria-label="Settings"
-      style={{ background: "var(--panel-bg)" }}
-      onKeyDown={(e) => e.key === "Escape" && p.onClose()}
-    >
-      <div style={{ width: "min(640px, calc(100% - 64px))", margin: "0 auto", padding: "24px 0" }}>
-        <div data-tauri-drag-region class="flex items-center" style={{ gap: "8px", height: "34px" }}>
+    <>
+      <section
+        class="flex h-full shrink-0 flex-col"
+        aria-label="Settings"
+        style={{ width: "var(--list-w)", background: "var(--panel-bg)", "border-right": "var(--hairline) solid var(--panel-border)" }}
+      >
+        <header data-tauri-drag-region class="flex shrink-0 items-center justify-center" style={{ height: "var(--list-header-h)" }}>
+          <h1 data-tauri-drag-region style={{ margin: 0, "font-size": "var(--fs-title)", "font-weight": "var(--fw-title)", color: "var(--text-primary)" }}>
+            {t("Settings")}
+          </h1>
+        </header>
+        <div class="scroll min-h-0 flex-1" style={{ padding: "4px var(--row-inset)" }}>
           <button
             type="button"
-            title={t("Back (Esc)")}
-            aria-label={t("Back (Esc)")}
-            onClick={() => (wallpaper() ? setWallpaper(false) : p.onClose())}
-            class="icon-button flex items-center justify-center rounded-full"
-            style={{ width: "30px", height: "30px", "margin-left": "-6px", color: "var(--text-secondary)" }}
+            onClick={() => setPage("account")}
+            class="chat-row flex w-full items-center text-left"
+            style={{ height: "64px", padding: "0 10px", gap: "12px", "border-radius": "var(--row-radius)" }}
           >
-            <BackIcon size={20} />
-          </button>
-          <h1 style={{ margin: 0, "font-size": "24px", "font-weight": 700, color: "var(--text-primary)" }}>{t(wallpaper() ? "Wallpaper" : "Settings")}</h1>
-        </div>
-        <Show when={wallpaper()}>
-          <div style={{ "margin-top": "20px", background: "var(--card-bg)", border: "1px solid var(--panel-border)", "border-radius": "10px", padding: "16px 20px 6px" }}>
-            <Body page="wallpaper" />
-          </div>
-        </Show>
-        <Show when={!wallpaper()}>
-        <label
-          class="flex items-center"
-          style={{ height: "var(--search-h)", "margin-top": "18px", "border-radius": "calc(var(--search-h) / 2)", background: "var(--search-bg)", "padding-left": "11px" }}
-        >
-          <span style={{ color: "var(--icon)" }}><SearchIcon size={17} /></span>
-          <input
-            type="search"
-            aria-label="Search settings"
-            placeholder={t("Search settings")}
-            value={query()}
-            onInput={(e) => setQuery(e.currentTarget.value)}
-            class="selectable h-full min-w-0 flex-1 bg-transparent outline-none"
-            style={{ "padding-left": "9px", "padding-right": "12px", "font-size": "var(--fs-search)", color: "var(--text-primary)" }}
-          />
-        </label>
-        <For each={shown()} fallback={
-          <p style={{ margin: "24px 0 0", "font-size": "14px", color: "var(--text-secondary)" }}>
-            {t("No settings match “{query}”.").replace("{query}", query().trim())}
-          </p>
-        }>
-          {([id, label]) => (
-            <section aria-label={t(label)} style={{ margin: "24px 0 0" }}>
-              <h2 style={{ margin: "0 0 14px", "font-size": "18px", "line-height": "22px", "font-weight": 700, color: "var(--text-primary)" }}>{t(label)}</h2>
-              <div style={{ background: "var(--card-bg)", border: "1px solid var(--panel-border)", "border-radius": "10px", padding: "16px 20px 6px" }}>
-                <Body page={id} onWallpaper={() => setWallpaper(true)} />
+            <Avatar src={null} size={44} seed={state.me ?? "me"} />
+            <div class="min-w-0">
+              <div class="truncate" style={{ "font-size": "var(--fs-row-title)", "font-weight": 600, color: "var(--text-primary)" }}>
+                {state.settings.name ?? "You"}
               </div>
-            </section>
-          )}
-        </For>
-        </Show>
-      </div>
-    </section>
+              <div class="truncate" style={{ "font-size": "var(--fs-row-text)", color: "var(--text-secondary)" }}>{state.settings.about ?? state.settings.phone ?? ""}</div>
+            </div>
+          </button>
+          <label
+            class="flex items-center"
+            style={{ height: "var(--search-h)", margin: "8px 0", "border-radius": "calc(var(--search-h) / 2)", background: "var(--search-bg)", "padding-left": "11px" }}
+          >
+            <input
+              type="search"
+              aria-label="Search settings"
+              placeholder={t("Search settings")}
+              value={query()}
+              onInput={(e) => {
+                setQuery(e.currentTarget.value);
+                const first = shown()[0];
+                if (first) setPage(first[0]);
+              }}
+              class="selectable h-full min-w-0 flex-1 bg-transparent outline-none"
+              style={{ "padding-right": "12px", "font-size": "var(--fs-search)", color: "var(--text-primary)" }}
+            />
+          </label>
+          <For each={shown()}>
+            {([id, label]) => (
+              <button
+                type="button"
+                aria-current={page() === id ? "page" : undefined}
+                onClick={() => setPage(id)}
+                class="chat-row flex w-full items-center justify-between text-left"
+                classList={{ selected: page() === id }}
+                style={{
+                  height: "36px",
+                  padding: "0 10px",
+                  "border-radius": "var(--row-radius)",
+                  background: page() === id ? "var(--row-selected)" : undefined,
+                  "font-size": "var(--fs-row-text)",
+                  color: "var(--text-primary)",
+                }}
+              >
+                {t(label)}
+                <span style={{ color: "var(--text-secondary)" }}><ChevronRightIcon size={14} /></span>
+              </button>
+            )}
+          </For>
+        </div>
+      </section>
+      <section class="flex h-full min-w-0 flex-1 flex-col" style={{ background: "var(--conversation-header-bg)" }} aria-label={title()}>
+        <header
+          data-tauri-drag-region
+          class="flex shrink-0 items-center"
+          style={{ height: "var(--conv-header-h)", padding: "0 24px", "border-bottom": "var(--hairline) solid var(--conversation-header-border)" }}
+        >
+          <h2 data-tauri-drag-region style={{ margin: 0, "font-size": "var(--fs-header-title)", "font-weight": 600, color: "var(--text-primary)" }}>{t(title())}</h2>
+        </header>
+        <div class="scroll min-h-0 flex-1" style={{ padding: "8px 24px 24px" }}>
+          <div style={{ "max-width": "640px" }}>
+            <Body page={page()} />
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

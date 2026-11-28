@@ -2,10 +2,9 @@
 # into the same sandbox as rocks.zapfast.ZapFast.yml describes. The
 # job unpacks the release tarball into built/ beside this file first.
 id: rocks.zapfast.ZapFast
-# GNOME's runtime carries the WebKitGTK the Tauri interface draws with.
-runtime: org.gnome.Platform
-runtime-version: '49'
-sdk: org.gnome.Sdk
+runtime: org.freedesktop.Platform
+runtime-version: '26.08'
+sdk: org.freedesktop.Sdk
 command: superwhatsapp
 finish-args:
   - --socket=wayland
