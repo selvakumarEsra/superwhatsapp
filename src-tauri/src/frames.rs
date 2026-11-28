@@ -48,7 +48,7 @@ pub fn publish(name: &'static str, frame: Option<Arc<ColorImage>>) -> Option<Str
     }
     slot.frame
         .as_ref()
-        .map(|_| format!("http://zapframe.localhost/{name}?n={}", slot.serial))
+        .map(|_| crate::media::address("zapframe", &format!("{name}?n={}", slot.serial)))
 }
 
 /// RGB JPEG of a straight-alpha frame, as the image crate writes it.
@@ -70,7 +70,7 @@ fn jpeg(frame: &ColorImage) -> Option<Vec<u8>> {
 /// The JPEG behind a `zapframe` address, for a dumped state
 /// (`--dump-state`, REQ-WEBUI-018).
 pub fn inline(address: &str) -> Option<Vec<u8>> {
-    let rest = address.strip_prefix("http://zapframe.localhost/")?;
+    let rest = crate::media::strip("zapframe", address)?;
     let name = rest.split('?').next()?;
     let frame = slot(name)?.lock().ok()?.frame.clone()?;
     jpeg(&frame)

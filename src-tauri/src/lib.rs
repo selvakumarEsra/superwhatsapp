@@ -711,11 +711,16 @@ pub fn run() {
     }
     start.receipt = launch.receipt;
     start.update_error = launch.error;
-    tauri::Builder::default()
-        // A second start brings the first window forward (REQ-WEBUI-012.A2).
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+    let mut builder = tauri::Builder::default();
+    // A second start brings the first window forward (REQ-WEBUI-012.A2).
+    // A demo keeps out of it, as in the egui build, so it runs beside a
+    // linked copy instead of handing itself over to it.
+    if !start.demo {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             desktop::show(app);
-        }))
+        }));
+    }
+    builder
         .register_uri_scheme_protocol("zapmedia", media::serve)
         .register_uri_scheme_protocol("zapframe", frames::serve)
         .setup(move |app| {

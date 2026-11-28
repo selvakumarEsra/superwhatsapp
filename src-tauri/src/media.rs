@@ -5,6 +5,24 @@ use std::path::{Path, PathBuf};
 
 use tauri::http::{Request, Response, StatusCode};
 
+/// The page's address for `rest` under one of the app's own protocols.
+/// WebKit (macOS, Linux) loads custom protocols as `scheme://localhost/`;
+/// WebView2 (Windows) and Android only as `http://scheme.localhost/`.
+pub fn address(scheme: &str, rest: &str) -> String {
+    if cfg!(any(windows, target_os = "android")) {
+        format!("http://{scheme}.localhost/{rest}")
+    } else {
+        format!("{scheme}://localhost/{rest}")
+    }
+}
+
+/// What follows the protocol in an address made by [`address`], in either
+/// form, so a dumped state reads the same on every system.
+pub fn strip<'a>(scheme: &str, text: &'a str) -> Option<&'a str> {
+    text.strip_prefix(&format!("{scheme}://localhost/"))
+        .or_else(|| text.strip_prefix(&format!("http://{scheme}.localhost/")))
+}
+
 fn decode(text: &str) -> Option<String> {
     let bytes = text.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
@@ -101,7 +119,7 @@ pub fn inline(value: &mut serde_json::Value) {
                 *text = format!("data:image/jpeg;base64,{data}");
                 return;
             }
-            let Some(rest) = text.strip_prefix("http://zapmedia.localhost/") else {
+            let Some(rest) = strip("zapmedia", text) else {
                 return;
             };
             let Some(path) = decode(rest).map(PathBuf::from) else {
@@ -118,5 +136,23 @@ pub fn inline(value: &mut serde_json::Value) {
         serde_json::Value::Array(items) => items.iter_mut().for_each(inline),
         serde_json::Value::Object(map) => map.values_mut().for_each(inline),
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn addresses_use_the_form_the_web_view_loads() {
+        let made = address("zapmedia", "%2Fa.jpg");
+        if cfg!(any(windows, target_os = "android")) {
+            assert_eq!(made, "http://zapmedia.localhost/%2Fa.jpg");
+        } else {
+            assert_eq!(made, "zapmedia://localhost/%2Fa.jpg");
+        }
+        assert_eq!(strip("zapmedia", &made), Some("%2Fa.jpg"));
+        assert_eq!(strip("zapmedia", "http://zapmedia.localhost/x"), Some("x"));
+        assert_eq!(strip("zapmedia", "zapframe://localhost/x"), None);
     }
 }

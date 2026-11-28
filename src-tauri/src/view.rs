@@ -988,7 +988,7 @@ pub fn parse_filter(name: &str) -> Option<ChatFilter> {
 fn media(path: Option<std::path::PathBuf>) -> Option<String> {
     let path = path?;
     let text = path.to_str()?;
-    Some(format!("http://zapmedia.localhost/{}", encode(text)))
+    Some(crate::media::address("zapmedia", &encode(text)))
 }
 
 fn encode(text: &str) -> String {

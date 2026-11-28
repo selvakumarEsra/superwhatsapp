@@ -223,6 +223,27 @@ where
     });
 }
 
+/// Ends a start that cannot go on, saying why, instead of panicking.
+fn stop(reason: &str) -> ! {
+    eprintln!("SuperWhatsapp cannot start: {reason}");
+    std::process::exit(1);
+}
+
+/// The session log, panic log and protocol redaction the egui build writes
+/// (Settings › Files opens this log).
+fn start_logging(dirs: &superwhatsapp::paths::AppDirs) {
+    let verbose = std::env::args().any(|arg| arg == "--verbose");
+    let result = fastframe_log::Logging::new("superwhatsapp", env!("CARGO_PKG_VERSION"))
+        .filter(superwhatsapp::diagnostics::default_log_filter(verbose))
+        .panic_log(dirs.panic_log())
+        .redact(superwhatsapp::diagnostics::redact_protocol)
+        .file(dirs.log_file())
+        .init();
+    if let Err(error) = result {
+        eprintln!("could not open the SuperWhatsapp log: {error}");
+    }
+}
+
 fn make_app(start: &Start) -> App {
     use superwhatsapp::paths::AppDirs;
     use superwhatsapp::settings::Settings;
@@ -240,9 +261,26 @@ fn make_app(start: &Start) -> App {
         return app;
     }
     let dirs = AppDirs::discover();
-    dirs.adopt_previous_names().expect("app folders");
-    dirs.ensure().expect("app folders");
-    dirs.adopt_single_account().expect("account folder");
+    // As the egui build: older folders move first, and a move that fails
+    // stops the start before anything new is created, so the next start
+    // can try again (REQ-SUPERWA-005).
+    if let Err(error) = dirs.adopt_previous_names() {
+        stop(&format!(
+            "could not move the earlier SuperWhatsapp folders: {error}"
+        ));
+    }
+    if let Err(error) = dirs.ensure() {
+        stop(&format!(
+            "could not create the SuperWhatsapp folders: {error}"
+        ));
+    }
+    start_logging(&dirs);
+    if let Err(error) = dirs.adopt_single_account() {
+        log::error!("could not move the linked account into its folder: {error}");
+        stop(&format!(
+            "could not move the linked account into its folder: {error}"
+        ));
+    }
     let settings = Settings::load(&dirs.settings_file());
     let instance = start
         .instance

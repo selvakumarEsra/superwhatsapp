@@ -242,6 +242,12 @@ the release after 0.21.1-beta.11 keeps the bundle ID
 release after that ships as `cc.superwhatsapp`. macOS asks again for
 camera, microphone and notification permission after the switch.
 
+The switch changes every place that names the bundle ID together:
+packaging/macos/Info.plist, packaging/macos/bundle.sh and autostart.plist
+(the login agent), src-tauri/tauri.conf.json `identifier`, and
+src/notify.rs `MACOS_BUNDLE_ID` (notifications). The web view keeps its
+storage per bundle ID, so the page's saved preferences start fresh once.
+
 implementations:
   - src/znga/update.rs:CONFIG
   - packaging/macos/Info.plist

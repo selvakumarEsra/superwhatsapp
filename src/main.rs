@@ -158,25 +158,10 @@ fn control(command: &Control, sent: single_instance::Sent) -> (i32, Option<Strin
     }
 }
 
-/// Default log filter, used when `RUST_LOG` is unset.
-///
-/// `fastframe_fonts` logs, once at startup, which installed face draws each
-/// script Inter lacks, which is what a report of odd Arabic or CJK text
-/// needs first.
-///
-/// `arboard` warns on every clipboard open when a Wayland compositor has no
-/// data-control protocol (GNOME, mutter) and it falls back to X11, which works
-/// there. Quiet that one target so it does not fill the log file, without
-/// hiding real clipboard failures (`arboard=error`) or any other warning.
+/// Default log filter, used when `RUST_LOG` is unset
+/// (shared with the Tauri build).
 fn default_log_filter(verbose: bool) -> &'static str {
-    if verbose {
-        "info,superwhatsapp=debug,whatsapp_rust=debug,wacore=debug"
-    } else {
-        // env_logger treats '/' as a message-regex separator, so it cannot
-        // select the literal target Client/AppState here. Enable Client INFO;
-        // the protocol redactor reduces every such line to a fixed category.
-        "warn,superwhatsapp=info,fastframe_fonts=info,Client=info,arboard=error"
-    }
+    superwhatsapp::diagnostics::default_log_filter(verbose)
 }
 
 /// Deletes a directory tree when dropped.
@@ -578,15 +563,12 @@ fn startup_failure_dialog(error: &eframe::Error) {
 }
 
 /// Summarises the WhatsApp library's lines, which can quote protocol
-/// payloads, into fixed categories.
+/// payloads, into fixed categories (shared with the Tauri build).
 fn redact_protocol(
     record: &log::Record<'_>,
     message: &str,
 ) -> Option<std::borrow::Cow<'static, str>> {
-    use superwhatsapp::diagnostics::{is_protocol_target, protocol_summary};
-    (is_protocol_target(record.target())
-        || is_protocol_target(record.module_path().unwrap_or_default()))
-    .then(|| protocol_summary(message))
+    superwhatsapp::diagnostics::redact_protocol(record, message)
 }
 
 /// Whether the first window starts in the tray.

@@ -1,6 +1,6 @@
 [package]
 name = "superwhatsapp-desktop"
-version = "0.21.1-beta.12"
+version = "0.21.1-beta.13"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
@@ -39,6 +39,8 @@ anyhow = "1"
 fastframe-update = { git = "https://github.com/crmne/fastframe", tag = "v0.15.4" }
 fastframe-i18n = { git = "https://github.com/crmne/fastframe", tag = "v0.15.4" }
 fastframe-theme = { git = "https://github.com/crmne/fastframe", tag = "v0.15.4" }
+# The log file, panic log and protocol redaction, as the egui build has.
+fastframe-log = { git = "https://github.com/crmne/fastframe", tag = "v0.15.4" }
 
 # The taskbar's unread overlay, drawn as the egui build draws it.
 [target.'cfg(windows)'.dependencies]

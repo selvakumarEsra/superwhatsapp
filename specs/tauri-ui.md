@@ -133,9 +133,18 @@ capabilities allow only SuperWhatsapp's own commands and the plugins it uses.
 No other program can call the commands. Message text, numbers, keys and
 QR payloads are never logged from either side.
 
+Each platform's web view gets these addresses in the form it can load:
+`zapmedia://localhost/…` in WebKit (macOS, Linux) and
+`http://zapmedia.localhost/…` in WebView2 (Windows); the same holds for
+call video frames (`zapframe`).
+
 implementations:
   - src-tauri/tauri.conf.json:app
-  - src-tauri/src/protocol.rs:serve
+  - src-tauri/src/media.rs:serve
+  - src-tauri/src/media.rs:address
+
+verifies:
+  - src-tauri/src/media.rs:addresses_use_the_form_the_web_view_loads
 
 ## Acceptance
 <!-- id: REQ-WEBUI-003.A1 -->
@@ -153,6 +162,11 @@ implementations:
 - A message containing HTML or script text is shown as text, never run
   or rendered as markup (message formatting is applied by building
   elements, not by inserting HTML).
+
+<!-- id: REQ-WEBUI-003.A5 -->
+- In the packaged app on macOS, chat and group pictures, photos, video
+  thumbnails and stickers show in the chat list and in chats; none is
+  left as an empty placeholder because the web view refused its address.
 
 <!-- id: REQ-WEBUI-004 -->
 ## The interface MUST look like SuperWhatsapp's egui app
@@ -519,6 +533,11 @@ implementations:
 - Settings › Files shows where the archive, downloads and log are, opens
   their folders, changes or resets the downloads folder, and measures the
   media cache each time Settings opens; Clear… asks first.
+<!-- id: REQ-WEBUI-012.A7 -->
+- A linked run writes the same session log as the egui build (the file
+  Settings › Files names, with its panic log and the protocol redaction),
+  and a start whose folder move fails ends with the reason instead of a
+  crash, creating no new folders.
 
 <!-- id: REQ-WEBUI-013 -->
 ## Znga and the extras MUST move into the web interface
