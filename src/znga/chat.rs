@@ -1646,87 +1646,96 @@ mod tests {
         assert!(app.znga.offer.is_none());
     }
 
+    fn incoming(chat: &str, text: &str, at: i64) -> crate::model::Message {
+        let mut message = super::super::archive_ask::tests_message(chat, text, at);
+        message.from_me = false;
+        message
+    }
+
     #[test]
-    fn translating_sends_only_the_chosen_messages_and_shows_the_popup() {
-        let (_root, mut app) = app("[1] See you tomorrow at home");
-        let seen = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    fn translating_sends_only_the_chosen_message_and_toggles_in_place() {
+        use super::super::translate::inline::{self, Toggle};
+        inline::reset();
+        let (_root, mut app) = app("x");
+        let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::<String>::new()));
         let copy = seen.clone();
         app.znga.runner.fake = Some(Box::new(move |prompt| {
-            *copy.lock().unwrap() = prompt.turns.iter().map(|t| t.text.clone()).collect();
-            Ok("[1] See you tomorrow at home".to_owned())
+            copy.lock()
+                .unwrap()
+                .push(prompt.turns.iter().map(|t| t.text.clone()).collect());
+            Ok("[1] I will come tomorrow morning".to_owned())
         }));
         let chat = "ada@s.whatsapp.net";
-        let mut spanish = super::super::archive_ask::tests_message(
-            chat,
-            "Nos vemos mañana en la casa, gracias",
-            10,
-        );
-        spanish.from_me = false;
-        let mut english =
-            super::super::archive_ask::tests_message(chat, "See you at the station tomorrow", 11);
-        english.from_me = false;
-        let mut secret = super::super::archive_ask::tests_message(
-            chat,
-            "Hola, el código secreto es para mañana",
-            12,
-        );
-        secret.from_me = false;
+        let hindi = incoming(chat, "मैं कल सुबह आऊँगा", 10);
+        let english = incoming(chat, "See you at the station tomorrow", 11);
+        let secret = incoming(chat, "Hola, el código secreto es para mañana", 12);
         app.conversations
             .entry(chat.to_owned())
             .or_default()
-            .messages = vec![spanish.clone(), english, secret.clone()];
+            .messages = vec![hindi.clone(), english.clone(), secret.clone()];
         app.open_chat = Some(chat.to_owned());
-        let found: Vec<String> = hooks::translatable(&mut app, chat)
-            .into_iter()
-            .map(|(id, _)| id)
-            .collect();
-        assert_eq!(found, vec![spanish.id.clone(), secret.id.clone()]);
-        hooks::request_translate(&mut app, chat, std::slice::from_ref(&spanish.id));
-        assert!(app.znga.translations.popup.is_some());
+        hooks::tick(&mut app);
+        let text = |m: &crate::model::Message| hooks::readable_text(m).unwrap().to_owned();
+        assert_eq!(
+            inline::toggle(chat, &hindi.id, &text(&hindi)),
+            Some(Toggle::Translate("English".into()))
+        );
+        assert_eq!(inline::toggle(chat, &english.id, &text(&english)), None);
+        inline::click(chat, &hindi.id);
         for _ in 0..200 {
             hooks::tick(&mut app);
-            if app
-                .znga
-                .translations
-                .translation(chat, &spanish.id)
-                .is_some()
-            {
+            if inline::shown(chat, &hindi.id).is_some() {
                 break;
             }
             std::thread::sleep(std::time::Duration::from_millis(5));
         }
+        let shown = inline::shown(chat, &hindi.id).unwrap();
+        assert!(shown.starts_with("I will come tomorrow morning"));
+        assert!(shown.contains("Translated from Hindi by Znga"));
         assert_eq!(
-            app.znga.translations.translation(chat, &spanish.id),
-            Some("See you tomorrow at home")
+            inline::toggle(chat, &hindi.id, &text(&hindi)),
+            Some(Toggle::Original)
         );
-        let sent = seen.lock().unwrap().clone();
-        assert!(sent.contains("Nos vemos"));
-        assert!(!sent.contains("secreto"), "only the chosen message is sent");
+        let sent = seen.lock().unwrap().join("\n");
+        assert!(sent.contains("मैं कल सुबह आऊँगा"));
+        assert!(
+            !sent.contains("secreto"),
+            "only the clicked message is sent"
+        );
+        // Show original, then translate again from what was kept.
+        inline::click(chat, &hindi.id);
+        hooks::tick(&mut app);
+        assert_eq!(inline::shown(chat, &hindi.id), None);
+        inline::click(chat, &hindi.id);
+        hooks::tick(&mut app);
+        assert!(inline::shown(chat, &hindi.id).is_some());
+        assert_eq!(seen.lock().unwrap().len(), 1, "the engine is asked once");
         assert!(
             app.znga
                 .audit
                 .entries()
                 .any(|e| e.action == "translate messages")
         );
+        assert_eq!(sends(&app), 0);
+        inline::reset();
     }
 
     #[test]
     fn locked_and_excluded_chats_never_translate() {
+        use super::super::translate::inline;
+        inline::reset();
         let (_root, mut app) = app("[1] hi");
         for chat in ["locked@s.whatsapp.net", "kim@s.whatsapp.net"] {
-            let mut foreign = super::super::archive_ask::tests_message(
-                chat,
-                "Nos vemos mañana en la casa, gracias",
-                10,
-            );
-            foreign.from_me = false;
+            let foreign = incoming(chat, "Nos vemos mañana en la casa, gracias", 10);
             app.conversations
                 .entry(chat.to_owned())
                 .or_default()
                 .messages = vec![foreign.clone()];
             app.open_chat = Some(chat.to_owned());
-            hooks::request_translate(&mut app, chat, &[foreign.id.clone()]);
-            assert!(app.znga.translations.popup.is_none());
+            hooks::tick(&mut app);
+            let text = hooks::readable_text(&foreign).unwrap().to_owned();
+            assert_eq!(inline::toggle(chat, &foreign.id, &text), None);
+            hooks::request_translate(&mut app, chat, std::slice::from_ref(&foreign.id));
             assert!(app.znga.translations.pending.is_empty());
         }
         assert!(
@@ -1735,6 +1744,7 @@ mod tests {
                 .entries()
                 .any(|e| !e.allowed && e.action.starts_with("translate messages in a locked"))
         );
+        inline::reset();
     }
 
     #[test]

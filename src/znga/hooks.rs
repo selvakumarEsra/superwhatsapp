@@ -1432,6 +1432,7 @@ pub fn tick(app: &mut App) {
         voice_transcribed(app, note, result);
     }
     super::chat::tick(app);
+    sync_inline(app);
     app.znga.save_if_dirty(&app.files);
     if !app.znga.config.enabled {
         return;
@@ -1542,9 +1543,9 @@ pub fn translatable(app: &mut App, chat: &str) -> Vec<(String, &'static str)> {
     found
 }
 
-/// Translates messages `ids` of the open `chat` and shows them in the
-/// popup. Only those messages are sent, and only when the Sentinel allows
-/// it; translations already made this session are reused.
+/// Translates messages `ids` of the open `chat`. Only those messages are
+/// sent, and only when the Sentinel allows it; translations already made
+/// this session are not asked for again (REQ-ZANS-004.A2).
 pub fn request_translate(app: &mut App, chat: &str, ids: &[String]) {
     if ids.is_empty() || app.open_chat.as_deref() != Some(chat) {
         return;
@@ -1558,12 +1559,16 @@ pub fn request_translate(app: &mut App, chat: &str, ids: &[String]) {
     {
         return;
     }
-    let account = app.account().id.as_str().to_owned();
-    let mut shown = Vec::new();
     let mut lines: Vec<(String, String)> = Vec::new();
     let mut asked: Vec<String> = Vec::new();
     if let Some(conversation) = app.conversations.get(chat) {
         for id in ids {
+            let key = (chat.to_owned(), id.clone());
+            if app.znga.translations.done.contains_key(&key)
+                || app.znga.translations.pending.contains(&key)
+            {
+                continue;
+            }
             let Some(message) = conversation.messages.iter().find(|m| m.id == *id) else {
                 continue;
             };
@@ -1571,34 +1576,14 @@ pub fn request_translate(app: &mut App, chat: &str, ids: &[String]) {
                 continue;
             };
             let sender = app.display_name_or(&message.sender, message.sender_name.as_deref());
-            shown.push(super::translate::Shown {
-                message: id.clone(),
-                sender: sender.clone(),
-                at: message.timestamp,
-                original: text.to_owned(),
-            });
-            let key = (chat.to_owned(), id.clone());
-            if app.znga.translations.done.contains_key(&key)
-                || app.znga.translations.pending.contains(&key)
-            {
-                continue;
-            }
             lines.push((sender, text.to_owned()));
             asked.push(id.clone());
         }
     }
-    if shown.is_empty() {
-        return;
-    }
-    app.znga.translations.error = None;
-    app.znga.translations.popup = Some(super::translate::Popup {
-        account,
-        chat: chat.to_owned(),
-        messages: shown,
-    });
     if asked.is_empty() {
         return;
     }
+    app.znga.translations.error = None;
     let language = app.znga.translate_to.clone();
     let prompt = prompt::translate_incoming(&lines, &language);
     for id in &asked {
@@ -1613,5 +1598,71 @@ pub fn request_translate(app: &mut App, chat: &str, ids: &[String]) {
     };
     if let Err(error) = app.znga.submit(prompt, purpose) {
         app.znga.translations.failed(chat, &asked, error);
+    }
+}
+
+/// The person's language as the translate button names it.
+pub fn translate_language(app: &App) -> String {
+    let language = app.znga.translate_to.trim();
+    if language.is_empty() {
+        "English".to_owned()
+    } else {
+        language.to_owned()
+    }
+}
+
+/// Keeps the bubbles' translate toggles in step with the app: which chat
+/// may show them, the clicks since the last frame, and translations that
+/// arrived (REQ-ZANS-004).
+pub fn sync_inline(app: &mut App) {
+    use super::translate::{decorated, inline, language_of};
+    let readable = app
+        .open_chat
+        .clone()
+        .filter(|chat| super::chat::tools_for(app, chat));
+    inline::set_readable(readable.clone(), &translate_language(app));
+    let Some(chat) = readable else {
+        return;
+    };
+    let from = |app: &App, id: &str| {
+        app.conversations
+            .get(&chat)
+            .and_then(|c| c.messages.iter().find(|m| m.id == id))
+            .and_then(readable_text)
+            .and_then(language_of)
+    };
+    for (clicked, id, toggle) in inline::take_clicks() {
+        if clicked != chat {
+            continue;
+        }
+        if inline::is_on(&chat, &id) {
+            if toggle {
+                inline::off(&chat, &id);
+            }
+            continue;
+        }
+        match app.znga.translations.translation(&chat, &id) {
+            Some(text) => inline::show(&chat, &id, Some(decorated(text, from(app, &id)))),
+            None => {
+                inline::show(&chat, &id, None);
+                request_translate(app, &chat, std::slice::from_ref(&id));
+            }
+        }
+    }
+    for (on, id) in inline::waiting() {
+        if on != chat {
+            continue;
+        }
+        let key = (on.clone(), id.clone());
+        if let Some(text) = app.znga.translations.done.get(&key).cloned() {
+            inline::show(&on, &id, Some(decorated(&text, from(app, &id))));
+        } else if !app.znga.translations.pending.contains(&key) {
+            // Refused or failed: the button offers it again.
+            inline::off(&on, &id);
+            if let Some(error) = app.znga.translations.error.take() {
+                let text = super::thread::explain_error(&error, app.znga.config.engine);
+                app.znga.set_status(text, true);
+            }
+        }
     }
 }

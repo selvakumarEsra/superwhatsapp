@@ -1146,76 +1146,162 @@ pub fn offer_bar(app: &mut App, ui: &mut Ui, chat_id: &str) {
 // ---------------------------------------------------------------------
 // Translating others' messages (REQ-ZANS-004).
 
-const TRANSLATABLE: &str = "znga-translatable";
-const TRANSLATE_REQUEST: &str = "znga-translate-request";
-
-/// "Translate with Znga" in a message's menu, for a message Znga found in
-/// another language in a chat it may read. The click is handed to
-/// [`offer_bar`] through the frame's data, as the menu has no app.
-pub fn message_menu(ui: &mut Ui, palette: &theme::Palette, chat_id: &str, message: &str) {
-    let offered = ui
-        .ctx()
-        .data(|d| d.get_temp::<(String, Vec<String>)>(egui::Id::new(TRANSLATABLE)))
-        .is_some_and(|(chat, ids)| chat == chat_id && ids.iter().any(|id| id == message));
-    if !offered {
-        return;
+/// The toggle's label for a message: "Translate to English", "Show
+/// original", or that it is on its way.
+fn toggle_label(toggle: &super::translate::inline::Toggle) -> String {
+    use super::translate::inline::Toggle;
+    match toggle {
+        Toggle::Translate(language) => format!("Translate to {language}"),
+        Toggle::Translating => "Translating…".to_owned(),
+        Toggle::Original => "Show original".to_owned(),
     }
-    if widgets::menu_item_enabled(ui, palette, None, "✨ Translate with Znga", true) {
-        ui.ctx().data_mut(|d| {
-            d.insert_temp(
-                egui::Id::new(TRANSLATE_REQUEST),
-                (chat_id.to_owned(), message.to_owned()),
-            )
-        });
+}
+
+/// "Translate with Znga", or "Show original" once translated, in the menu
+/// of a message in another language, in a chat Znga may read
+/// (REQ-ZANS-004).
+pub fn message_menu(
+    ui: &mut Ui,
+    palette: &theme::Palette,
+    chat_id: &str,
+    message: &crate::model::Message,
+) {
+    use super::translate::inline::{self, Toggle};
+    let Some(text) = super::hooks::readable_text(message) else {
+        return;
+    };
+    let Some(toggle) = inline::toggle(chat_id, &message.id, text) else {
+        return;
+    };
+    let label = match &toggle {
+        Toggle::Translate(_) => "Translate with Znga".to_owned(),
+        other => toggle_label(other),
+    };
+    let enabled = toggle != Toggle::Translating;
+    if widgets::menu_item_enabled(ui, palette, None, &format!("🌐 {label}"), enabled) {
+        inline::click(chat_id, &message.id);
+        ui.ctx().request_repaint();
         ui.close();
     }
 }
 
-/// Above the composer: an offer to translate the chat's recent messages
-/// in another language, and the translation popup.
-fn translate_bar(app: &mut App, ui: &mut Ui, chat_id: &str) {
-    let palette = app.palette;
-    let request = ui
-        .ctx()
-        .data_mut(|d| d.remove_temp::<(String, String)>(egui::Id::new(TRANSLATE_REQUEST)));
-    if app
-        .znga
-        .translations
-        .popup
-        .as_ref()
-        .is_some_and(|p| p.chat != chat_id)
-    {
-        app.znga.translations.popup = None;
-    }
-    if !chat::tools_for(app, chat_id) {
-        ui.ctx()
-            .data_mut(|d| d.remove_temp::<(String, Vec<String>)>(egui::Id::new(TRANSLATABLE)));
-        app.znga.translations.popup = None;
+/// The translate toggle beside a bubble's React, Reply and Forward
+/// buttons (REQ-ZANS-004.A1, A3): a pill reading "Translate to English",
+/// then "Show original". `slot` is the next free button place, `outward`
+/// the direction away from the bubble; `revealed` whether the bubble's
+/// buttons show.
+#[allow(clippy::too_many_arguments)]
+pub fn translate_control(
+    ui: &mut Ui,
+    palette: &theme::Palette,
+    chat_id: &str,
+    message: &crate::model::Message,
+    slot: egui::Rect,
+    outward: f32,
+    bounds: egui::Rect,
+    revealed: bool,
+) {
+    use super::translate::inline::{self, Toggle};
+    let Some(text) = super::hooks::readable_text(message) else {
+        return;
+    };
+    let Some(toggle) = inline::toggle(chat_id, &message.id, text) else {
+        return;
+    };
+    let label = toggle_label(&toggle);
+    let font = theme::medium(12.5);
+    let galley = ui
+        .painter()
+        .layout_no_wrap(label.clone(), font.clone(), palette.text);
+    let height = slot.height();
+    let width = galley.size().x + height + 10.0;
+    let pill = if outward >= 0.0 {
+        egui::Rect::from_min_size(slot.min, vec2(width, height))
+    } else {
+        egui::Rect::from_min_size(pos2(slot.max.x - width, slot.min.y), vec2(width, height))
+    };
+    // Where the words do not fit, the globe alone, with them as its tooltip.
+    let compact = !bounds.contains_rect(pill);
+    let rect = if compact { slot } else { pill };
+    if !bounds.contains_rect(rect) {
         return;
     }
-    if let Some((chat, message)) = request
-        && chat == chat_id
-    {
-        super::hooks::request_translate(app, chat_id, &[message]);
+    let id = egui::Id::new(("znga-translate-toggle", chat_id, message.id.as_str()));
+    // The pointer crossing from the bubble to the pill keeps it shown.
+    let held = ui.ctx().data(|d| d.get_temp::<bool>(id)).unwrap_or(false);
+    let pointer = ui.input(|i| i.pointer.interact_pos());
+    let over = pointer.is_some_and(|p| rect.expand(4.0).contains(p));
+    let show = revealed || (held && over);
+    ui.ctx().data_mut(|d| d.insert_temp(id, show));
+    if !show {
+        return;
+    }
+    let response = ui.interact(rect, id, Sense::click());
+    let hovered = response.hovered();
+    let fill = if hovered {
+        palette.surface_hover
+    } else {
+        palette.surface
+    };
+    ui.painter().rect_filled(rect, height / 2.0, fill);
+    ui.painter().rect_stroke(
+        rect,
+        height / 2.0,
+        egui::Stroke::new(1.0, palette.outline),
+        egui::StrokeKind::Inside,
+    );
+    let color = if hovered {
+        palette.text
+    } else {
+        palette.secondary
+    };
+    let icon = egui::Rect::from_min_size(rect.min, vec2(height, height));
+    ui.painter().text(
+        icon.center(),
+        egui::Align2::CENTER_CENTER,
+        "🌐",
+        theme::regular(13.0),
+        color,
+    );
+    if !compact {
+        ui.painter().galley(
+            pos2(icon.right() - 2.0, rect.center().y - galley.size().y / 2.0),
+            galley,
+            color,
+        );
+    }
+    let response = response
+        .on_hover_cursor(egui::CursorIcon::PointingHand)
+        .on_hover_text(if compact {
+            label.as_str()
+        } else {
+            "Znga translates it for you; nothing is sent to the chat"
+        });
+    if response.clicked() && toggle != Toggle::Translating {
+        inline::click(chat_id, &message.id);
+        ui.ctx().request_repaint();
+    }
+    if toggle == Toggle::Translating {
+        ui.ctx()
+            .request_repaint_after(std::time::Duration::from_millis(200));
+    }
+}
+
+/// Above the composer: an offer to translate the chat's recent messages
+/// in another language, in place (REQ-ZANS-004).
+fn translate_bar(app: &mut App, ui: &mut Ui, chat_id: &str) {
+    use super::translate::inline;
+    let palette = app.palette;
+    if !chat::tools_for(app, chat_id) {
+        return;
     }
     let found = super::hooks::translatable(app, chat_id);
-    ui.ctx().data_mut(|d| {
-        d.insert_temp(
-            egui::Id::new(TRANSLATABLE),
-            (
-                chat_id.to_owned(),
-                found.iter().map(|(id, _)| id.clone()).collect::<Vec<_>>(),
-            ),
-        )
-    });
-    translation_popup(app, ui, chat_id);
     let waiting: Vec<(String, &'static str)> = found
         .into_iter()
-        .filter(|(id, _)| app.znga.translations.translation(chat_id, id).is_none())
+        .filter(|(id, _)| !inline::is_on(chat_id, id))
         .collect();
     if waiting.is_empty()
         || app.znga.translations.declined.contains(chat_id)
-        || app.znga.translations.popup.is_some()
         || app.znga.offer.as_ref().is_some_and(|o| o.chat == chat_id)
     {
         return;
@@ -1242,7 +1328,9 @@ fn translate_bar(app: &mut App, ui: &mut Ui, chat_id: &str) {
             close = ui.small_button("×").on_hover_text("Not now").clicked();
             translate = ui
                 .small_button("Translate")
-                .on_hover_text("Znga translates them; only these messages are sent to its engine")
+                .on_hover_text(
+                    "Znga translates them in place; only these messages are sent to its engine",
+                )
                 .clicked();
         });
     });
@@ -1251,162 +1339,10 @@ fn translate_bar(app: &mut App, ui: &mut Ui, chat_id: &str) {
     }
     if translate {
         let skip = waiting.len().saturating_sub(10);
-        let ids: Vec<String> = waiting[skip..].iter().map(|(id, _)| id.clone()).collect();
-        super::hooks::request_translate(app, chat_id, &ids);
-    }
-}
-
-/// The translations over the chat, under each sender and time, with Copy
-/// and Close (REQ-ZANS-004.A3).
-fn translation_popup(app: &mut App, ui: &mut Ui, chat_id: &str) {
-    let palette = app.palette;
-    let Some(popup) = app.znga.translations.popup.clone() else {
-        return;
-    };
-    if popup.chat != chat_id {
-        return;
-    }
-    let language = if app.znga.translate_to.trim().is_empty() {
-        "English".to_owned()
-    } else {
-        app.znga.translate_to.trim().to_owned()
-    };
-    let anchor = pos2(ui.max_rect().right(), ui.max_rect().top() - 8.0);
-    let mut close = false;
-    let mut copy: Option<String> = None;
-    egui::Area::new(egui::Id::new("znga-translation"))
-        .order(egui::Order::Foreground)
-        .constrain(true)
-        .pivot(egui::Align2::RIGHT_BOTTOM)
-        .fixed_pos(anchor)
-        .show(ui.ctx(), |ui| {
-            egui::Frame::popup(ui.style())
-                .fill(palette.panel)
-                .stroke(egui::Stroke::new(1.0, palette.outline))
-                .corner_radius(10.0)
-                .inner_margin(egui::Margin::same(12))
-                .show(ui, |ui| {
-                    ui.set_width(380.0);
-                    ui.horizontal(|ui| {
-                        ui.label(
-                            RichText::new(format!("✨ Translated into {language}"))
-                                .font(theme::semibold(13.5))
-                                .color(palette.text),
-                        );
-                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                            close = ui.small_button("Close").clicked();
-                        });
-                    });
-                    ui.add_space(6.0);
-                    let mut all: Vec<String> = Vec::new();
-                    let mut list = |ui: &mut Ui| {
-                        for shown in &popup.messages {
-                            let key = (chat_id.to_owned(), shown.message.clone());
-                            let done = app.znga.translations.done.get(&key).cloned();
-                            let pending = app.znga.translations.pending.contains(&key);
-                            egui::Frame::new()
-                                .fill(palette.surface)
-                                .corner_radius(8.0)
-                                .inner_margin(egui::Margin::symmetric(10, 7))
-                                .show(ui, |ui| {
-                                    ui.set_width(ui.available_width());
-                                    ui.horizontal(|ui| {
-                                        ui.label(
-                                            RichText::new(format!(
-                                                "{} · {}",
-                                                shown.sender,
-                                                clock(shown.at)
-                                            ))
-                                            .font(theme::semibold(12.0))
-                                            .color(palette.accent),
-                                        );
-                                        if let Some(text) = &done {
-                                            ui.with_layout(
-                                                Layout::right_to_left(Align::Center),
-                                                |ui| {
-                                                    if ui.small_button("Copy").clicked() {
-                                                        copy = Some(text.clone());
-                                                    }
-                                                },
-                                            );
-                                        }
-                                    });
-                                    let original: String =
-                                        shown.original.chars().take(240).collect();
-                                    ui.label(
-                                        RichText::new(original)
-                                            .font(theme::regular(12.0))
-                                            .color(palette.secondary),
-                                    );
-                                    ui.add_space(2.0);
-                                    match (&done, pending) {
-                                        (Some(text), _) => {
-                                            all.push(text.clone());
-                                            ui.label(
-                                                RichText::new(text)
-                                                    .font(theme::regular(14.0))
-                                                    .color(palette.text),
-                                            );
-                                        }
-                                        (None, true) => {
-                                            ui.horizontal(|ui| {
-                                                ui.add(egui::Spinner::new().size(12.0));
-                                                ui.label(
-                                                    RichText::new("Translating…")
-                                                        .color(palette.secondary),
-                                                );
-                                            });
-                                            ui.ctx().request_repaint_after(
-                                                std::time::Duration::from_millis(200),
-                                            );
-                                        }
-                                        (None, false) => {
-                                            let said = app
-                                                .znga
-                                                .translations
-                                                .error
-                                                .clone()
-                                                .map(|e| {
-                                                    super::thread::explain_error(
-                                                        &e,
-                                                        app.znga.config.engine,
-                                                    )
-                                                })
-                                                .unwrap_or_else(|| {
-                                                    "Znga could not translate this one.".into()
-                                                });
-                                            ui.label(
-                                                RichText::new(said)
-                                                    .font(theme::regular(12.5))
-                                                    .color(palette.secondary),
-                                            );
-                                        }
-                                    }
-                                });
-                            ui.add_space(4.0);
-                        }
-                    };
-                    // A few translations show whole; a long list scrolls.
-                    if popup.messages.len() > 3 {
-                        egui::ScrollArea::vertical()
-                            .id_salt("znga-translation-list")
-                            .max_height(340.0)
-                            .show(ui, list);
-                    } else {
-                        list(ui);
-                    }
-                    if all.len() > 1 && ui.small_button("Copy all").clicked() {
-                        copy = Some(all.join("\n\n"));
-                    }
-                });
-        });
-    if let Some(text) = copy {
-        ui.ctx().copy_text(text);
-    }
-    if close
-        || ui.input(|i| i.key_pressed(egui::Key::Escape)) && app.znga.translations.popup.is_some()
-    {
-        app.znga.translations.popup = None;
+        for (id, _) in &waiting[skip..] {
+            inline::turn_on(chat_id, id);
+        }
+        ui.ctx().request_repaint();
     }
 }
 

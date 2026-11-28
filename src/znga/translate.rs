@@ -179,34 +179,16 @@ pub fn foreign(text: &str, language: &str) -> Option<&'static str> {
 /// Messages found in another language, as (message id, language).
 pub type Found = Vec<(String, &'static str)>;
 
-/// A message in the translation popup.
-#[derive(Clone, Debug, PartialEq)]
-pub struct Shown {
-    pub message: String,
-    pub sender: String,
-    pub at: i64,
-    pub original: String,
-}
-
-/// The popup over a chat.
-#[derive(Clone, Debug, PartialEq)]
-pub struct Popup {
-    pub account: String,
-    pub chat: String,
-    pub messages: Vec<Shown>,
-}
-
-/// Translations for this session, and the popup.
+/// Translations made this session.
 #[derive(Default)]
 pub struct Translations {
-    pub popup: Option<Popup>,
     /// Translations by (chat, message id).
     pub done: HashMap<(String, String), String>,
     /// Asked for and not back yet.
     pub pending: HashSet<(String, String)>,
     /// Chats whose offer the person closed this session.
     pub declined: HashSet<String>,
-    /// The last request failed: what to say in the popup.
+    /// Why the last request failed.
     pub error: Option<String>,
     /// The last scan of a chat: (chat, newest message id, message count,
     /// the messages found in another language with that language).
@@ -238,6 +220,158 @@ impl Translations {
             self.pending.remove(&(chat.to_owned(), message.clone()));
         }
         self.error = Some(error);
+    }
+}
+
+/// What a bubble shows for a translated message: the translation, and a
+/// line saying it was translated (REQ-ZANS-004.A3). The line is WhatsApp
+/// italics, as the bubble draws the text with WhatsApp's markup.
+pub fn decorated(translation: &str, from: Option<&str>) -> String {
+    match from {
+        Some(from) => format!("{translation}\n\n_Translated from {from} by Znga_"),
+        None => format!("{translation}\n\n_Translated by Znga_"),
+    }
+}
+
+/// The in-place toggle (REQ-ZANS-004): what the bubbles of the open chat
+/// show, read while they are drawn, where the app is out of reach. Znga's
+/// tick fills it from [`Translations`] and turns the clicks into requests.
+pub mod inline {
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+
+    type Key = (String, String);
+
+    #[derive(Default)]
+    struct State {
+        /// The open chat, when Znga may read it.
+        readable: Option<String>,
+        /// The person's language, as the button names it.
+        language: String,
+        /// Messages switched to their translation: the text to show, or
+        /// `None` while it is on its way.
+        on: HashMap<Key, Option<String>>,
+        /// Clicks since the last tick: (chat, message, toggle). A toggle
+        /// switches; otherwise the message only turns to its translation.
+        clicks: Vec<(String, String, bool)>,
+    }
+
+    // The app draws and ticks on one thread, so the state is that
+    // thread's; tests running side by side each have their own.
+    thread_local! {
+        static STATE: RefCell<State> = RefCell::default();
+    }
+
+    fn with<R>(f: impl FnOnce(&mut State) -> R) -> R {
+        STATE.with(|state| f(&mut state.borrow_mut()))
+    }
+
+    fn key(chat: &str, message: &str) -> Key {
+        (chat.to_owned(), message.to_owned())
+    }
+
+    /// What the toggle of a message offers.
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    pub enum Toggle {
+        /// "Translate to {language}".
+        Translate(String),
+        /// The translation is on its way.
+        Translating,
+        /// "Show original".
+        Original,
+    }
+
+    /// The text a bubble shows in place of the message's, while it is
+    /// switched to its translation.
+    pub fn shown(chat: &str, message: &str) -> Option<String> {
+        with(|state| state.on.get(&key(chat, message)).cloned().flatten())
+    }
+
+    /// The toggle for a message whose text is `text`, where it has one:
+    /// only in a chat Znga may read, for text in another language than the
+    /// person's (REQ-ZANS-004.A1, A4).
+    pub fn toggle(chat: &str, message: &str, text: &str) -> Option<Toggle> {
+        with(|state| {
+            if state.readable.as_deref() != Some(chat) {
+                return None;
+            }
+            match state.on.get(&key(chat, message)) {
+                Some(Some(_)) => Some(Toggle::Original),
+                Some(None) => Some(Toggle::Translating),
+                None => {
+                    super::foreign(text, &state.language)?;
+                    Some(Toggle::Translate(state.language.clone()))
+                }
+            }
+        })
+    }
+
+    /// The person clicked the toggle (or the menu's item).
+    pub fn click(chat: &str, message: &str) {
+        with(|state| {
+            state
+                .clicks
+                .push((chat.to_owned(), message.to_owned(), true))
+        });
+    }
+
+    /// Turns a message to its translation, as the bar above the composer
+    /// does for the recent ones.
+    pub fn turn_on(chat: &str, message: &str) {
+        with(|state| {
+            state
+                .clicks
+                .push((chat.to_owned(), message.to_owned(), false))
+        });
+    }
+
+    pub fn is_on(chat: &str, message: &str) -> bool {
+        with(|state| state.on.contains_key(&key(chat, message)))
+    }
+
+    // What Znga's tick uses.
+
+    pub(crate) fn set_readable(chat: Option<String>, language: &str) {
+        with(|state| {
+            if state.readable != chat {
+                state.clicks.clear();
+            }
+            state.readable = chat;
+            state.language = language.to_owned();
+        });
+    }
+
+    pub(crate) fn take_clicks() -> Vec<(String, String, bool)> {
+        with(|state| std::mem::take(&mut state.clicks))
+    }
+
+    pub(crate) fn show(chat: &str, message: &str, text: Option<String>) {
+        with(|state| {
+            state.on.insert(key(chat, message), text);
+        });
+    }
+
+    pub(crate) fn off(chat: &str, message: &str) {
+        with(|state| {
+            state.on.remove(&key(chat, message));
+        });
+    }
+
+    /// Messages switched on whose translation has not arrived yet.
+    pub(crate) fn waiting() -> Vec<Key> {
+        with(|state| {
+            state
+                .on
+                .iter()
+                .filter(|(_, text)| text.is_none())
+                .map(|(key, _)| key.clone())
+                .collect()
+        })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn reset() {
+        with(|state| *state = State::default());
     }
 }
 
@@ -325,6 +459,48 @@ mod tests {
             parse("[5] out of range", 1),
             vec![Some("[5] out of range".into())]
         );
+    }
+
+    #[test]
+    fn a_toggle_shows_the_translation_and_then_the_original() {
+        inline::reset();
+        let hindi = "मैं कल सुबह आऊँगा";
+        assert_eq!(
+            inline::toggle("g", "m", hindi),
+            None,
+            "only in a readable chat"
+        );
+        inline::set_readable(Some("g".into()), "English");
+        assert_eq!(
+            inline::toggle("g", "m", hindi),
+            Some(inline::Toggle::Translate("English".into()))
+        );
+        assert_eq!(
+            inline::toggle("g", "e", "See you tomorrow at the station"),
+            None
+        );
+        inline::show("g", "m", None);
+        assert_eq!(
+            inline::toggle("g", "m", hindi),
+            Some(inline::Toggle::Translating)
+        );
+        inline::show(
+            "g",
+            "m",
+            Some(decorated("I will come tomorrow morning", Some("Hindi"))),
+        );
+        assert_eq!(
+            inline::toggle("g", "m", hindi),
+            Some(inline::Toggle::Original)
+        );
+        assert!(
+            inline::shown("g", "m")
+                .unwrap()
+                .contains("_Translated from Hindi by Znga_")
+        );
+        inline::off("g", "m");
+        assert_eq!(inline::shown("g", "m"), None);
+        inline::reset();
     }
 
     #[test]

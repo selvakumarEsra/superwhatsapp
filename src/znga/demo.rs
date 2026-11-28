@@ -219,7 +219,7 @@ fn chat(app: &mut App) {
     app.znga.restored.insert(account);
 }
 
-/// A chat with messages in Spanish, one translated in the popup
+/// A chat with messages in Spanish, one shown translated in place
 /// (`--demo-page znga-translate`, specs/znga-answers.md REQ-ZANS-004).
 fn translate(app: &mut App) {
     let Some(chat) = app
@@ -272,14 +272,13 @@ fn translate(app: &mut App) {
         (chat.clone(), first.id.clone()),
         "Hi! Shall we meet tomorrow at my mother's house at eight?".into(),
     );
-    app.znga.translations.popup = Some(super::translate::Popup {
-        account: app.account().id.as_str().to_owned(),
-        chat,
-        messages: vec![super::translate::Shown {
-            message: first.id.clone(),
-            sender: "Ada Lovelace".into(),
-            at: first.timestamp,
-            original: "¡Hola! ¿Nos vemos mañana en la casa de mi madre a las ocho?".into(),
-        }],
-    });
+    // The first is shown translated; hovering the second offers it.
+    super::translate::inline::show(
+        &chat,
+        &first.id,
+        Some(super::translate::decorated(
+            "Hi! Shall we meet tomorrow at my mother's house at eight?",
+            Some("Spanish"),
+        )),
+    );
 }

@@ -4822,6 +4822,8 @@ fn reaction_affordance(
             }));
         }
     }
+    #[cfg(feature = "znga")]
+    crate::znga::chat_ui::translate_control(ui, &view.palette, &view.chat.id, message, rect.translate(vec2(outward * (1.0 + f32::from(u8::from(reply_fits)) + f32::from(u8::from(forward_fits))), 0.0)), outward, bounds, revealed && uncovered); // znga hook
 }
 
 /// Where a message sits in its sender's run: whether it names the sender,
@@ -7426,7 +7428,7 @@ fn context_menu(
         actions.push(forward_action(chat, &message.id));
     }
     #[cfg(feature = "znga")]
-    crate::znga::chat_ui::message_menu(ui, &palette, chat, &message.id); // znga hook
+    crate::znga::chat_ui::message_menu(ui, &palette, chat, message); // znga hook
     // A photo opens the viewer on its own click; a clip plays in its bubble
     // there, so this is how the album is reached from a chat that holds no
     // pictures.
@@ -9645,6 +9647,10 @@ fn rich_body(
     span: Option<f32>,
     actions: &mut Vec<Action>,
 ) -> Option<Rect> {
+    #[cfg(feature = "znga")]
+    let translated = crate::znga::translate::inline::shown(&view.chat.id, &message.id); // znga hook
+    #[cfg(feature = "znga")]
+    let text = translated.as_deref().unwrap_or(text); // znga hook
     let palette = view.palette;
     let mentions = mentions_of(view, message);
     let style = markup::Style {

@@ -12,14 +12,14 @@ This document covers three things in the Znga chat of the egui app (specs/znga-c
 
 - **Links.** An answer that names messages, chats or groups links to them. Asking "show me the messages where people gave an email address" returns a list where each item opens that exact message.
 - **Layout and actions.** Answers have readable formatting: headings, spacing, lists and emphasis. Hovering an answer shows small Copy, Reply and Forward buttons.
-- **Translation.** In any chat Znga may read, a message written in another language can be translated by Znga. The translation shows in a popup in that chat.
+- **Translation.** In any chat Znga may read, a message written in another language has a "Translate to English" button on hover. It shows Znga's translation in the bubble, then turns into "Show original" to switch back.
 
 The house rules of specs/znga.md and specs/znga-chat.md still apply:
 - Znga is opt-in.
 - Znga never reads locked or excluded chats.
 - Nothing is sent to anyone without the person's click.
 - Every Znga request passes the Sentinel and is logged without message text.
-- Fork code stays in `src/znga/`, and upstream files get only one-line `// znga hook` lines (AGENTS.md). The one new hook is the message menu's "Translate with Znga" item.
+- Fork code stays in `src/znga/`, and upstream files get only one-line `// znga hook` lines (AGENTS.md). The new hooks are the message menu's "Translate with Znga" item, the translate button beside a bubble's hover buttons, and the bubble text showing a translation.
 
 This is built in the egui app, the one SuperWhatsapp ships. The Tauri interface (specs/tauri-ui.md) is not covered yet.
 
@@ -129,38 +129,41 @@ verifies:
 - Forward, then picking a chat, opens that chat with the text offered above its composer and sends nothing.
 
 <!-- id: REQ-ZANS-004 -->
-## Znga SHOULD offer to translate messages written in another language
+## Znga SHOULD translate messages written in another language, in place
 
-In a chat Znga may read, Znga notices recent incoming text messages that are not in the person's language. The person's language is Znga's "Translate to" setting, or English when it is unset. The check runs on this computer and sends nothing anywhere.
+In a chat Znga may read, one-to-one or group, Znga notices incoming text messages and captions that are not in the person's language. The person's language is Znga's "Translate to" setting, or English when it is unset. The check runs on this computer and sends nothing anywhere.
 
-When the open chat has such messages, Znga's bar above the composer offers "Translate" and names the language it found. Each such message's menu also has "Translate with Znga". Clicking either sends only those messages to Znga's engine, and the translation shows in a popup over that chat. The popup shows each translation under its sender and time, with Copy and Close. Translating the same message again reuses the translation kept for this session.
+Hovering such a message shows a "Translate to English" button beside its React, Reply and Forward buttons. The button names the person's language. Clicking it sends only that message to Znga's engine, and the bubble's text is replaced by the translation, with a line saying it was translated and from which language. The button then reads "Show original", and clicking it brings the original text back. The two can be switched as often as the person likes: the translation is kept for the session and is not asked for again.
+
+The same toggle is in each such message's menu ("Translate with Znga", then "Show original"). When the open chat has such messages, Znga's bar above the composer offers to translate the recent ones in place at once. Nothing is ever sent to anyone: the translation is only shown on this computer.
 
 implementations:
   - src/znga/translate.rs:foreign
-  - src/znga/translate.rs:Translations
-  - src/znga/hooks.rs:translatable
+  - src/znga/translate.rs:inline
+  - src/znga/hooks.rs:sync_inline
   - src/znga/hooks.rs:request_translate
   - src/znga/prompt.rs:translate_incoming
   - src/znga/sentinel.rs:check
+  - src/znga/chat_ui.rs:translate_control
   - src/znga/chat_ui.rs:translate_bar
-  - src/znga/chat_ui.rs:translation_popup
   - src/znga/chat_ui.rs:message_menu
+  - src/ui/conversation.rs:rich_body
 
 verifies:
   - src/znga/translate.rs:other_languages_are_found_and_english_is_not
   - src/znga/translate.rs:the_persons_own_language_is_not_offered
   - src/znga/translate.rs:numbered_translations_are_read_back
-  - src/znga/translate.rs:arrived_translations_are_kept_and_reused
-  - src/znga/chat.rs:translating_sends_only_the_chosen_messages_and_shows_the_popup
+  - src/znga/translate.rs:a_toggle_shows_the_translation_and_then_the_original
+  - src/znga/chat.rs:translating_sends_only_the_chosen_message_and_toggles_in_place
   - src/znga/chat.rs:locked_and_excluded_chats_never_translate
   - src/znga/sentinel.rs:translations_run_only_when_asked_and_never_in_hidden_chats
 
 ## Acceptance
 <!-- id: REQ-ZANS-004.A1 -->
-- A chat whose latest incoming messages are in Spanish, Tamil or Hindi offers Translate. A chat where every message is English offers nothing. A message of only emoji, links or numbers is never counted as another language.
+- Hovering a Hindi, Tamil or Spanish message in a one-to-one or group chat shows "Translate to English" beside React, Reply and Forward. An English message shows no such button, and neither does a message of only emoji, links or numbers.
 <!-- id: REQ-ZANS-004.A2 -->
-- No message text reaches an engine until the person clicks Translate, and only the messages offered are sent.
+- No message text reaches an engine until the person clicks, and only the clicked message is sent.
 <!-- id: REQ-ZANS-004.A3 -->
-- The translation shows in a popup over the same chat, and the chat stays open behind it. Copy copies the translation, and Close dismisses the popup.
+- After the click, the bubble shows the translation and a "translated from" line, and the button reads "Show original". Clicking it shows the original again, and the next "Translate to English" shows the kept translation without asking the engine again.
 <!-- id: REQ-ZANS-004.A4 -->
-- Locked or excluded chats never offer Translate. Each translation is logged by the Sentinel as a translate action, without message text.
+- Locked or excluded chats never show the button. Each translation is logged by the Sentinel as a translate action, without message text.
